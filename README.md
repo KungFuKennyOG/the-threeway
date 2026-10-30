@@ -12,7 +12,7 @@ This is the combat MVP. It answers one question: does hitting people in The Thre
 
 - **Quest 3:** open the GitHub Pages URL for this repo in the Quest browser and press **Enter VR**.
 - **Desktop:** serve the folder over HTTPS or localhost (`npx serve .`) and press **Fight on desktop**. Desktop mode is for testing without a headset.
-- **Level 2 straight away:** tick **Start outside, in Tripoint Square** on the menu (or open the page with `?level=street`).
+- **Skip ahead:** pick a level under **Start at** on the menu (or open the page with `?level=street` or `?level=depot`).
 
 | Quest 3 | Action |
 | --- | --- |
@@ -28,7 +28,7 @@ This is the combat MVP. It answers one question: does hitting people in The Thre
 | Grip as a potato or pot reaches you | Catch it, then throw it back |
 | Swat the bat (or the bat arm) mid-swing | Disarm Bat Boy; the bat drops and is yours |
 | Left X | Perf + tuning panel on your left wrist (left stick: up/down picks, left/right changes) |
-| A | Restart after clearing the bar (or walk out the open door) or the street |
+| A | Restart after clearing a level (or walk on: out the bar's open door, through the lifted boom) |
 
 Desktop: mouse look, WASD, left/right click (or J/K) punch, Shift heavy, hold X light, Space block, C duck, G headbutt, E grab/drop/catch, Q throw, F drink, R restart, P perf panel (`[` `]` pick a setting, `-` `=` change it).
 
@@ -62,12 +62,24 @@ Clear the bar and the front door swings open onto **Tripoint Square** at night. 
 - **The end:** the joint-militia checkpoint: booth, floodlight, the Free City's flag with the three powers'. Walk up to the boom and it lifts. The Ring Road and the Accords wall start beyond it.
 - **The skylines:** Hinomoto's black-glass neon cluster behind the Threeway (Aoki Development tallest, an expressway of tail lights), Krasnovia's even field of panel slabs, the Tower of Labor and the TV tower right of the road, Columbia's ridge of cream-and-gold deco towers left of it. Red beacons blink on top. The sky glows red, sodium and gold over each sector.
 
+## Level 3: Tram Depot 7
+
+![Volkov's ring](docs/depot.png)
+
+Walk through the lifted checkpoint boom and you're in **Krasnovia**, at the gate of Tram Depot 7.
+
+- **The yard:** sodium lamps on concrete posts, three tracks running in through the big doors, a parked green-and-cream tram, a stack of sleepers and rails, oil drums. The panel slabs and the TV tower stand right behind the wall. The red DEPOT 7 sign and two banners over the doors.
+- **The hall:** soot-dark brick under a sawtooth roof with north-light glazing, trams parked over inspection pits, a gantry crane, rows of cold fluorescent tubes. The middle track leads to the back, where the depot crews have built a ring out of tram seats and crates.
+- **The workshop:** off the hall's east side through a small door: a workbench, a tool board, wheelsets, drums. Nothing to fight in there yet.
+- **The fight:** the yard (two wrestlers and a cook), the hall (Aoki Security, a wrestler, a cook, a kicker coming in behind you), then the ring: **Volkov, "the Bear"**, an old Krasnovian champion. He's a grabber like the wrestler but bigger, with a boss bar, and he gets angry below half health.
+- **Rooms:** the hall and the workshop are drawn only through their doorways. Inside the hall facing the ring, the city, the yard and the workshop aren't drawn at all.
+
 ## Quest performance
 
 - **Merged static geometry.** The whole bar room is one mesh on one atlas (`tools/bar_atlas.py` packs its textures; the shader tiles each texture inside its box of the atlas). The street is one mesh on a painted, mipmapped atlas, the skylines and far city another. Light is **baked per vertex** at build time with the shader's own formula, so any number of gas lamps is free; goons, props and hands are lit live by the 6 nearest lamps (the bar's six inside).
 - **Prop batches.** Every stool, crate, bin and street sign is written into one mesh per material each frame (a few hundred vertices on the CPU), so a room full of stools or a street full of crates is one draw call.
 - **LOD stand-ins.** Past the Old Quarter's edge every building is one cheap box with its lit windows painted on, always drawn, out to ~400 m: you see the city's lights and rooflines all the way to the skylines, nothing pops. The street atlas is mipmapped (wrapped gutters), so far things average instead of sparkling.
-- **Portal culling.** The bar and the street only draw each other through the open door when it's in view: inside with the door shut, the street, skylines and sky aren't drawn at all.
+- **Portal culling.** The world is rooms joined by doorways (`src/rooms.js`): you're in one room, and a neighbour is drawn only if the doorway into it is open and in view (and the room beyond that only if its doorway is too). The bar and the street only draw each other through the open door; inside with the door shut, the street, skylines and sky aren't drawn at all. The depot hall and workshop work the same way.
 - Measured in Chromium: 9 draw calls in the bar (was 26), 8–9 down the street, 18 looking back at the Threeway through its open door (was 49). ~52k static triangles, most of them the always-on skylines and far city.
 - **One draw call per goon.** Each goon is a single CPU-skinned mesh: every body part's vertices are moved by its ragdoll frame each frame, and the hurt/KO faces swap by rewriting the face UVs. Previously each goon was 14 to 16 draw calls. Stools are one mesh on a vinyl + chrome atlas.
 - **Perf panel.** Left X (desktop: P) shows fps, physics ms per frame, draw calls and the current quality level on your left wrist, plus live tuning for ragdoll pull, hit shove, knockback, fist pitch in the controller and vertex snap. Tuning is saved in the browser.
@@ -76,7 +88,7 @@ Clear the bar and the front door swings open onto **Tripoint Square** at night. 
 
 ## Tuning
 
-Every number lives in `CFG` in `src/config.js` (level 2: `CFG.street`: the stretches, triggers, spawns and arenas, street props, gaslight, fog, sky glow): physics (`CFG.physics`: how hard goons follow their animation, hit shoves, personal space, domino and impact speeds), tier thresholds, damage and poise per tier, hitstop, knockback, magnetism, block and dodge distances, grab and throw, weapons and projectiles, per-enemy stats, the boss tag team (`CFG.boss`), waves, perf/auto quality (`CFG.perf`), render settings (desktop lines, VR framebuffer scale, snap/affine per mode), and `hands.modelPitchDeg` for how the fist model sits in the controller.
+Every number lives in `CFG` in `src/config.js` (level 2: `CFG.street`: the stretches, triggers, spawns and arenas, street props, gaslight, fog, sky glow; level 3: `CFG.depot`: the fights, the props, sodium/tube/ring light, Volkov's enrage point; Volkov himself is in `CFG.enemies.volkov`): physics (`CFG.physics`: how hard goons follow their animation, hit shoves, personal space, domino and impact speeds), tier thresholds, damage and poise per tier, hitstop, knockback, magnetism, block and dodge distances, grab and throw, weapons and projectiles, per-enemy stats, the boss tag team (`CFG.boss`), waves, perf/auto quality (`CFG.perf`), render settings (desktop lines, VR framebuffer scale, snap/affine per mode), and `hands.modelPitchDeg` for how the fist model sits in the controller.
 
 ## Tests
 
@@ -84,7 +96,8 @@ No headset needed. The tests run the real game script against a small stand-in f
 
 ```
 node test/street.js    # 41 checks: one-mesh bar room, prop batches, LOD stand-ins, portal culling, the door opens and leads outside, walls and crossings, baked light and the live lights outside/inside, the stretches (trigger, spawn, arena lock, clear, lose + restart), the boom, crates/bins/signs, draw calls + triangle budget, street physics cost
-node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street)
+node test/depot.js     # 31 checks: the depot's three baked meshes + triangle budget, nothing from the skylines on it, walls, track doors, workshop door, solid trams, rooms + portals (hall/workshop drawn only through doorways), the yard and hall fights (trigger, spawn, arena lock, clear, lose + restart), Volkov (boss bar, enrage, clear), street boom → depot, hall physics cost
+node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street; --level=depot: the depot and Volkov; --level=road: the street, through the boom, then the depot)
 node test/vr.js        # 52 checks: level 2 in VR (start outside, stick walking, held in by the stretch), tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
 node test/physics.js   # 47 checks: heights for all 9 goons, skinned mesh vs skeleton, one mesh per goon/stool, shove + recover, launch, get-up, dominoes, the cook's lob accuracy, Rocco & Ivan tag + enrage
 node test/bot.js 1 400 --mode=aggro    # a bot plays all four rounds (catches pots, throws them back); prints hits, losses, catches, tags, per-round times, errors
@@ -104,6 +117,8 @@ Three.js r149 from jsDelivr, WebXR, synthesized placeholder audio. Plain script 
 | `src/geometry.js` | mesh builders, static batching, light baking |
 | `src/bar.js`, `src/bar_atlas.js` | the bar room (one mesh on one atlas: `tools/bar_atlas.py`), walkable areas, the door |
 | `src/street/` | level 2: `paint.js` (painted street atlas), `build.js` (the square, the road, the checkpoint), `skylines.js` (the three sectors, the far city, the sky), `fight.js` (stretches, portals, signs) |
+| `src/depot/` | level 3: `paint.js` (its paintings, in the same street atlas), `build.js` (the yard, the hall, the workshop, the ring; its rooms and doorways) |
+| `src/rooms.js` | rooms + portals: what's drawn from where |
 | `src/characters.js` | goon bodies and poses, the player's hands |
 | `src/audio.js`, `src/fx.js` | placeholder sound, sprites and signs |
 | `src/player.js`, `src/locomotion.js` | the player, XR + desktop input, hand/head tracking, moving and turning |
