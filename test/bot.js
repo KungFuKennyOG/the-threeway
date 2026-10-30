@@ -42,7 +42,9 @@ const key = (type, code, extra = {}) => { for (const f of listeners[type] || [])
 // start desktop mode
 els.deskBtn.fire('click');
 const TW = ctx.__tw;
-const stats = { tiers: {}, frames: 0, minHp: 100, errors: [], states: {}, waves: new Set(), grabs: 0, throws: 0, drinks: 0, blocks: 0, clinches: 0, parries: 0 };
+const stats = { tiers: {}, frames: 0, minHp: 100, errors: [], states: {}, waves: new Set(), grabs: 0, throws: 0, drinks: 0, blocks: 0, clinches: 0, parries: 0,
+  catchTries: 0, throwBacks: 0, projHits: 0, tags: 0, enraged: [], waveTimes: [], lobs: 0, maxProps: 0 };
+let lastWave = -1, waveStart = 0, catchState = null; const seenCarry = new Set(); let aimingAt = null;
 let lastHitRef = null, punchSide = 0, punchT = 0, step = 0, blocking = false;
 const DT = 1 / 60, MAX_T = Number(process.argv[3] || 240);
 
@@ -71,8 +73,25 @@ try {
     // nearest enemy
     let tgt = null, best = 1e9;
     for (const e of live) { const d = Math.hypot(e.pos.x - TW.player.head.x, e.pos.z - TW.player.head.z); if (d < best) { best = d; tgt = e; } }
+    if (G.wave !== lastWave) { if (lastWave >= 0) stats.waveTimes.push(+(clock - waveStart).toFixed(1)); lastWave = G.wave; waveStart = clock; }
+    stats.maxProps = Math.max(stats.maxProps, TW.props.length);
+    // incoming kitchenware: look at it, E to catch, then Q it back at the nearest goon
+    const incoming = TW.props.find(p => p.hostile && p.body.ps[0].x.distanceTo(TW.player.head) < 2.3 && p.body.ps[0].v.dot(new THREE.Vector3().subVectors(TW.player.head, p.body.ps[0].x)) > 0);
+    if (!catchState && incoming && !run('hands.right.held') && MODE !== 'passive') {
+      if (aimingAt === incoming) {   // the camera turned last frame: now grab
+        key('keydown', 'KeyE'); key('keyup', 'KeyE'); stats.catchTries++; aimingAt = null;
+        if (run('hands.right.held') === incoming) catchState = { t: clock + 0.3, prop: incoming };
+      } else aimingAt = incoming;
+    } else if (!incoming) aimingAt = null;
+    if (aimingAt) aimAt(aimingAt.body.ps[0].x);
+    if (catchState && clock > catchState.t) {
+      const tg = live.find(e => true);
+      if (tg) aimAt(tg.zone('chest').pos);
+      key('keydown', 'KeyQ'); key('keyup', 'KeyQ'); stats.throwBacks++; catchState = null;
+    }
     const clinched = TW.player.clinchedBy;
-    if (clinched) {
+    if (catchState || aimingAt) { /* catching */ }
+    else if (clinched) {
       stats.clinchFrames = (stats.clinchFrames || 0) + 1;
       aimAt(clinched.zone('armR').pos);
       if (clock - punchT > (MODE === 'passive' ? 0.9 : 0.35)) { punchT = clock; els.c.fire('mousedown', { button: (punchSide++) % 2 ? 2 : 0 }); }
@@ -102,14 +121,20 @@ try {
     const lh = run('lastHit');
     if (lh && lh !== lastHitRef) { lastHitRef = lh; stats.tiers[lh.tier] = (stats.tiers[lh.tier] || 0) + 1; if (VERBOSE) console.log('HIT', clock.toFixed(2), JSON.stringify(lh)); }
     for (const e of TW.enemies) stats.states[e.type + ':' + e.state] = (stats.states[e.type + ':' + e.state] || 0) + 1;
-    if (TW.game.state === 'lost') stats.lost = (stats.lost || 0) + 1;
+    for (const e of TW.enemies) { if (e.carry && !seenCarry.has(e.carry)) { seenCarry.add(e.carry); stats.lobs++; } if (e.enraged && !stats.enraged.includes(e.type)) stats.enraged.push(e.type); }
+    { const act = TW.game.bosses.filter(e => e.alive && !e.benched).map(e => e.type).join(); if (stats.lastActive && act && act !== stats.lastActive) stats.tags++; if (act) stats.lastActive = act; }
+    if (TW.game.state === 'lost') { stats.lost = (stats.lost || 0) + 1; if (!stats.wasLost) stats.losses = (stats.losses || 0) + 1; }
+    stats.wasLost = TW.game.state === 'lost';
+    if (TW.game.bosses.length && Math.floor(clock) % 20 === 0 && Math.floor(clock) !== stats.bossLogT) { stats.bossLogT = Math.floor(clock); (stats.bossLog = stats.bossLog || []).push(Math.floor(clock) + ':' + TW.game.bosses.map(e => e.type[0] + Math.round(e.hp) + e.state.slice(0, 4) + (e.benched ? 'B' : '')).join('/')); }
   }
 } catch (err) { stats.errors.push(err.stack); }
 
-const out = { mode: MODE, seed: SEED, simSeconds: +clock.toFixed(1), final: TW.game.state, wave: TW.game.wave + 1, frames: stats.frames, minHp: Math.round(stats.minHp),
+if (lastWave >= 0) stats.waveTimes.push(+(clock - waveStart).toFixed(1));
+const out = { mode: MODE, seed: SEED, simSeconds: +clock.toFixed(1), final: TW.game.state, wave: TW.game.wave + 1, waveTimes: stats.waveTimes, frames: stats.frames, minHp: Math.round(stats.minHp),
+  losses: stats.losses || 0, bossLog: stats.bossLog || [], catches: TW.game.catches, catchTries: stats.catchTries, throwBacks: stats.throwBacks, lobs: stats.lobs, disarms: TW.game.disarms, tags: stats.tags, enraged: stats.enraged, maxProps: stats.maxProps, perfLevel: TW.perf.level,
   hpNow: Math.round(TW.player.hp), tiers: stats.tiers, drinks: stats.drinks, grabs: stats.grabs, throws: stats.throws, blocks: stats.blocks,
   closestToHead: +(stats.closest ?? 9).toFixed(3), closestWhat: stats.closestWhat, clinchFrames: stats.clinchFrames || 0, lostFrames: stats.lost || 0, enemiesLeft: TW.enemies.length, props: TW.props.length,
-  roomTris: TW.roomTris(), enemyTris: ['boso', 'boxer', 'wrestler'].map(t => { const e = new TW.Enemy(t); const n = e.tris; e.remove(); return t + ':' + n; }).join(' '),
+  roomTris: TW.roomTris(), enemyTris: ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'rocco', 'ivan'].map(t => { const e = new TW.Enemy(t); const n = e.tris; e.remove(); return t + ':' + n; }).join(' '),
   errors: stats.errors };
 if (VERBOSE) out.states = stats.states;
 console.log(JSON.stringify(out, null, 1));

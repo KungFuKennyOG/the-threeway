@@ -26,13 +26,15 @@ const snap = (e, tag) => frames.push({ tag, t: +clock.toFixed(2), ps: e.body.ps.
 
 els.deskBtn.fire('click');
 run(`clearEnemies(); game.state = 'fight'; game.queue = []; game.timer = 0;`);
+run('var __ug = updateGame; updateGame = function () {};');   // no wave flow here: each check sets up its own goons
 TW.rig.position.set(0, 0, 0); run('desk.yaw = Math.PI; desk.pitch = 0;');
 step(5);
 const freeze = (e) => { e.cooldown = 1e9; e.cfg = Object.assign({}, e.cfg, { speed: 0 }); };
 try {
   // ---- scale + standing heights
   const H = {};
-  for (const t of ['boso', 'boxer', 'wrestler']) {
+  const ALL = ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'rocco', 'ivan'];
+  for (const t of ALL) {
     const e = new TW.Enemy(t); freeze(e); e.placeAt(0, 2.5, Math.PI); e.state = 'circle'; TW.enemies.push(e);
     step(90);
     const P = e.body.by;
@@ -40,14 +42,19 @@ try {
     // does the drawn body match the animated skeleton?
     let maxPos = 0;
     for (const [n, part] of [['torso', 'torso'], ['head', 'head'], ['uarmr', 'uarmr'], ['thighl', 'thighl'], ['shinr', 'shinr']]) {
-      const vp = new THREE.Vector3(); e.vis[part]._chainWorld(); const m = e.vis[part].matrixWorld.elements; vp.set(m[12], m[13], m[14]);
+      const vp = new THREE.Vector3(); const m = e.partM[part].elements; vp.set(m[12], m[13], m[14]);
       const bp = e.bones[part].getWorldPosition(new THREE.Vector3());
       maxPos = Math.max(maxPos, vp.distanceTo(bp));
     }
     check(`${t}: drawn parts sit on the animated skeleton`, maxPos < 0.08, 'max offset ' + maxPos.toFixed(3) + ' m');
+    const meshes = TW.scene.children.filter(o => o.material === e.mat);
+    check(`${t}: one mesh, one draw call`, meshes.length === 1 && meshes[0].children.length === 0, meshes.length + ' meshes');
     e.remove();
   }
-  for (const t of Object.keys(H)) check(`${t}: realistic height`, H[t].top > 1.6 && H[t].top < 1.92, `top of head ${H[t].top.toFixed(2)} m, pelvis ${H[t].pelvis.toFixed(2)}, feet ${H[t].foot.toFixed(2)}`);
+  for (const t of Object.keys(H)) {
+    const [lo, hi] = TW.CFG.enemies[t].boss ? [1.8, 2.02] : [1.6, 1.92];
+    check(`${t}: realistic height`, H[t].top > lo && H[t].top < hi, `top of head ${H[t].top.toFixed(2)} m, pelvis ${H[t].pelvis.toFixed(2)}, feet ${H[t].foot.toFixed(2)}`);
+  }
 
   // ---- hit shove: a solid punch moves the chest, then it springs back
   TW.rig.position.set(0, 0, 2.6); step(3);
@@ -115,6 +122,31 @@ try {
   const pinD = d.pinned ? d.pinned.x.distanceTo(h.fist) : 9;
   check('grabbed goon hangs from your fist', d.state === 'held' && pinD < 0.02, 'pin gap ' + pinD.toFixed(3));
   check('the rest dangles (feet near the floor, not floating)', Math.min(d.body.by.anL.x.y, d.body.by.anR.x.y) < 0.6, 'feet ' + Math.min(d.body.by.anL.x.y, d.body.by.anR.x.y).toFixed(2));
+  // ---- one draw call per stool
+  run(`clearEnemies(); stockProps();`);
+  const stools = TW.props.filter(q => q.type === 'stool');
+  check('stools are one mesh each (vinyl + chrome atlas)', stools.length > 0 && stools.every(q => q.obj.isMesh !== false && q.obj.geometry && q.obj.children.length === 0 && q.obj.material.uniforms.map.value.src === run('TEX.stool')), stools.length + ' stools');
+  // ---- the cook's lob lands on a still player's head
+  run(`clearEnemies(); game.state = 'fight'; game.queue = [];`);
+  TW.rig.position.set(0, 0, 0); run('desk.yaw = Math.PI; desk.pitch = 0;'); step(3);
+  const cook = new TW.Enemy('cook'); cook.placeAt(0.6, 3.8, Math.PI); TW.enemies.push(cook); cook.setState('approach'); cook.throwCd = 0;
+  let lobMin = 9, lobbed = null, hp0 = TW.player.hp;
+  step(Math.ceil(3 / DT), () => { for (const q of TW.props) if (q.hostile) { lobbed = q; lobMin = Math.min(lobMin, run('(p) => closestOnSeg(player.head, p.prevPos, p.body.ps[0].x, new THREE.Vector3()).distanceTo(player.head)')(q)); } });
+  check('the cook winds up and lobs at you', !!lobbed, cook.state);
+  check('his lob lands on your head', lobMin < 0.3 && TW.player.hp < hp0, 'closest ' + lobMin.toFixed(2) + ' m, hp ' + hp0 + ' -> ' + TW.player.hp);
+  // ---- Rocco & Ivan: stagger the active one and the other tags in; floor one for good and the other enrages
+  run('updateGame = __ug;');
+  run(`clearEnemies(); stockProps(); startWave(3);`);
+  let spawned = false; step(Math.ceil(6 / DT), () => { if (TW.game.bosses.length === 2) spawned = true; });
+  const B = TW.game.bosses;
+  check('round 4 brings in Rocco and Ivan, one waiting', spawned && B.length === 2 && B.filter(e => e.benched).length === 1 && TW.bossBars.length === 2, B.map(e => e.type + (e.benched ? '(bench)' : '')).join(' '));
+  const act = B.find(e => !e.benched), wait = B.find(e => e.benched);
+  for (const e of B) { e.cooldown = 1e9; }
+  run('game.tagT = 0');
+  act.stagger(); step(4);
+  check('staggering the active boss tags in his partner', act.benched && !wait.benched, `${act.type} benched ${act.benched}, ${wait.type} benched ${wait.benched}`);
+  wait.hp = 0; wait.knockdown(new THREE.Vector3(0, 0, 1), 'knockdown', true); step(4);
+  check('dropping one enrages the other', act.enraged && !act.benched && act.cfg.speed > TW.CFG.enemies[act.type].speed, act.type + ' enraged ' + act.enraged);
   // performance of the solver
   run(`clearEnemies(); stockProps();`);
   for (const t of ['boso', 'boxer', 'wrestler', 'boso']) { const q = new TW.Enemy(t); q.placeAt(rnd() * 4 - 2, rnd() * 3, 0); TW.enemies.push(q); }

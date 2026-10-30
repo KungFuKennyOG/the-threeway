@@ -154,6 +154,7 @@ class BufferGeometry { constructor() { this.attributes = {}; } setAttribute(n, a
 class PlaneGeometry extends BufferGeometry { constructor() { super(); this.setAttribute('uv', new BufferAttribute([0, 1, 1, 1, 0, 0, 1, 0], 2)); } }
 class ShaderMaterial { constructor(p) { Object.assign(this, p); if (!this.uniforms) this.uniforms = {}; } }
 class TextureLoader { load(src) { return { src }; } }
+class CanvasTexture { constructor(img) { this.image = img; } }
 class WebGLRenderer {
   constructor() {
     this.grips = [new Group(), new Group()];
@@ -164,5 +165,5 @@ class WebGLRenderer {
   setAnimationLoop(f) { this.loop = f; }
 }
 module.exports = { Vector2, Vector3, Quaternion, Euler, Matrix4, Color, Object3D, Group, Scene, Mesh, PerspectiveCamera,
-  BufferGeometry, Float32BufferAttribute: BufferAttribute, PlaneGeometry, ShaderMaterial, TextureLoader, WebGLRenderer,
+  BufferGeometry, Float32BufferAttribute: BufferAttribute, PlaneGeometry, ShaderMaterial, TextureLoader, CanvasTexture, WebGLRenderer, DynamicDrawUsage: 35048,
   NearestFilter: 1, RepeatWrapping: 2, FrontSide: 0, DoubleSide: 2, LinearEncoding: 3000 };

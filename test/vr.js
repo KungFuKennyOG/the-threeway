@@ -8,7 +8,9 @@ const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280;
 const mkEl = (id) => ({ id, hidden: false, disabled: false, textContent: '', style: {}, _l: {},
   addEventListener(t, f) { (this._l[t] = this._l[t] || []).push(f); }, async fire(t, e) { for (const f of this._l[t] || []) await f(e || {}); } });
 const els = {}; for (const id of ['c', 'menu', 'vrBtn', 'deskBtn', 'vrNote', 'hud', 'hpFill', 'info']) els[id] = mkEl(id);
-const documentStub = { pointerLockElement: null, getElementById: (id) => els[id], addEventListener() {} };
+const ctx2d = () => new Proxy({ calls: 0 }, { get: (t, k) => (k in t ? t[k] : () => { t.calls++; }), set: (t, k, val) => { t[k] = val; return true; } });
+const documentStub = { pointerLockElement: null, getElementById: (id) => els[id], addEventListener() {},
+  createElement: () => ({ width: 0, height: 0, getContext: ctx2d }) };
 class ImageStub { set src(v) { this.width = 40; this.height = 16; if (this.onload) this.onload(); } }
 const pulses = [];
 const mkPad = () => ({ axes: [0, 0, 0, 0], buttons: Array.from({ length: 6 }, () => ({ pressed: false, value: 0 })),
@@ -148,6 +150,68 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     }
     step(3);
     check('two arm hits break the clinch', !TW.player.clinchedBy && w.state === 'stagger', w.state + ' armHits ' + w.armHits + ' hp ' + TW.player.hp.toFixed(1));
+    // ---- perf panel: left X opens it on the wrist; the left stick tunes instead of walking
+    pads[1].buttons[4].pressed = true; step(2); pads[1].buttons[4].pressed = false; step(2);
+    check('left X opens the wrist perf panel', TW.perfPanel.open && TW.perfPanel.mesh && TW.perfPanel.mesh.visible && TW.perfPanel.mesh.parent === TW.hands.left.anchor);
+    const pull0 = TW.CFG.physics.activePull, rigP = TW.rig.position.clone();
+    pads[1].axes[3] = 1; step(2); pads[1].axes[3] = 0; step(2);          // down: next row (pull)
+    pads[1].axes[2] = 1; step(2); pads[1].axes[2] = 0; step(2);          // right: +0.05
+    check('stick picks a row and nudges its value', TW.perfPanel.row === 1 && Math.abs(TW.CFG.physics.activePull - (pull0 + 0.05)) < 1e-9, 'pull ' + TW.CFG.physics.activePull);
+    check('stick does not walk while the panel is open', TW.rig.position.distanceTo(rigP) < 1e-6);
+    step(Math.ceil(0.3 / DT));
+    check('panel shows live numbers (canvas redrawn)', TW.perfPanel.texture && TW.perfPanel.texture.needsUpdate === true && TW.perf.fps > 30, TW.perf.fps.toFixed(0) + ' fps');
+    TW.CFG.physics.activePull = pull0;
+    pads[1].buttons[4].pressed = true; step(2); pads[1].buttons[4].pressed = false; step(2);
+    check('left X closes it again', !TW.perfPanel.open && !TW.perfPanel.mesh.visible);
+    // ---- catch a potato out of the air and throw it back
+    run(`clearEnemies(); player.hp = 100; game.state = 'fight'; game.queue = [];`);
+    TW.rig.position.set(0, 0, 0); TW.rig.rotation.y = 0;
+    setGrip(R, 0.2, 1.4, -0.35); setGrip(L, -0.25, 1.0, -0.2); step(3);
+    const tgt = new TW.Enemy('boso'); tgt.placeAt(0.3, -2.4, 0); tgt.state = 'circle'; tgt.cooldown = 99; tgt.cfg = Object.assign({}, tgt.cfg, { speed: 0 }); TW.enemies.push(tgt); step(3);
+    const fist = TW.hands.right.fist.clone();
+    ctx.__fist = fist;
+    const pot = run(`(() => { const T = 0.45, S = new THREE.Vector3(__fist.x - 0.4, 1.3, __fist.z - 2.6);
+      const p = new Prop('potato', S); const v = new THREE.Vector3().subVectors(__fist, S).divideScalar(T); v.y -= 0.5 * CFG.physics.gravity * T;
+      p.body.drag = 0.02; p.unpinAll(v); p.hostile = true; p.thrown = true; p.releasedAt = NOW; p.prevPos.copy(S); return p; })()`);
+    pads[0].buttons[1].pressed = true;
+    let caughtAt = -1; step(50, (i) => { if (caughtAt < 0 && TW.hands.right.held === pot) caughtAt = i; });
+    check('squeezed grip catches a potato in flight', TW.hands.right.held === pot && TW.game.catches >= 1 && TW.player.hp === 100, 'frame ' + caughtAt + ' hp ' + TW.player.hp);
+    const thp = tgt.hp;
+    for (let i = 0; i < 7; i++) { setGrip(R, 0.2 + 0.01 * i, 1.4 + 0.02 * i, -0.2 - 0.09 * i); step(1); }
+    pads[0].buttons[1].pressed = false; step(Math.ceil(1.0 / DT));
+    check('thrown back, it hits the goon', tgt.hp < thp, 'hp ' + thp + ' -> ' + tgt.hp);
+    // a potato you don't block or catch hits you
+    pads[0].buttons[1].pressed = false; setGrip(R, 0.25, 1.0, -0.2); step(3);
+    run(`game.state = 'fight'; game.queue = [];`);
+    run(`(() => { const T = 0.5, Hd = player.head.clone(), S = new THREE.Vector3(Hd.x + 0.3, 1.4, Hd.z - 3);
+      const p = new Prop('pot', S); const v = new THREE.Vector3().subVectors(Hd, S).divideScalar(T); v.y -= 0.5 * CFG.physics.gravity * T;
+      p.body.drag = 0.02; p.unpinAll(v); p.hostile = true; p.thrown = true; p.releasedAt = NOW; p.prevPos.copy(S); })()`);
+    const hpPot = TW.player.hp; step(60);
+    check('a pot to the face hurts', TW.player.hp < hpPot, 'hp ' + hpPot + ' -> ' + TW.player.hp);
+    // ---- Bat Boy: swat the bat mid-swing to disarm him, then use it
+    run(`clearEnemies(); player.hp = 100;`); setGrip(R, 0.2, 1.3, -0.25); step(3);
+    const bb = new TW.Enemy('batboy'); bb.placeAt(0, -1.25, 0); bb.state = 'approach'; bb.cooldown = 0; TW.enemies.push(bb);
+    check('Bat Boy spawns holding a bat', bb.weapon && bb.weapon.type === 'bat' && bb.weapon.heldByEnemy === bb);
+    guard = 0; while (!(bb.state === 'windup' && bb.timer > bb.windupTime * 0.6) && guard++ < 900) step(1);
+    const kb = bb.weapon.body.by, mid = kb.knob.x.clone().lerp(kb.tip.x, 0.6);
+    const from = mid.clone().add(new THREE.Vector3(0.05, -0.1, 0.4));
+    setGrip(R, from.x, from.y, from.z); step(2);
+    for (let i = 0; i < 6; i++) { R.position.lerpVectors(from, mid, (i + 1) / 6); step(1); }
+    check('swatting the bat mid-swing disarms him', !bb.weapon && TW.game.disarms >= 1 && bb.state === 'stagger', bb.state + ' disarms ' + TW.game.disarms);
+    setGrip(R, 0.2, 1.3, -0.25); step(Math.ceil(1.5 / DT));
+    const bat = TW.props.find(p => p.type === 'bat');
+    const gp = bat.grabPoint(new THREE.Vector3());
+    check('the bat lands on the floor', gp.y < 0.3, 'y ' + gp.y.toFixed(2));
+    setGrip(R, gp.x, gp.y + 0.03, gp.z); step(2); pads[0].buttons[1].pressed = true; step(2);
+    check('you can pick the bat up', TW.hands.right.held === bat);
+    run(`clearEnemies();`);
+    const dummy = new TW.Enemy('boso'); dummy.placeAt(0, -1.3, 0); dummy.state = 'circle'; dummy.cooldown = 99; dummy.cfg = Object.assign({}, dummy.cfg, { speed: 0 }); dummy.poise = 999; TW.enemies.push(dummy);
+    setGrip(R, 0.15, 1.35, 0.25); step(30); run('lastHit = null');
+    for (let i = 0; i < 20; i++) { setGrip(R, 0.15 - 0.008 * i, 1.35, 0.25 - 0.06 * i); step(1); }   // ~4.3 m/s swing, a full arm's travel
+    const lb = run('lastHit');
+    const fistDmg = lb ? TW.CFG.punch.tiers.find(t => t.name === lb.tier).dmg * (lb.zone === 'head' ? 1.5 : lb.zone.startsWith('arm') ? 0.5 : 1) : 0;
+    check('a bat swing hits harder than the same swing with a fist', lb && lb.dmg >= fistDmg + 9, lb ? `${lb.tier} on ${lb.zone}: ${lb.dmg} dmg vs fist ${fistDmg}` : 'no hit');
+    pads[0].buttons[1].pressed = false; step(2);
     // ---- snap turn + stick move
     const yaw0 = TW.rig.rotation.y; pads[0].axes[2] = 1; step(2); pads[0].axes[2] = 0; step(2);
     check('right stick snap-turns 30°', Math.abs(Math.abs(TW.rig.rotation.y - yaw0) - Math.PI / 6) < 1e-6);
