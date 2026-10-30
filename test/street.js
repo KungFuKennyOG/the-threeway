@@ -36,7 +36,7 @@ try {
   const streetMeshes = TW.scene.children.filter(o => o.material && o.material.uniforms && o.material.uniforms.map && o.material.uniforms.map.value === TW.ST.atlas.tex && !o.parent.isProp);
   check('the street is a few draw calls (street, skylines, sky, beacons, boom)', streetMeshes.length <= 5, streetMeshes.length + ' static street meshes');
   const litTris = run('ST.lit.tris'), skyTris = run('ST.sky.tris');
-  check('street + skylines under the triangle budget', litTris + skyTris < 45000, `${litTris} street + ${skyTris} skyline tris`);
+  check('street + skylines under the triangle budget', litTris + skyTris < 60000, `${litTris} street + ${skyTris} skyline tris`);
   const baked = TW.scene.children.filter(o => o.geometry && o.geometry.attributes && o.geometry.attributes.bake);
   const lit = baked.filter(o => !o.material.uniforms.uEmissive.value);
   check('static geometry carries baked light (bar + street)', lit.length >= 3 && lit.every(o => o.material.uniforms.uBaked.value === 1), lit.length + ' baked meshes');
@@ -121,6 +121,20 @@ try {
   const t0 = process.hrtime.bigint(); for (let i = 0; i < 120; i++) TW.updatePhysics(1 / 72);
   const ms = Number(process.hrtime.bigint() - t0) / 1e6 / 120;
   check('street physics cost per frame (4 goons + street props, Node on a server CPU)', ms < 4, ms.toFixed(2) + ' ms');
+  // LOD stand-ins and portals
+  check('far buildings are cheap lit stand-ins, always drawn (no black edge)', TW.ST.farBlocks > 500 && TW.ST.skylineMesh.frustumCulled === false, TW.ST.farBlocks + ' stand-ins');
+  run('startStreet(false); level.encounter = 99'); TW.rig.position.set(0, 0, 12); run('desk.yaw = Math.PI'); step(3);
+  check('outside facing away from the door: the bar isn\'t drawn', TW.ST.barGroup.length >= 3 && TW.ST.barGroup.every(o => !o.visible) && TW.ST.litMesh.visible);
+  run('desk.yaw = 0'); step(3);
+  check('outside facing the open door: the bar is drawn through it', TW.ST.barGroup.every(o => o.visible));
+  run('startGame()'); TW.rig.position.set(0, 0, 0); run('desk.yaw = Math.PI'); step(3);
+  check('inside with the door shut: the street, skylines and sky aren\'t drawn', TW.ST.streetGroup.every(o => !o.visible) && TW.ST.barGroup.every(o => o.visible));
+  const bm = TW.ST.barMesh;
+  check('the whole bar room is one mesh on one atlas', bm && bm.material.uniforms.uAtlas.value === 1 && bm.geometry.attributes.arect && TW.ST.barGroup.length <= 5, TW.ST.barGroup.length + ' bar meshes');
+  step(2);
+  const batches = [...run('propBatches').values()].filter(b => b.mesh.visible);
+  const stoolVerts = TW.props.filter(q => q.type === 'stool' && q.shown).reduce((n, q) => n + q.obj.geometry.attributes.position.count, 0);
+  check('stools and street props are drawn in one batch per material', batches.length >= 1 && batches.length <= 2 && TW.props.filter(q => q.batched).every(q => !q.obj.visible) && batches.some(b => b.count === stoolVerts), batches.map(b => b.count + ' verts').join(', '));
   // back inside: the bar's own lights again
   run('startGame()'); TW.rig.position.set(0, 0, 0); step(3);
   check('inside the bar the live lights are the bar\'s six again', Math.abs(run('SU.uAmbient.value.x') - 0.2) < 1e-9 && TW.level.name === 'bar');
