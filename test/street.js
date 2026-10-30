@@ -36,7 +36,7 @@ try {
   const streetMeshes = TW.scene.children.filter(o => o.material && o.material.uniforms && o.material.uniforms.map && o.material.uniforms.map.value === TW.ST.atlas.tex && !o.parent.isProp);
   check('the street is a few draw calls (street, skylines, sky, beacons, boom)', streetMeshes.length <= 5, streetMeshes.length + ' static street meshes');
   const litTris = run('ST.lit.tris'), skyTris = run('ST.sky.tris');
-  check('street + skylines under the triangle budget', litTris + skyTris < 60000, `${litTris} street + ${skyTris} skyline tris`);
+  check('street + skylines under the triangle budget', litTris + skyTris < 80000, `${litTris} street + ${skyTris} skyline tris`);
   const baked = TW.scene.children.filter(o => o.geometry && o.geometry.attributes && o.geometry.attributes.bake);
   const lit = baked.filter(o => !o.material.uniforms.uEmissive.value);
   check('static geometry carries baked light (bar + street)', lit.length >= 3 && lit.every(o => o.material.uniforms.uBaked.value === 1), lit.length + ' baked meshes');

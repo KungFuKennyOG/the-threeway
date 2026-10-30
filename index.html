@@ -188,7 +188,7 @@ const CFG = {
     fog: { near: 28, far: 130 },               // outside (the bar's is render.fogNear / fogFar); blends at the door. Far enough to see the checkpoint from the square
     skylineFog: 0.5,                           // the far skylines get at most this much fog
     atlasGutter: 8,                            // px of wrapped border per street texture, so the atlas can be mipmapped
-    farField: { radius: 420, spacing: 22, oldRadius: 150 },   // LOD stand-ins: one lit box per far building, out to radius (m)
+    farField: { radius: 430, pitch: 30, block: 22, oldRadius: 140, lampRadius: 16, lampK: 1.3 },   // LOD stand-ins: a street grid of lit boxes from the street's edge out to radius (m), a street light per block
     portalDeg: 72,                             // the bar and the street only draw each other when the door is open and in view
     beaconBlink: 1.6,                          // s per on/off cycle of the towers' red beacons
     light: { ambient: [0.09, 0.075, 0.11], sky: [0.05, 0.075, 0.11],          // night + a little moonlight on roofs
@@ -389,10 +389,19 @@ function tbox(acc, accFace, y0, y1, w0, d0, w1, d1, uvs, o = {}) {
 // Static light, baked per vertex with exactly the shader's formula: any number of lamps, no per-frame cost.
 // light: { ambient: [r,g,b], sky: [r,g,b] (extra on up-facing surfaces), lights: [[pos, [r,g,b] pre-scaled, radius]] }
 function bakeLight(P, N, Cv, light) {
-  const out = new Float32Array(P.length), A = light.ambient, S = light.sky || [0, 0, 0], Ls = light.lights;
+  const out = new Float32Array(P.length), A = light.ambient, S = light.sky || [0, 0, 0];
+  // hundreds of lamps (the far city): file them in a coarse xz grid and only test the cells around each vertex
+  let index = null, C = 0;
+  if (light.lights.length > 64) {
+    C = Math.max(...light.lights.map(l => l[2])); index = new Map();
+    for (const L of light.lights) { const k = Math.floor(L[0][0] / C) + ',' + Math.floor(L[0][2] / C); if (!index.has(k)) index.set(k, []); index.get(k).push(L); }
+  }
+  const near = [];
   for (let i = 0; i < P.length; i += 3) {
     const px = P[i], py = P[i + 1], pz = P[i + 2], nx = N[i], ny = N[i + 1], nz = N[i + 2], up = Math.max(0, ny);
     let r = A[0] + S[0] * up, g = A[1] + S[1] * up, b = A[2] + S[2] * up;
+    let Ls = light.lights;
+    if (index) { near.length = 0; const cx = Math.floor(px / C), cz = Math.floor(pz / C); for (let a = -1; a <= 1; a++) for (let c = -1; c <= 1; c++) { const l = index.get((cx + a) + ',' + (cz + c)); if (l) for (const L of l) near.push(L); } Ls = near; }
     for (const [lp, lc, rad] of Ls) {
       const dx = lp[0] - px, dy = lp[1] - py, dz = lp[2] - pz, dist = Math.hypot(dx, dy, dz) + 1e-4;
       if (dist >= rad) continue;
@@ -880,6 +889,7 @@ const PAINT = {
   // ---- LOD stand-ins: one box per far building, its lit windows painted on (4 floors x 4 bays per repeat)
   farOld() { const p = new Pix(32, 32); p.fill('#8a7e6e'); for (let y = 0; y < 32; y += 8) { p.rect(0, y + 7, 32, 1, '#6e6456'); for (let x = 2; x < 32; x += 8) { const lit = prng() < 0.38; p.rect(x, y + 2, 4, 4, lit ? '#ffcf86' : '#2a2430', lit ? EM : 255); } } return p; },
   farHino() { const p = new Pix(32, 32); p.fill('#3a3438'); for (let y = 0; y < 32; y += 8) { p.rect(0, y, 32, 1, '#24222a'); for (let x = 1; x < 32; x += 8) { const q = prng(); p.rect(x, y + 3, 6, 3, q < 0.18 ? '#ff3020' : q < 0.28 ? '#ff3fb0' : q < 0.36 ? '#3ff0ff' : q < 0.6 ? '#ffd0a0' : '#1a1418', q < 0.6 ? EM : 255); } } return p; },
+  farGround() { const p = new Pix(8, 8); p.fill('#1a1418'); return p; },
   farCol() { const p = new Pix(32, 32); p.fill('#6a3a32'); for (let y = 0; y < 32; y += 8) { p.rect(0, y + 7, 32, 1, '#c9a04a'); for (let x = 2; x < 32; x += 8) { const lit = prng() < 0.42; p.rect(x, y + 1, 4, 5, lit ? '#ffd8a0' : '#1e1418', lit ? EM : 255); } } return p; },
 };
 // pack every painting into one atlas (shelf packing); returns { tex, rect: { key: [u0, v0, u1, v1] } }
@@ -939,7 +949,7 @@ function uvBreaks(a, b, len, cell) {
 // uv = [u0, v0, u1, v1] in texture repeats (u runs A→B, v runs A→D). It is cut wherever a repeat ends (an atlas
 // can't wrap) and into cells of at most `cell` metres so the baked light has vertices to live on.
 // flat colours never need cutting at texture repeats
-const SOLID = new Set(['litRed', 'litCyan', 'litMagenta', 'litWarm', 'litSodium', 'roofDark', 'black', 'white', 'iron', 'gilt', 'lacquer']);
+const SOLID = new Set(['farGround', 'litRed', 'litCyan', 'litMagenta', 'litWarm', 'litSodium', 'roofDark', 'black', 'white', 'iron', 'gilt', 'lacquer']);
 function aq(acc, key, A, B, C, D, uv, out, cell = 2.2) {
   const R = ST.atlas.rect[key]; if (!R) throw new Error('no painting ' + key);
   if (SOLID.has(key)) uv = [0, 0, 1, 1];
@@ -1187,6 +1197,9 @@ function buildStreetGeometry() {
     aq(acc, 'curb', [cx, 0.01, SZ], [cx, 0.01, RZ + 1], [cx + s * 0.18, 0.01, RZ + 1], [cx + s * 0.18, 0.01, SZ], [0, 0, (RZ + 1 - SZ) / 2, 1], [0, 1, 0], 2);
   }
   ground(acc, 'cobble', W.x1, W.z0, -SX, W.z1, 0, 2); ground(acc, 'cobble', SX, E.z0, E.x1, E.z1, 0, 2);
+  // past the barricades the old roads carry on, gaslit, into the city (the far grid leaves them a street at z 10.5..18.5)
+  ground(acc, 'cobble', W.x1 - 46, 10.6, W.x1, 18.4, 0, 2); ground(acc, 'cobble', E.x1, 10.6, E.x1 + 46, 18.4, 0, 2);
+  for (let k = 0; k < 5; k++) { gasLamp(acc, W.x1 + 2 - k * 11, k % 2 ? 11.2 : 17.8); gasLamp(acc, E.x1 - 2 + k * 11, k % 2 ? 11.2 : 17.8); }
   // three brass lines in the cobbles, meeting at the Threeway's door: the Accords borders
   const line = (pts) => { for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1], L = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / L * 0.07, nz = (bx - ax) / L * 0.07; aq(acc, 'brassLine', [ax + nx, 0.015, az + nz], [bx + nx, 0.015, bz + nz], [bx - nx, 0.015, bz - nz], [ax - nx, 0.015, az - nz], [0, 0, L / 0.5, 1], [0, 1, 0], 2); } };
   line([[0, Z + 0.02], [0, RZ + 1.2]]);
@@ -1230,10 +1243,10 @@ function buildStreetGeometry() {
   wallLamp(acc, -RX, 3.4, 29, Math.PI / 2); bracket(acc, -RX, 3.4, 29, Math.PI / 2);
   // St. Vost Cathedral's onion domes over the west roofs (1740s, Krasnovian craftsmen)
   acc.tint = [0.9, 0.86, 0.76];
-  sbox(acc, 'stone', -32, 0, 6, 10, 16, 15, 0, { u: 4, v: 4, top: 'slate' });
-  cyl(acc, 'stone', -32, 15, 6, 4.2, 4.2, 3, 10, { u: 4, v: 4 }); acc.tint = [1, 1, 1];
-  onion(acc, -32, 18, 6, 5.6, 9, 10);
-  for (const [ox, oz] of [[-27.5, -1], [-36.5, 13]]) { acc.tint = [0.9, 0.86, 0.76]; cyl(acc, 'stone', ox, 0, oz, 1.6, 1.6, 19, 8, { u: 4, v: 4 }); acc.tint = [1, 1, 1]; onion(acc, ox, 19, oz, 2.0, 4.4); }
+  sbox(acc, 'stone', -30, 0, -15, 16, 10, 15, 0, { u: 4, v: 4, top: 'slate' });
+  cyl(acc, 'stone', -30, 15, -15, 4.2, 4.2, 3, 10, { u: 4, v: 4 }); acc.tint = [1, 1, 1];
+  onion(acc, -30, 18, -15, 5.6, 9, 10);
+  for (const [ox, oz] of [[-22.5, -12], [-37.5, -18]]) { acc.tint = [0.9, 0.86, 0.76]; cyl(acc, 'stone', ox, 0, oz, 1.6, 1.6, 19, 8, { u: 4, v: 4 }); acc.tint = [1, 1, 1]; onion(acc, ox, 19, oz, 2.0, 4.4); }
   // landmarks in the square
   brassClock(acc, ...STREET.clock);
   sealedStation(acc, ...STREET.station);
@@ -1342,20 +1355,55 @@ function decoTower(acc, x, z, w, d, h, phi, rng, mast) {
 function buildFarField() {
   const acc = ST.sky, F = CFG.street.farField; let s = 7, n = 0;
   const rng = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
-  const near = (x, z) => (x > -46 && x < 46 && z > -14 && z < 64) || (x > -76 && x < 50 && z > 64 && z < 100) || (Math.abs(x) < 12 && z > 56);
-  for (let gx = -F.radius; gx <= F.radius; gx += F.spacing) for (let gz = -F.radius; gz <= F.radius; gz += F.spacing) {
-    const x = gx + (rng() - 0.5) * F.spacing * 0.5, z = 25 + gz + (rng() - 0.5) * F.spacing * 0.5, r = Math.hypot(x, z - 25);
-    if (r > F.radius || near(x, z) || rng() < 0.12) continue;
-    const a = Math.atan2(x, z - 10) / DEG, old = r < F.oldRadius;   // 0° = down the road; the road is the Krasnovia | Columbia line
+  // ground under the whole city, just below the street's own (which covers it near you)
+  ground(acc, 'farGround', -F.radius - 60, -F.radius - 60, F.radius + 60, F.radius + 80, -0.06, 60, { cell: 999 });
+  ground(acc, 'farGround', -170, -150, 170, 190, -0.04, 60, { cell: 10 });   // finer near you, so street lights pool on it
+  ST.farLamps = [];
+  // what's already built near you (the square, its buildings, the side roads, the road, the Ring Road and its first blocks)
+  const NEAR = [[-37, 37, -7, 31], [-40, -19, -21, -7], [-13.5, 13.5, 31, 57], [-42, 42, 57, 74], [-72, 44, 74, 98]];
+  const hits = (x0, x1, z0, z1) => NEAR.some(([a0, a1, b0, b1]) => x0 < a1 && x1 > a0 && z0 < b1 && z1 > b0);
+  const P = F.pitch, B = F.block, half = B / 2;
+  // a street grid that carries on the three old roads: x = 0 (the wall down the middle), z = 14.5 (the side roads)
+  for (let ix = -Math.ceil(F.radius / P); ix <= Math.ceil(F.radius / P); ix++) for (let iz = -Math.ceil(F.radius / P); iz <= Math.ceil(F.radius / P); iz++) {
+    const cx = ix * P, cz = 14.5 + P / 2 + iz * P, r = Math.hypot(cx, cz - 20);
+    if (r > F.radius) continue;
+    const old = r < F.oldRadius, a = Math.atan2(cx, cz - 10) / DEG;
     const sector = old ? 'old' : Math.abs(a) > 125 ? 'hino' : a < 0 ? 'kras' : 'colu';
-    const w = F.spacing * (0.55 + rng() * 0.3);
-    const h = { old: 9 + rng() * 9, hino: 6 + rng() * 10, kras: 18 + rng() * 26, colu: 10 + rng() * 22 }[sector];
-    const key = { old: 'farOld', hino: 'farHino', kras: 'panel', colu: 'farCol' }[sector];
-    const top = { old: rng() < 0.55 ? 'copperTop' : 'slate', hino: 'kawara', kras: 'roofDark', colu: 'roofDark' }[sector];
-    if (sector === 'old') acc.tint = PLASTER[Math.floor(rng() * PLASTER.length)].map(c => c * 0.9 + 0.1);
-    const rows = h > 26 ? 2 : 1;   // one quad per face (two rows for tall slabs): the windows stretch to fit, nobody can tell at 100 m
-    sbox(acc, key, x, 0, z, w, w, h, (rng() - 0.5) * 0.3, { u: w * 1.0001, v: h / rows * 1.0001, top, tu: w * 1.0001, cell: 999 });
-    acc.tint = [1, 1, 1]; n++;
+    // the block: two buildings side by side (one far out), or two narrow ones either side of the wall at x = 0
+    const parts = ix === 0 ? [[-half, -4], [4, half]] : (r < 220 ? [[-half, -0.6], [0.6, half]] : [[-half, half]]);
+    for (const [u0, u1] of parts) {
+      let x0 = cx + u0, x1 = cx + u1, z0 = cz - half + rng() * 1.5, z1 = cz + half - rng() * 1.5;
+      for (const [a0, a1, b0, b1] of NEAR) {   // trim a stand-in back to the edge of what's built, so there's no gap
+        if (!(x0 < a1 && x1 > a0 && z0 < b1 && z1 > b0)) continue;
+        const cut = [[a0 - x0, () => { x1 = a0 - 1; }], [x1 - a1, () => { x0 = a1 + 1; }], [b0 - z0, () => { z1 = b0 - 1; }], [z1 - b1, () => { z0 = b1 + 1; }]];
+        cut.sort((p, q) => q[0] - p[0]); cut[0][1]();
+      }
+      if (x1 - x0 < 2.5 || z1 - z0 < 2.5 || hits(x0, x1, z0, z1)) continue;
+      const w = x1 - x0, d = z1 - z0, mx = (x0 + x1) / 2, mz = (z0 + z1) / 2;
+      let h = { old: 10 + rng() * 7, hino: 7 + rng() * 9, kras: 22 + rng() * 24, colu: 12 + rng() * 26 }[sector];
+      const dh = Math.hypot(mx - STREET.hino[0], mz - STREET.hino[1]); if (sector === 'hino' && dh < 170 && rng() < 0.3) h = 30 + rng() * 60;
+      const key = { old: 'farOld', hino: h > 25 ? 'glassN' : 'farHino', kras: 'panel', colu: rng() < 0.5 ? 'farCol' : 'decoStone' }[sector];
+      const rows = Math.max(1, Math.round(h / 13));   // one quad per face per ~4 floors
+      if (sector === 'old') acc.tint = PLASTER[Math.floor(rng() * PLASTER.length)].map(c => c * 0.9 + 0.1);
+      frustum(acc, key, mx, 0, mz, w, d, w, d, h, 0, { u: w * 1.0001, v: h / rows * 1.0001, top: false, cell: 999, faceKey: { l: key, r: key } });
+      // aq above used u per face = w; side faces (depth d) stretch a little: fine at this distance
+      acc.tint = [1, 1, 1];
+      if (sector === 'old') {   // mansard / copper roof, sometimes an onion dome
+        const rk = rng() < 0.5 ? 'copperTop' : 'slate';
+        frustum(acc, rk, mx, h, mz, w, d, w * 0.55, d * 0.55, 3.2, 0, { u: w * 1.0001, v: 3.3, top: rk, tu: w * 1.0001, cell: 999 });
+        if (rng() < 0.06) onion(acc, mx, h + 3.2, mz, 2.2, 5, 6);
+      } else if (sector === 'hino' && h < 25) frustum(acc, 'kawara', mx, h, mz, w + 1.6, d + 1.6, w * 0.4, d * 0.2, 2.6, 0, { u: 99, v: 99, top: 'kawara', tu: 99, cell: 999 });
+      else ground(acc, 'roofDark', x0, z0, x1, z1, h, 99, { cell: 999 });
+      n++;
+    }
+    // a street light on the block's corner: the city's lights all the way out
+    const lk = { old: 'gaslamp', hino: rng() < 0.5 ? 'litRed' : 'litCyan', kras: 'litSodium', colu: 'litWarm' }[sector];
+    const lx = cx - half - (P - B) / 2, lz = cz - half - (P - B) / 2;
+    if (!hits(lx - 1, lx + 1, lz - 1, lz + 1)) {
+      sbox(acc, lk, lx, 4.2, lz, 1.0, 1.0, 1.0, 0, { u: 99, v: 99, cell: 999 });
+      const L = CFG.street.light, col = { old: L.gas, hino: L.hinoGlow, kras: L.sodium, colu: L.amber }[sector];
+      ST.farLamps.push(lightFromHex([lx, 4.6, lz], col, F.lampRadius, F.lampK));
+    }
   }
   ST.farBlocks = n;
 }
@@ -1389,7 +1437,7 @@ function buildStreet() {
   buildFarField();
   const L = CFG.street.light;
   const litMesh = new THREE.Mesh(ST.lit.geometry({ ambient: L.ambient, sky: L.sky, lights: ST.lamps }), makeMat('street', { baked: true }));
-  const skyMesh = new THREE.Mesh(ST.sky.geometry({ ambient: L.skylineAmbient, sky: L.skylineSky, lights: [] }), makeMat('street', { baked: true, fog: CFG.street.skylineFog }));
+  const skyMesh = new THREE.Mesh(ST.sky.geometry({ ambient: L.skylineAmbient, sky: L.skylineSky, lights: ST.farLamps.concat(ST.lamps) }), makeMat('street', { baked: true, fog: CFG.street.skylineFog }));
   for (const m of [litMesh, skyMesh]) { m.matrixAutoUpdate = false; m.updateMatrix(); m.frustumCulled = false; scene.add(m); }
   // the street keeps its own outdoor fog wherever you stand: seen through the door from inside the bar it isn't
   // drowned in the bar's short fog (the shared fog, for goons and props, still follows you)
