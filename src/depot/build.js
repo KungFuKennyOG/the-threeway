@@ -79,6 +79,10 @@ function buildDepotExterior(acc) {
   dSolid(-15.1, 25.4, -13.1, 27.8, 0.9);
   for (const [lx, lz, d] of [[-15, 6, 1], [15, 6, -1], [-15, 22, 1], [15, 22, -1]]) sodiumLamp(acc, lx, lz, d);
   sodiumLamp(acc, -10.5, -6, 1); sodiumLamp(acc, 10.5, -6, -1);
+  sodiumLamp(acc, -9, 15, 1);                                                                 // mid-yard, so goons read
+  // floodlights over the track doors, aimed down into the yard
+  for (const s of [-1, 1]) { dBox(acc, 'iron', s * 6.5, DEPOT.doorH + 0.2, H0 - 0.35, 0.9, 0.5, 0.4, { u: 1, v: 1 }); dBox(acc, 'sodiumHead', s * 6.5, DEPOT.doorH + 0.05, H0 - 0.6, 0.8, 0.2, 0.18, { u: 0.8, v: 0.18 });
+    dLight(s * 6.5, DEPOT.doorH - 0.4, H0 - 2.5, CFG.street.light.sodium, CFG.depot.light.floodRadius, CFG.depot.light.floodK); }
   dLight(0, DEPOT.doorH + 1.2, H0 - 1.2, '#ff7050', 9, 0.9);   // the red depot sign on the yard
 }
 function buildDepotHall(acc) {

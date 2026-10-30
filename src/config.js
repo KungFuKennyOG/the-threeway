@@ -148,7 +148,7 @@ const CFG = {
     enrageAt: 0.5,                             // the boss loses it below this share of his health
     props: [['crate', -8.5, 3], ['crate', -8.9, 3.8], ['bin', 13.5, 12], ['sign', -16.6, 30], ['crate', 12.5, 36], ['bin', -12, 34],
             ['crate', 16.4, 52], ['bottle', 24, 50.5], ['bottle', 24.1, 52], ['bottle', 26.8, 48]],
-    light: { sodiumRadius: 14, sodiumK: 1.5, tube: '#dfefff', tubeRadius: 13, tubeK: 1.25, workRadius: 9, workK: 1.6, ring: '#ffd8a0', ringRadius: 7.5, ringK: 1.6, hallAmbient: [0.1, 0.1, 0.115] },
+    light: { sodiumRadius: 14, sodiumK: 1.5, floodRadius: 18, floodK: 1.4, tube: '#dfefff', tubeRadius: 13, tubeK: 1.25, workRadius: 9, workK: 1.6, ring: '#ffd8a0', ringRadius: 7.5, ringK: 1.6, hallAmbient: [0.1, 0.1, 0.115] },
   },
   debugLabels: true,          // floating LIGHT / SOLID / HEAVY labels at hit points
   labelScale: 0.0035,         // metres per label pixel
