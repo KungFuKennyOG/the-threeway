@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 420" width="420" height="420" role="img" aria-label="The Threeway emblem: a taped fist on a round brass sign split three ways">
+<defs>
+<pattern id="diths" width="8" height="8" patternUnits="userSpaceOnUse"><rect width="4" height="4" fill="#140b12" opacity="0.42"/><rect x="4" y="4" width="4" height="4" fill="#140b12" opacity="0.42"/></pattern>
+<clipPath id="ins"><circle cx="200" cy="200" r="160"/></clipPath>
+</defs>
+<circle cx="212" cy="212" r="194" fill="#000"/>
+<circle cx="200" cy="200" r="194" fill="#c9a04a" stroke="#000" stroke-width="8"/>
+<circle cx="200" cy="200" r="180" fill="none" stroke="#8a6a2a" stroke-width="4"/>
+<rect x="370.6" y="229.9" width="10" height="10" fill="#6a5a30"/><rect x="343.8" y="294.4" width="10" height="10" fill="#fff2c0"/><rect x="294.4" y="343.8" width="10" height="10" fill="#fff2c0"/><rect x="229.9" y="370.6" width="10" height="10" fill="#fff2c0"/><rect x="160.1" y="370.6" width="10" height="10" fill="#6a5a30"/><rect x="95.6" y="343.8" width="10" height="10" fill="#fff2c0"/><rect x="46.2" y="294.4" width="10" height="10" fill="#fff2c0"/><rect x="19.4" y="229.9" width="10" height="10" fill="#fff2c0"/><rect x="19.4" y="160.1" width="10" height="10" fill="#6a5a30"/><rect x="46.2" y="95.6" width="10" height="10" fill="#fff2c0"/><rect x="95.6" y="46.2" width="10" height="10" fill="#fff2c0"/><rect x="160.1" y="19.4" width="10" height="10" fill="#fff2c0"/><rect x="229.9" y="19.4" width="10" height="10" fill="#6a5a30"/><rect x="294.4" y="46.2" width="10" height="10" fill="#fff2c0"/><rect x="343.8" y="95.6" width="10" height="10" fill="#fff2c0"/><rect x="370.6" y="160.1" width="10" height="10" fill="#fff2c0"/>
+<circle cx="200" cy="200" r="164" fill="#140b12" stroke="#000" stroke-width="8"/>
+<g clip-path="url(#ins)">
+<path d="M200,200 L61.4,120.0 A160,160 0 0,1 338.6,120.0 Z" fill="#e8352b"/>
+<path d="M200,200 L338.6,120.0 A160,160 0 0,1 200.0,360.0 Z" fill="#ff9a3c"/>
+<path d="M200,200 L200.0,360.0 A160,160 0 0,1 61.4,120.0 Z" fill="#ff4f9a"/>
+<rect x="0" y="222" width="420" height="200" fill="url(#diths)"/>
+<g stroke="#140b12" stroke-width="12"><line x1="200" y1="200" x2="61.4" y2="120.0"/><line x1="200" y1="200" x2="338.6" y2="120.0"/><line x1="200" y1="200" x2="200.0" y2="360.0"/></g>
+<g transform="translate(8 8)" fill="#000"><rect x="160" y="250" width="80" height="140"/><rect x="128" y="146" width="144" height="128"/><rect x="128" y="112" width="144" height="44"/></g>
+<rect x="164" y="262" width="72" height="140" fill="#c88a64" stroke="#000" stroke-width="7"/>
+<rect x="158" y="262" width="84" height="30" fill="#f2ede4" stroke="#000" stroke-width="7"/>
+<line x1="164" y1="276" x2="236" y2="270" stroke="#c4bfb4" stroke-width="4"/>
+<rect x="150" y="320" width="100" height="44" fill="#3a5a8a" stroke="#000" stroke-width="7"/>
+<line x1="150" y1="334" x2="250" y2="334" stroke="#1e3456" stroke-width="5"/>
+<g fill="#c9a04a"><rect x="160" y="346" width="6" height="6"/><rect x="180" y="346" width="6" height="6"/><rect x="200" y="346" width="6" height="6"/><rect x="220" y="346" width="6" height="6"/><rect x="240" y="346" width="6" height="6"/></g>
+</g>
+<rect x="130" y="148" width="140" height="122" fill="#f2ede4" stroke="#000" stroke-width="8"/>
+<g fill="#f2ede4" stroke="#000" stroke-width="8">
+<rect x="130" y="112" width="35" height="46"/><rect x="165" y="108" width="35" height="50"/><rect x="200" y="108" width="35" height="50"/><rect x="235" y="114" width="35" height="44"/>
+</g>
+<g stroke="#000" stroke-width="5"><line x1="165" y1="158" x2="165" y2="208"/><line x1="200" y1="158" x2="200" y2="208"/><line x1="235" y1="158" x2="235" y2="208"/></g>
+<g stroke="#c4bfb4" stroke-width="5"><line x1="140" y1="132" x2="156" y2="124"/><line x1="208" y1="130" x2="228" y2="120"/><line x1="246" y1="190" x2="262" y2="180"/><line x1="140" y1="186" x2="156" y2="176"/></g>
+<path d="M205 126 l7 -6 l6 6 l7 -6 l6 6" fill="none" stroke="#c0384a" stroke-width="5"/>
+<rect x="116" y="212" width="112" height="44" fill="#e6e3da" stroke="#000" stroke-width="8"/>
+<line x1="126" y1="230" x2="214" y2="230" stroke="#c4bfb4" stroke-width="4"/>
+<g transform="translate(316 92)">
+<polygon points="0,-46 9,-12 40,-24 16,0 40,24 9,12 0,46 -9,12 -40,24 -16,0 -40,-24 -9,-12" fill="#000" transform="translate(6 6)"/>
+<polygon points="0,-46 9,-12 40,-24 16,0 40,24 9,12 0,46 -9,12 -40,24 -16,0 -40,-24 -9,-12" fill="#f2c14e" stroke="#000" stroke-width="5"/>
+<polygon points="0,-18 5,-5 18,0 5,5 0,18 -5,5 -18,0 -5,-5" fill="#fff"/>
+</g>
+</svg>

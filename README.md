@@ -1,5 +1,7 @@
 # The Threeway
 
+![The Threeway](docs/logo.png)
+
 VR beat 'em up prototype for Quest 3. Vostburg, 1986: a city split three ways by a cold war, and the one bar where all three sides drink together. The officials want it shut. Their muscle just walked in.
 
 This is the combat MVP. It answers one question: does hitting people in The Threeway feel good?
