@@ -13,8 +13,8 @@ function updateHud(dt) {
     hpFill.style.width = (frac * 100).toFixed(0) + '%';
     const t = lastHit ? `${lastHit.tier.toUpperCase()} · ${lastHit.speed.toFixed(1)} m/s · ${lastHit.zone} · ${lastHit.dmg} dmg` : 'Punch something.';
     const bosses = game.bosses.filter(e => e.alive).map(e => `${e.type.toUpperCase()} ${Math.max(0, Math.ceil(e.hp))}${e.benched ? ' (waiting)' : ''}${e.enraged ? ' (ENRAGED)' : ''}`).join(' · ');
-    const street = level.name === 'street', E = CFG.street.encounters;
-    const wave = street ? (game.state === 'won' ? 'Checkpoint reached — R to restart the street' : game.state === 'lost' ? 'You got tossed' : game.state === 'walk' ? (level.encounter + 1 < E.length ? 'Tripoint Square — head down the road' : 'Walk up to the checkpoint') : `Street ${level.encounter + 1} / ${E.length}`)
+    const street = level.name === 'street' || level.name === 'depot', E = stageCfg().encounters;
+    const wave = street ? (game.state === 'won' ? (level.name === 'depot' ? 'Depot cleared — R to restart the depot' : 'Checkpoint reached — walk through, or R to restart the street') : game.state === 'lost' ? 'You got tossed' : game.state === 'walk' ? (level.name === 'depot' ? 'Tram Depot 7 — head into the hall' : level.encounter + 1 < E.length ? 'Tripoint Square — head down the road' : 'Walk up to the checkpoint') : `${level.name === 'depot' ? 'Depot' : 'Street'} ${level.encounter + 1} / ${E.length}`)
       : game.state === 'won' ? (DOOR.target ? 'Bar cleared — walk out the door (R to restart)' : 'Bar cleared') : game.state === 'lost' ? 'You got tossed' : `Round ${game.wave + 1} / ${CFG.waves.length}${bosses ? '  ·  ' + bosses : ''}`;
     const held = hands.right.held ? (hands.right.held.isProp ? `Holding: ${hands.right.held.type}` : 'Holding a goon — Q to throw') : '';
     infoEl.textContent = `${wave}   ·   ${t}${held ? '   ·   ' + held : ''}${player.clinchedBy ? '   ·   CLINCHED: punch his arms or G to headbutt' : ''}`;

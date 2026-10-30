@@ -33,7 +33,7 @@ try {
   const atlasKeys = Object.keys(run('PAINT')), rect = TW.ST.atlas.rect;
   check('every street painting is in the atlas', atlasKeys.every(k => rect[k] && rect[k][2] > rect[k][0] && rect[k][3] > rect[k][1] && rect[k][2] <= 1 && rect[k][3] <= 1), atlasKeys.length + ' paintings, ' + TW.ST.atlas.W + 'x' + TW.ST.atlas.H);
   const streetMeshes = TW.scene.children.filter(o => o.material && o.material.uniforms && o.material.uniforms.map && o.material.uniforms.map.value === TW.ST.atlas.tex && !o.parent.isProp);
-  check('the street is a few draw calls (street, skylines, sky, beacons, boom)', streetMeshes.length <= 5, streetMeshes.length + ' static street meshes');
+  check('the street and depot are a few meshes (street, skylines, sky, beacons, boom, depot outside/hall/workshop)', streetMeshes.length <= 8, streetMeshes.length + ' static street + depot meshes');
   const litTris = run('ST.lit.tris'), skyTris = run('ST.sky.tris');
   check('street + skylines under the triangle budget', litTris + skyTris < 80000, `${litTris} street + ${skyTris} skyline tris`);
   const baked = TW.scene.children.filter(o => o.geometry && o.geometry.attributes && o.geometry.attributes.bake);

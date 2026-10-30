@@ -101,6 +101,14 @@ const BODIES = {
     r.torso[3].push((a) => tbox(a, null, 0.3, 0.52, 0.56, 0.34, 0.64, 0.36, { '*': TA }, { z: 0.01, faces: 'fblr' }));
     return r;
   },
+  volkov() {   // Bogdan "the Bear" Volkov: barrel chest, bare arms, red singlet, black tights, a champion's gold belt
+    const r = humanoid({ torso: TA, legs: TB, arms: TC, hands: TC, feet: TD, shoulder: 0.74, chestD: 0.46, waist: 0.54,
+      neck: -0.03, head: [0.26, 0.3, 0.28], thighW: 0.24 });
+    r.torso[3].push((a) => tbox(a, null, 0.0, 0.36, 0.56, 0.42, 0.68, 0.5, { '*': TA }, { z: 0.02, faces: 'fblr' }));
+    r.hips[3].push((a) => tbox(a, null, 0.1, 0.2, 0.6, 0.44, 0.6, 0.44, { '*': [43, 36, 44, 37] }, { faces: 'fblr' }));   // the belt
+    for (const nm of ['l', 'r']) r['uarm' + nm][3] = [(a) => tbox(a, null, 0.06, -0.31, 0.21, 0.21, 0.17, 0.17, { '*': TC })];
+    return r;
+  },
   ivan() {     // Krasnovian bouncer: wrestler frame in a tracksuit
     const r = humanoid({ torso: TA, legs: TB, arms: TA, hands: TC, feet: TD, shoulder: 0.68, chestD: 0.42, waist: 0.5,
       neck: -0.02, head: [0.25, 0.29, 0.27], thighW: 0.22 });
@@ -140,7 +148,7 @@ const POSES = {
   lob: { torso: [-14, 20, 0], head: [-10, -15, 0], uarmr: [-160, 0, 20], farmr: [-50, 0, 0], uarml: [-60, 0, -20], farml: [-20, 0, 0], thighr: [8, 0, 6], thighl: [-10, 0, -6] },
   lobRelease: { torso: [16, -10, 0], head: [6, 0, 0], uarmr: [-110, 0, 6], farmr: [-6, 0, 0], uarml: [-20, 0, -14], farml: [-30, 0, 0], thighl: [-18, 0, -6], shinl: [18, 0, 0] },
 };
-POSES.rocco = POSES.boxer; POSES.ivan = POSES.wrestler;
+POSES.rocco = POSES.boxer; POSES.ivan = POSES.wrestler; POSES.volkov = POSES.wrestler;
 Object.assign(POSES, {
   secguard: { torso: [8, 0, 0], head: [-4, 0, 0], uarml: [-15, 0, 16], farml: [-55, 0, 0], uarmr: [10, 0, 14], farmr: [-30, 0, 0],
     thighl: [-10, 0, -6], shinl: [12, 0, 0], thighr: [8, 0, 6], hips: [0, -10, 0] },

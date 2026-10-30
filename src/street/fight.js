@@ -30,18 +30,35 @@ function startStreet(fromBar) {
   game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
   showSign('street', 2.6);
 }
+// The street and the depot share one flow: stretches with arena locks, spawns, clear, lose + restart, finish.
+// Their configs (CFG.street, CFG.depot) use positions relative to the level's origin.
+const stageCfg = () => level.name === 'depot' ? CFG.depot : CFG.street;
+const stageOrigin = () => level.name === 'depot' ? [DEPOT.x, DEPOT.z] : [0, 0];
 function startEncounter(i) {
-  const E = CFG.street.encounters[i];
+  const E = stageCfg().encounters[i];
   level.encounter = i; level.arena = E.arena;
   game.state = 'intro'; game.timer = 0; game.queue = E.spawn.slice(); game.spawnT = 0.3; game.bosses = [];
-  showSign(E.sign || 'fight', 1.4); AU.bell();
+  showSign(E.sign || 'fight', E.boss ? 2.2 : 1.4); if (E.boss) AU.roar(); else AU.bell();
 }
-function updateStreet(dt) {
-  const S = CFG.street, enc = S.encounters, z = player.head.z;
+function startDepot(fromStreet) {
+  level.name = 'depot'; level.encounter = -1; level.arena = null;
+  clearEnemies();
+  if (!fromStreet) { stockProps(); player.hp = CFG.player.health; player.hurtT = 0; game.catches = 0; game.disarms = 0; }
+  else {   // the bar and street props stay behind (whatever's in your hands comes with you)
+    const held = new Set(handList.map(h => h.held));
+    for (const p of props.slice()) if (!held.has(p)) { scene.remove(p.obj); p.body.remove(); p.alive = false; props.splice(props.indexOf(p), 1); }
+  }
+  for (const [type, x, z] of CFG.depot.props) new Prop(type, new V3(DEPOT.x + x, type === 'bottle' ? 0.95 : 0, DEPOT.z + z));
+  placePlayer(DEPOT.x + CFG.depot.start[0], DEPOT.z + CFG.depot.start[1], Math.PI);
+  game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
+  showSign('depot', 2.6);
+}
+function updateStreet(dt) {   // the stage flow for whichever level you're in (street or depot)
+  const S = stageCfg(), enc = S.encounters, [ox, oz] = stageOrigin(), z = player.head.z - oz;
   if (game.state === 'walk') {
     const next = level.encounter + 1;
     if (next < enc.length && z > enc[next].trigger) startEncounter(next);
-    else if (next >= enc.length && z > S.finishZ) {
+    else if (level.name === 'street' && next >= enc.length && z > S.finishZ) {
       game.state = 'won'; game.timer = 0; showSign('checkpoint', 1e9); AU.bell();
     }
     return;
@@ -50,13 +67,18 @@ function updateStreet(dt) {
   if (game.state === 'fight') {
     game.spawnT -= dt;
     if (game.queue.length && game.spawnT <= 0) {
-      const [type, x, zz] = game.queue.shift(), e = new Enemy(type);
+      const [type, lx, lz] = game.queue.shift(), x = ox + lx, zz = oz + lz, e = new Enemy(type);
       e.placeAt(x, zz, Math.atan2(player.head.x - x, player.head.z - zz));
       const d = _v1.set(player.head.x - x, 0, player.head.z - zz); const L = d.length();
       e.target.set(x, 0, zz).addScaledVector(d.divideScalar(L || 1), Math.min(2.5, L * 0.5));
       enemies.push(e); game.spawnT = S.spawnGap;
+      if (e.cfg.boss) { game.bosses.push(e); addBossBar(e); }
     }
-    if (!game.queue.length && enemies.every(e => !e.alive)) { game.state = 'cleared'; game.timer = 0; showSign('ko', 1.6); }
+    for (const b of game.bosses) if (b.alive && !b.enraged && S.enrageAt && b.hp < b.maxHp * S.enrageAt) enrage(b);
+    if (!game.queue.length && enemies.every(e => !e.alive)) {
+      if (level.name === 'depot' && level.encounter === enc.length - 1) { game.state = 'won'; game.timer = 0; showSign('depotClear', 1e9); AU.bell(); return; }
+      game.state = 'cleared'; game.timer = 0; showSign('ko', 1.6);
+    }
     return;
   }
   if (game.state === 'cleared' && game.timer > S.clearedPause) {
@@ -68,23 +90,35 @@ function updateStreet(dt) {
   if (game.state === 'lost' && game.timer > 3.5) {   // back to the start of this stretch, full health
     const E = enc[level.encounter];
     clearEnemies(); player.hp = CFG.player.health;
-    placePlayer(E.respawn[0], E.respawn[1], Math.PI);
+    placePlayer(ox + E.respawn[0], oz + E.respawn[1], Math.PI);
     startEncounter(level.encounter);
   }
-  if (game.state === 'won' && boomPivot) boomPivot.rotation.z = Math.max(-1.35, boomPivot.rotation.z - dt * 0.9);
+  if (game.state === 'won' && level.name === 'street') {   // the boom lifts; walk through it to the depot
+    if (boomPivot) boomPivot.rotation.z = Math.max(-1.35, boomPivot.rotation.z - dt * 0.9);
+    if (player.head.z > STREET.chk.z + CFG.street.exitPast) startDepot(true);
+  }
+}
+// a boss loses it: faster, shorter windups, red
+function enrage(s) {
+  s.enraged = true; s.benched = false; s.cooldown = 0;
+  const c = s.cfg, E = CFG.boss;
+  s.cfg = Object.assign({}, c, { speed: c.speed * E.enrageSpeed, windup: c.windup * E.enrageWindup, comboWindup: (c.comboWindup || c.windup) * E.enrageWindup });
+  s.poise = s.cfg.poise; s.mat.uniforms.uTint.value.set(1.3, 0.78, 0.78);
+  showSign('enrage', 2.0); AU.roar();
+  label('enrage', s.body.by.head.x.clone().add(new V3(0, 0.4, 0)));
 }
 // encounter walls: only the player is held in; goons walk in from outside them
 function keepPlayerIn(p, r) {
   pushOutXZ(p, r);
-  if (level.name === 'street' && level.arena) p.z = clamp(p.z, level.arena[0] + r, level.arena[1] - r);
+  if ((level.name === 'street' || level.name === 'depot') && level.arena) { const oz = stageOrigin()[1]; p.z = clamp(p.z, oz + level.arena[0] + r, oz + level.arena[1] - r); }
 }
 // lights and fog follow you: the bar's six inside, the nearest six street lamps outside
 const _lampD = [];
 function updateArea(dt) {
-  const hz = player.head.z, out = clamp((hz - (STREET.fz - 1.2)) / 3.0, 0, 1);
+  const hz = player.head.z, out = Math.abs(player.head.x) > 8 ? 1 : clamp((hz - (STREET.fz - 1.2)) / 3.0, 0, 1);
   const R = CFG.render, F = CFG.street.fog;
   SU.uFogNear.value = R.fogNear + (F.near - R.fogNear) * out; SU.uFogFar.value = R.fogFar + (F.far - R.fogFar) * out;
-  if (hz < STREET.fz - 0.4) applyLights(BAR_LIGHT.lights, BAR_LIGHT.ambient);
+  if (hz < STREET.fz - 0.4 && Math.abs(player.head.x) < 6 && hz > -6) applyLights(BAR_LIGHT.lights, BAR_LIGHT.ambient);
   else {
     _lampD.length = 0;
     for (const L of ST.lamps) _lampD.push([(L[0][0] - player.head.x) ** 2 + (L[0][2] - hz) ** 2, L]);
@@ -93,13 +127,9 @@ function updateArea(dt) {
   }
   if (ST.skyMesh) { camera.getWorldPosition(_v1); ST.skyMesh.position.set(_v1.x, 0, _v1.z); ST.skyMesh.updateMatrix(); }
   updateDoor(dt);
-  // portals: the bar and the street only draw each other through the open door, when it's in view
-  const inside = hz < STREET.fz - 0.05, see = DOOR.open > 0.02 && doorInView();
-  ST.portal = { inside, see };
-  if (ST.barGroup) for (const o of ST.barGroup) o.visible = !inside ? see : true;
-  if (ST.streetGroup) for (const o of ST.streetGroup) if (o) o.visible = inside ? see : true;
-  for (const p of props) if (p.obj) { const pin = p.body.ps[0].x.z < STREET.fz; p.shown = pin === inside || see; if (!p.batched) p.obj.visible = p.shown; }
-  if (ST.beaconMesh) { ST.beaconT = (ST.beaconT || 0) + dt; ST.beaconMesh.visible = (!inside || see) && (ST.beaconT % CFG.street.beaconBlink) < CFG.street.beaconBlink * 0.5; }
+  // portals: rooms are only drawn through open doorways in view (src/rooms.js)
+  if (ROOMS.size) updateRooms();
+  if (ST.beaconMesh) { ST.beaconT = (ST.beaconT || 0) + dt; ST.beaconMesh.visible = ST.beaconMesh.visible && (ST.beaconT % CFG.street.beaconBlink) < CFG.street.beaconBlink * 0.5; }
 }
 // Prop batches: every visible stool / crate / bin / sign is written into one mesh per material each frame
 // (a few hundred vertices on the CPU), so a room full of stools or a street full of crates is one draw call.
@@ -142,7 +172,8 @@ function doorInView() {
   return _v2.dot(_dv) / L > Math.cos(CFG.street.portalDeg * DEG);
 }
 // big signs painted in code (same pixel font as the street), with a hard drop shadow
-const SIGN_TEXT = { street: ['TRIPOINT SQUARE', '#c9a04a'], go: ['GO!', '#33e0d0'], goCheck: ['TO THE CHECKPOINT', '#33e0d0'],
+const SIGN_TEXT = { depot: ['TRAM DEPOT 7', '#ff9a3c'], yard: ['FIGHT!', '#f2c14e'], hall: ['FIGHT!', '#f2c14e'], volkov: ['THE BEAR', '#e8352b'],
+  depotClear: ['DEPOT CLEARED', '#33e0d0'], street: ['TRIPOINT SQUARE', '#c9a04a'], go: ['GO!', '#33e0d0'], goCheck: ['TO THE CHECKPOINT', '#33e0d0'],
   checkpoint: ['CHECKPOINT', '#f2ede4'], doorOpen: ['THE DOOR IS OPEN', '#ff9a3c'], square: ['FIGHT!', '#f2c14e'], road: ['FIGHT!', '#f2c14e'], last: ['LAST STRETCH', '#ff4f9a'] };
 function paintSign(text, col) {
   const s = 3, w = textW(text) * s + 6, h = 7 * s + 6, p = new Pix(w, h);

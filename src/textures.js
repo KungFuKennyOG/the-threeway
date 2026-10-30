@@ -69,6 +69,7 @@ const TEX = {
  "sheet_cook": "assets/tex/sheet_cook.png",
  "sheet_rocco": "assets/tex/sheet_rocco.png",
  "sheet_ivan": "assets/tex/sheet_ivan.png",
+ "sheet_volkov": "assets/tex/sheet_volkov.png",
  "bat": "assets/tex/bat.png",
  "potato": "assets/tex/potato.png",
  "pot": "assets/tex/pot.png",

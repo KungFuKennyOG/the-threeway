@@ -35,7 +35,7 @@ function buildSkylines() {
   const [kx, kz] = STREET.kras;
   for (let i = -4; i <= 4; i++) for (let j = -3; j <= 3; j++) {
     const x = kx + i * 36, z = kz + j * 42; if (Math.abs(i) <= 1 && Math.abs(j) <= 1) continue;
-    if (x > -28) continue;
+    if (x > -28 || onDepot(x, z, 18)) continue;
     const h = 34 + ((i * 7 + j * 13) % 4 + 4) % 4 * 8, long = (i + j) % 2 === 0;
     sbox(acc, 'panel', x, 0, z, long ? 30 : 11, long ? 11 : 30, h, 0, { u: 12, v: 12, top: 'roofDark', tu: 8, cell: 999 });
     if ((i * 3 + j) % 5 === 0) plate(acc, 'banner', x, h * 0.55, z + (long ? 5.5 : 15), 5, 18, 0, 0.2);
@@ -85,11 +85,15 @@ function buildFarField() {
   const acc = ST.sky, F = CFG.street.farField; let s = 7, n = 0;
   const rng = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
   // ground under the whole city, just below the street's own (which covers it near you)
-  ground(acc, 'farGround', -F.radius - 60, -F.radius - 60, F.radius + 60, F.radius + 80, -0.06, 60, { cell: 999 });
-  ground(acc, 'farGround', -170, -150, 170, 190, -0.04, 60, { cell: 10 });   // finer near you, so street lights pool on it
+  // finer near you (so street lights pool on it), coarse further out. The coarse ground is a frame AROUND the fine
+  // one, never under it: a 1 km triangle's far vertices get snapped by metres, which tilts its plane up through the
+  // ground you stand on (the depot yard showed it as streaks of sky).
+  const [ix0, ix1, iz0, iz1] = F.fineGround, ox0 = -F.radius - 60, ox1 = F.radius + 60, oz0 = -F.radius - 60, oz1 = F.radius + 80;
+  ground(acc, 'farGround', ix0, iz0, ix1, iz1, -0.04, 60, { cell: 10 });
+  for (const [a0, b0, a1, b1] of [[ox0, oz0, ox1, iz0], [ox0, iz1, ox1, oz1], [ox0, iz0, ix0, iz1], [ix1, iz0, ox1, iz1]]) ground(acc, 'farGround', a0, b0, a1, b1, -0.06, 60, { cell: 999 });
   ST.farLamps = [];
   // what's already built near you (the square, its buildings, the side roads, the road, the Ring Road and its first blocks)
-  const NEAR = [[-37, 37, -7, 31], [-40, -19, -21, -7], [-13.5, 13.5, 31, 57], [-42, 42, 57, 74], [-72, 44, 74, 98]];
+  const NEAR = [[-37, 37, -7, 31], [-40, -19, -21, -7], [-13.5, 13.5, 31, 57], [-42, 42, 57, 74], [-72, 44, 74, 98], DEPOT.rect];
   const hits = (x0, x1, z0, z1) => NEAR.some(([a0, a1, b0, b1]) => x0 < a1 && x1 > a0 && z0 < b1 && z1 > b0);
   const P = F.pitch, B = F.block, half = B / 2;
   // a street grid that carries on the three old roads: x = 0 (the wall down the middle), z = 14.5 (the side roads)
@@ -162,6 +166,7 @@ function buildStreet() {
   ST.atlas = paintAtlas(); texCache.street = ST.atlas.tex;
   ST.lit = new GeoAcc(); ST.sky = new GeoAcc(); ST.lamps = []; ST.beacons = []; ST.searchlights = [];
   buildStreetGeometry();
+  DP.outside = buildDepot().slice(0, 1);   // level 3's outside shell is part of the city; its rooms are drawn through doors
   buildSkylines();
   buildFarField();
   const L = CFG.street.light;
@@ -181,6 +186,7 @@ function buildStreet() {
     { x0: W.x1 + 17.4, x1: -STREET.sq.x + 2, z0: W.z0 + 0.2, z1: W.z1 - 0.2, area: 'west' },   // rectangles overlap so you can cross
     { x0: STREET.sq.x - 2, x1: E.x1 - 17.4, z0: E.z0 + 0.2, z1: E.z1 - 0.2, area: 'east' },
     { x0: -STREET.road.x + 0.2, x1: STREET.road.x - 0.2, z0: STREET.sq.z1 - 1, z1: STREET.chk.z - 0.3, area: 'road' },
+    { x0: -STREET.road.x + 0.2, x1: STREET.road.x - 0.2, z0: STREET.chk.z - 1, z1: STREET.chk.z + CFG.street.exitPast + 1, area: 'boom', on: () => level.name === 'street' && game.state === 'won' },
   ].forEach(addWalk);
   ST.lamps.sort((a, b) => a[0][2] - b[0][2]);
 }

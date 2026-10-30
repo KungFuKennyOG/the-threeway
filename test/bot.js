@@ -8,7 +8,7 @@ const VERBOSE = process.argv.includes('-v');
 const MODE = (process.argv.find(a => a.startsWith('--mode=')) || '--mode=aggro').slice(7);
 const PUNCH_GAP = MODE === 'aggro' ? 0.3 : MODE === 'sloppy' ? 0.9 : 1e9;
 const BLOCK_P = MODE === 'passive' ? 0.5 : 1.0;
-const LEVEL = (process.argv.find(a => a.startsWith('--level=')) || '--level=bar').slice(8);   // bar | street | both (bar, then out the door)
+const LEVEL = (process.argv.find(a => a.startsWith('--level=')) || '--level=bar').slice(8);   // bar | street | both (bar, then out the door) | depot | road (street, then on to the depot)
 
 // deterministic Math.random
 let seed = SEED * 9301 + 49297;
@@ -41,7 +41,9 @@ const key = (type, code, extra = {}) => { for (const f of listeners[type] || [])
 // start desktop mode
 els.deskBtn.fire('click');
 const TW = ctx.__tw;
-if (LEVEL === 'street') run('startStreet(false)');
+if (LEVEL === 'street' || LEVEL === 'road') run('startStreet(false)');
+if (LEVEL === 'depot') run('startDepot(false)');
+const FINAL = { bar: 'bar', both: 'street', street: 'street', depot: 'depot', road: 'depot' }[LEVEL];
 const stats = { tiers: {}, frames: 0, minHp: 100, errors: [], states: {}, waves: new Set(), grabs: 0, throws: 0, drinks: 0, blocks: 0, clinches: 0, parries: 0,
   catchTries: 0, throwBacks: 0, projHits: 0, tags: 0, enraged: [], waveTimes: [], lobs: 0, maxProps: 0 };
 let lastWave = -1, waveStart = 0, catchState = null; const seenCarry = new Set(); let aimingAt = null;
@@ -68,7 +70,12 @@ try {
     for (const s of script) if (!s.done && clock >= s.t) { s.done = true; s.f(); }
     const G = TW.game;
     stats.waves.add(G.wave);
-    if (G.state === 'won' && (LEVEL === 'bar' || TW.level.name === 'street')) break;
+    if (G.state === 'won' && TW.level.name === FINAL) break;
+    if (G.state === 'won' && TW.level.name === 'street') {   // the road is clear: through the checkpoint boom once it lifts
+      stats.streetCleared = stats.streetCleared || +clock.toFixed(1);
+      aimAt({ x: TW.STREET.chk.x || 0, y: 1.6, z: TW.player.head.z + 6 }); press('Space', false); press('KeyS', false); press('KeyW', true);
+      ctx.__frame ? ctx.__frame() : TW.renderer.loop(); stats.frames++; continue;
+    }
     if (G.state === 'won' && LEVEL === 'both') {   // the bar is clear: walk out of the door once it opens
       stats.barCleared = stats.barCleared || +clock.toFixed(1);
       aimAt({ x: 0, y: 1.6, z: 9 }); press('Space', false); press('KeyW', TW.DOOR.open > 0.6);
@@ -118,10 +125,10 @@ try {
         const heavy = (punchSide % 3) === 2;
         els.c.fire('mousedown', { button: (punchSide++) % 2 ? 2 : 0, shiftKey: heavy });
       }
-    } else if (TW.level.name === 'street' && ['walk', 'cleared', 'intro', 'fight'].includes(G.state) && !live.length) {
+    } else if ((TW.level.name === 'street' || TW.level.name === 'depot') && ['walk', 'cleared', 'intro', 'fight'].includes(G.state) && !live.length) {
       // nothing to hit: head down the road (aim at the middle of the next stretch)
       const hz = TW.player.head.z;
-      const gx = 0, gz = hz + 6;
+      const gx = TW.level.name === 'depot' ? TW.DEPOT.x : 0, gz = hz + 6;
       aimAt({ x: gx, y: 1.6, z: gz }); press('Space', false); press('KeyS', false); press('KeyW', true);
       stats.streetMax = Math.max(stats.streetMax || 0, hz);
     } else { press('KeyW', false); press('Space', false); }
@@ -141,11 +148,11 @@ try {
 } catch (err) { stats.errors.push(err.stack); }
 
 if (lastWave >= 0) stats.waveTimes.push(+(clock - waveStart).toFixed(1));
-const out = { mode: MODE, level: LEVEL, seed: SEED, levelNow: TW.level.name, encounter: TW.level.encounter + 1, barCleared: stats.barCleared, streetMaxZ: +(stats.streetMax || 0).toFixed(1), simSeconds: +clock.toFixed(1), final: TW.game.state, wave: TW.game.wave + 1, waveTimes: stats.waveTimes, frames: stats.frames, minHp: Math.round(stats.minHp),
+const out = { mode: MODE, level: LEVEL, seed: SEED, levelNow: TW.level.name, encounter: TW.level.encounter + 1, barCleared: stats.barCleared, streetCleared: stats.streetCleared, streetMaxZ: +(stats.streetMax || 0).toFixed(1), simSeconds: +clock.toFixed(1), final: TW.game.state, wave: TW.game.wave + 1, waveTimes: stats.waveTimes, frames: stats.frames, minHp: Math.round(stats.minHp),
   losses: stats.losses || 0, bossLog: stats.bossLog || [], catches: TW.game.catches, catchTries: stats.catchTries, throwBacks: stats.throwBacks, lobs: stats.lobs, disarms: TW.game.disarms, tags: stats.tags, enraged: stats.enraged, maxProps: stats.maxProps, perfLevel: TW.perf.level,
   hpNow: Math.round(TW.player.hp), tiers: stats.tiers, drinks: stats.drinks, grabs: stats.grabs, throws: stats.throws, blocks: stats.blocks,
   closestToHead: +(stats.closest ?? 9).toFixed(3), closestWhat: stats.closestWhat, clinchFrames: stats.clinchFrames || 0, lostFrames: stats.lost || 0, enemiesLeft: TW.enemies.length, props: TW.props.length,
-  roomTris: TW.roomTris(), enemyTris: ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'secguard', 'kicker', 'rocco', 'ivan'].map(t => { const e = new TW.Enemy(t); const n = e.tris; e.remove(); return t + ':' + n; }).join(' '),
+  roomTris: TW.roomTris(), enemyTris: ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'secguard', 'kicker', 'rocco', 'ivan', 'volkov'].map(t => { const e = new TW.Enemy(t); const n = e.tris; e.remove(); return t + ':' + n; }).join(' '),
   errors: stats.errors };
 if (VERBOSE) out.states = stats.states;
 console.log(JSON.stringify(out, null, 1));

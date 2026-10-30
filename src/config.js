@@ -82,6 +82,8 @@ const CFG = {
     kicker:   { hp: 45, poise: 40, speed: 2.5, reach: 1.0, windup: 0.5, dmg: 8, combo: 2, comboWindup: 0.4, kicker: true, retreat: 2.6, scale: 0.86 },
     // the mini-boss pair: one fights while the other waits; a stagger or knockdown tags the other in
     rocco:    { hp: 150, poise: 110, speed: 1.8, reach: 0.76, windup: 0.42, dmg: 9, combo: 4, comboWindup: 0.22, highGuard: true, boss: true, scale: 0.96 },
+    // Bogdan "the Bear" Volkov: wrestling champion turned enforcer. A bigger, slower grappler; enrages at half health
+    volkov:   { hp: 280, poise: 200, speed: 1.2, reach: 1.0, windup: 0.85, dmg: 0, combo: 1, grabber: true, boss: true, clinchDps: 8, clinchSlam: 22, armHitsToBreak: 3, scale: 1.04 },
     ivan:     { hp: 190, poise: 150, speed: 1.15, reach: 0.95, windup: 0.85, dmg: 0, combo: 1, grabber: true, boss: true, clinchDps: 7, clinchSlam: 18, armHitsToBreak: 3, scale: 0.96 },
   },
   boss: { tagCooldown: 4.0, benchRadius: 2.9, enrageSpeed: 1.25, enrageWindup: 0.75 },
@@ -102,6 +104,7 @@ const CFG = {
     doorSpeed: 0.9, doorOpenDeg: 100,          // the bar's door swings out onto the square once the bar is clear
     start: [0, 7.2],                           // where "start in the street" puts you (x, z), facing down the road
     finishZ: 54.6,                             // walk up to the boom and the level is done
+    exitPast: 2.0,                             // then walk this far past the lifted boom and you're at Tram Depot 7
     spawnGap: 1.1, clearedPause: 1.6, healBetween: 20,
     // each stretch: walk past `trigger` (z) and you're held between arena[0] and arena[1] until it's clear.
     // spawn: [type, x, z]; respawn: where you restart that stretch after going down
@@ -120,7 +123,7 @@ const CFG = {
     fog: { near: 28, far: 130 },               // outside (the bar's is render.fogNear / fogFar); blends at the door. Far enough to see the checkpoint from the square
     skylineFog: 0.5,                           // the far skylines get at most this much fog
     atlasGutter: 8,                            // px of wrapped border per street texture, so the atlas can be mipmapped
-    farField: { radius: 430, pitch: 30, block: 22, oldRadius: 140, lampRadius: 16, lampK: 1.3 },   // LOD stand-ins: a street grid of lit boxes from the street's edge out to radius (m), a street light per block
+    farField: { radius: 430, pitch: 30, block: 22, oldRadius: 140, lampRadius: 16, lampK: 1.3, fineGround: [-170, 170, -150, 250] },   // LOD stand-ins: a street grid of lit boxes from the street's edge out to radius (m), a street light per block
     portalDeg: 72,                             // the bar and the street only draw each other when the door is open and in view
     beaconBlink: 1.6,                          // s per on/off cycle of the towers' red beacons
     light: { ambient: [0.09, 0.075, 0.11], sky: [0.05, 0.075, 0.11],          // night + a little moonlight on roofs
@@ -129,6 +132,23 @@ const CFG = {
              sodium: '#ff9a3c', amber: '#ffc870', hinoGlow: '#ff3a5a',
              skylineAmbient: [0.22, 0.2, 0.26], skylineSky: [0.05, 0.05, 0.08] },
     sky: { top: '#0e0710', horizon: '#2a1424', hino: '#8a1434', kras: '#6a3008', colu: '#5a4414' },
+  },
+  // ---- level 3: Tram Depot 7, Krasnovia (positions are local to the depot gate: lx across, lz in; see src/depot/build.js)
+  depot: {
+    start: [0, 2.2],                           // where you arrive (through the gate), facing into the yard
+    spawnGap: 1.2, clearedPause: 1.6, healBetween: 25,
+    encounters: [
+      { name: 'yard', trigger: 4, arena: [0.6, 31.6], respawn: [0, 3], sign: 'yard',
+        spawn: [['wrestler', -10, 24], ['cook', 12, 28], ['wrestler', 9, 4.5]] },
+      { name: 'hall', trigger: 35, arena: [32.5, 64], respawn: [0, 35.5], sign: 'hall',
+        spawn: [['secguard', 0, 60], ['wrestler', -11, 56], ['cook', 12, 62], ['kicker', 0, 33]] },
+      { name: 'ring', trigger: 64.5, arena: [62, 79.4], respawn: [0, 64.6], sign: 'volkov', boss: true,
+        spawn: [['volkov', 0, 72]] },
+    ],
+    enrageAt: 0.5,                             // the boss loses it below this share of his health
+    props: [['crate', -8.5, 3], ['crate', -8.9, 3.8], ['bin', 13.5, 12], ['sign', -16.6, 30], ['crate', 12.5, 36], ['bin', -12, 34],
+            ['crate', 16.4, 52], ['bottle', 24, 50.5], ['bottle', 24.1, 52], ['bottle', 26.8, 48]],
+    light: { sodiumRadius: 14, sodiumK: 1.5, tube: '#dfefff', tubeRadius: 13, tubeK: 1.25, workRadius: 9, workK: 1.6, ring: '#ffd8a0', ringRadius: 7.5, ringK: 1.6, hallAmbient: [0.1, 0.1, 0.115] },
   },
   debugLabels: true,          // floating LIGHT / SOLID / HEAVY labels at hit points
   labelScale: 0.0035,         // metres per label pixel

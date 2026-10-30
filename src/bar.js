@@ -33,17 +33,19 @@ function bandIndex(list, get, margin) {
   return bands;
 }
 const NONE = [];
-let blockerBands = null, worldBoxBands = null;
+let blockerBands = null, worldBoxBands = null, walkBands = null;
 function indexWorld() {
   blockerBands = bandIndex(BLOCKERS, b => [b.z0, b.z1], 0.8);
   worldBoxBands = bandIndex(WORLD_BOXES, B => [B[2], B[5]], 0.6);
+  walkBands = bandIndex(WALK, w => [w.z0, w.z1], 8);   // only the walkable rectangles near you are tested
 }
 const blockersNear = (z) => (blockerBands && blockerBands.get(Math.floor(z / BAND))) || NONE;
 const boxesNear = (z) => (worldBoxBands && worldBoxBands.get(Math.floor(z / BAND))) || NONE;
 // keep an xz point (radius r) inside the walkable union; returns true if it had to move. walls: ragdoll particles
 function keepInWalk(p, r, walls) {
   let best = null, bestD = 1e9, bx = 0, bz = 0;
-  for (const w of WALK) {
+  const list = (walkBands && walkBands.get(Math.floor(p.z / BAND))) || WALK;
+  for (const w of list) {
     if (w.on && !w.on()) continue;
     let x0, x1, z0, z1;
     if (walls) { x0 = w.wx0 + r; x1 = w.wx1 - r; z0 = w.wz0 + r; z1 = w.wz1 - r; }

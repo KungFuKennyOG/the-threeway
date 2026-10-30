@@ -31,7 +31,7 @@ function loseRound() {
 }
 function updateGame(dt) {
   game.timer += dt;
-  if (level.name === 'street') { updateStreet(dt); return; }
+  if (level.name === 'street' || level.name === 'depot') { updateStreet(dt); return; }
   if (game.state === 'won') {   // bar cleared: the door swings open; walk out onto the square
     if (game.timer > 2.5 && DOOR.target === 0) { DOOR.target = 1; showSign('doorOpen', 3.0); AU.bell(); }
     if (DOOR.open > 0.6 && player.head.z > STREET.fz + 0.4) startStreet(true);
