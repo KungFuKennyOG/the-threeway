@@ -29,6 +29,7 @@ vm.runInContext(inline, ctx, { filename: 'index.html' });
 const run = (c) => vm.runInContext(c, ctx);
 const TW = ctx.__tw;
 const log = [];
+let camW = null;
 const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + name + (extra ? '  (' + extra + ')' : '')); };
 
 (async () => {
@@ -260,6 +261,14 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     check('right stick snap-turns 30°', Math.abs(Math.abs(TW.rig.rotation.y - yaw0) - Math.PI / 6) < 1e-6);
     const p0 = TW.rig.position.clone(); pads[1].axes[3] = -1; step(36); pads[1].axes[3] = 0;
     check('left stick moves forward', TW.rig.position.distanceTo(p0) > 0.8, TW.rig.position.distanceTo(p0).toFixed(2) + ' m in 0.5 s');
+    // ---- level 2 in VR: start outside, walk the square on the stick, held in by the stretch you're fighting
+    run('startStreet(false)'); step(2);
+    camW = () => TW.camera.getWorldPosition(new THREE.Vector3());
+    check('VR: starting outside puts you on the square, facing the road', TW.level.name === 'street' && camW().z > 6 && Math.abs(TW.rig.rotation.y - Math.PI) < 1e-6, 'z ' + camW().z.toFixed(2));
+    run('level.encounter = -1; game.state = "walk"'); TW.rig.position.z = TW.CFG.street.encounters[0].trigger + 0.5; step(3);
+    pads[1].axes[3] = -1; step(72 * 8); pads[1].axes[3] = 0;
+    check('VR: the stretch you\'re fighting holds you in', TW.level.encounter === 0 && camW().z <= TW.CFG.street.encounters[0].arena[1] + 1e-6, 'z ' + camW().z.toFixed(2));
+    run('clearEnemies()');
     // ---- session end returns to the menu
     for (const f of session._l.end || []) f();
     check('session end returns to menu', els.menu.hidden === false && run('xrMode') === false);

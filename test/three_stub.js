@@ -155,6 +155,7 @@ class PlaneGeometry extends BufferGeometry { constructor() { super(); this.setAt
 class ShaderMaterial { constructor(p) { Object.assign(this, p); if (!this.uniforms) this.uniforms = {}; } }
 class TextureLoader { load(src) { return { src }; } }
 class CanvasTexture { constructor(img) { this.image = img; } }
+class DataTexture { constructor(data, w, h) { this.image = { data, width: w, height: h }; } }
 class WebGLRenderer {
   constructor() {
     this.grips = [new Group(), new Group()];
@@ -165,5 +166,5 @@ class WebGLRenderer {
   setAnimationLoop(f) { this.loop = f; }
 }
 module.exports = { Vector2, Vector3, Quaternion, Euler, Matrix4, Color, Object3D, Group, Scene, Mesh, PerspectiveCamera,
-  BufferGeometry, Float32BufferAttribute: BufferAttribute, PlaneGeometry, ShaderMaterial, TextureLoader, CanvasTexture, WebGLRenderer, DynamicDrawUsage: 35048,
-  NearestFilter: 1, RepeatWrapping: 2, FrontSide: 0, DoubleSide: 2, LinearEncoding: 3000 };
+  BufferGeometry, Float32BufferAttribute: BufferAttribute, PlaneGeometry, ShaderMaterial, TextureLoader, CanvasTexture, DataTexture, WebGLRenderer, DynamicDrawUsage: 35048, RGBAFormat: 1023,
+  NearestFilter: 1, NearestMipmapLinearFilter: 1005, RepeatWrapping: 2, FrontSide: 0, DoubleSide: 2, LinearEncoding: 3000 };

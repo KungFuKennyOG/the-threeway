@@ -12,6 +12,7 @@ This is the combat MVP. It answers one question: does hitting people in The Thre
 
 - **Quest 3:** open the GitHub Pages URL for this repo in the Quest browser and press **Enter VR**.
 - **Desktop:** serve the folder over HTTPS or localhost (`npx serve .`) and press **Fight on desktop**. Desktop mode is for testing without a headset.
+- **Level 2 straight away:** tick **Start outside, in Tripoint Square** on the menu (or open the page with `?level=street`).
 
 | Quest 3 | Action |
 | --- | --- |
@@ -27,7 +28,7 @@ This is the combat MVP. It answers one question: does hitting people in The Thre
 | Grip as a potato or pot reaches you | Catch it, then throw it back |
 | Swat the bat (or the bat arm) mid-swing | Disarm Bat Boy; the bat drops and is yours |
 | Left X | Perf + tuning panel on your left wrist (left stick: up/down picks, left/right changes) |
-| A | Restart after clearing the bar |
+| A | Restart after clearing the bar (or walk out the open door) or the street |
 
 Desktop: mouse look, WASD, left/right click (or J/K) punch, Shift heavy, hold X light, Space block, C duck, G headbutt, E grab/drop/catch, Q throw, F drink, R restart, P perf panel (`[` `]` pick a setting, `-` `=` change it).
 
@@ -49,8 +50,21 @@ Desktop: mouse look, WASD, left/right click (or J/K) punch, Shift heavy, hold X 
 - **Rocco & Ivan** (round 4 mini-boss): Rocco is a broad Columbian bouncer who fights like a faster boxer (four-punch combos, high guard). Ivan is a Krasnovian bouncer in a tracksuit who clinches harder and needs three arm hits to break. One fights while the other circles wide. Stagger, floor or grab the active one and his partner tags in. Drop one for good and the survivor enrages: faster and with shorter windups. Both have health bars over their heads.
 - Attack tokens (two attackers at once, the rest circle), four escalating rounds: punk + kicker → Aoki Security + boxer + Bat Boy → cook + wrestler + kicker + Bat Boy + punk → Rocco & Ivan.
 
+## Level 2: out the door
+
+![Tripoint Square](docs/street.png)
+
+Clear the bar and the front door swings open onto **Tripoint Square** at night. Walk out and the street starts.
+
+- **The square:** Old Quarter tenements (plaster, Krasnovian painted window surrounds, Columbian cast-iron shopfronts, Hinomoto tile roofs) under green-copper and slate roofs, lit by pale gaslight. The Brass Clock (1888), sealed Tripoint Station, St. Vost Cathedral's onion domes over the roofs. Three brass lines in the setts (the Accords borders) meet at the Threeway's door. The Threeway's front: pink neon and all three flags over the door. The other two old roads are barricaded by the militia.
+- **The fight:** three stretches: the square (punks and a kicker from the side roads), the old road (boxer, Bat Boy, the cook), and the last stretch before the checkpoint (Aoki Security, the wrestler, a kicker). Each stretch holds you in until it's clear; go down and you restart that stretch at full health.
+- **Street props:** crates (break after two hits), bins (never break) and cast-iron street signs (swing long, like the bat). Grab, swing, throw.
+- **The end:** the joint-militia checkpoint: booth, floodlight, the Free City's flag with the three powers'. Walk up to the boom and it lifts. The Ring Road and the Accords wall start beyond it.
+- **The skylines:** Hinomoto's black-glass neon cluster behind the Threeway (Aoki Development tallest, an expressway of tail lights), Krasnovia's even field of panel slabs, the Tower of Labor and the TV tower right of the road, Columbia's ridge of cream-and-gold deco towers left of it. Red beacons blink on top. The sky glows red, sodium and gold over each sector.
+
 ## Quest performance
 
+- **Level 2 is about 4 draw calls.** Every street texture is painted in code and packed into one atlas; the street is one mesh, the skylines another, plus the sky band and the beacons. Light is **baked per vertex** at build time with the shader's own formula, so the square can have any number of gas lamps for free; goons, props and hands are lit live by the 6 lamps nearest you (the bar's six inside). The atlas is mipmapped with wrapped gutters: nearest-filtered texels up close, no sparkle far away. About 20k street + 18k skyline triangles.
 - **One draw call per goon.** Each goon is a single CPU-skinned mesh: every body part's vertices are moved by its ragdoll frame each frame, and the hurt/KO faces swap by rewriting the face UVs. Previously each goon was 14 to 16 draw calls. Stools are one mesh on a vinyl + chrome atlas.
 - **Perf panel.** Left X (desktop: P) shows fps, physics ms per frame, draw calls and the current quality level on your left wrist, plus live tuning for ragdoll pull, hit shove, knockback, fist pitch in the controller and vertex snap. Tuning is saved in the browser.
 - **Auto quality.** If the frame rate stays under 90% of the 72 Hz target for 1.5 s, physics steps down (120 Hz × 4 iterations → 90×4 → 90×3 → 72×3 → 60×2). It steps back up after sustained headroom, and backs off further each time it has to drop again. Turn it off in the panel.
@@ -58,14 +72,16 @@ Desktop: mouse look, WASD, left/right click (or J/K) punch, Shift heavy, hold X 
 
 ## Tuning
 
-Every number lives in `CFG` at the top of the game script in `index.html`: physics (`CFG.physics`: how hard goons follow their animation, hit shoves, personal space, domino and impact speeds), tier thresholds, damage and poise per tier, hitstop, knockback, magnetism, block and dodge distances, grab and throw, weapons and projectiles, per-enemy stats, the boss tag team (`CFG.boss`), waves, perf/auto quality (`CFG.perf`), render settings (desktop lines, VR framebuffer scale, snap/affine per mode), and `hands.modelPitchDeg` for how the fist model sits in the controller.
+Every number lives in `CFG` at the top of the game script in `index.html` (level 2: `CFG.street`: the stretches, triggers, spawns and arenas, street props, gaslight, fog, sky glow): physics (`CFG.physics`: how hard goons follow their animation, hit shoves, personal space, domino and impact speeds), tier thresholds, damage and poise per tier, hitstop, knockback, magnetism, block and dodge distances, grab and throw, weapons and projectiles, per-enemy stats, the boss tag team (`CFG.boss`), waves, perf/auto quality (`CFG.perf`), render settings (desktop lines, VR framebuffer scale, snap/affine per mode), and `hands.modelPitchDeg` for how the fist model sits in the controller.
 
 ## Tests
 
 No headset needed. The tests run the real game script against a small stand-in for Three.js (math and scene graph only, no rendering):
 
 ```
-node test/vr.js        # 50 checks: tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
+node test/street.js    # 34 checks: the door opens and leads outside, walls and crossings, baked light and the live lights outside/inside, the stretches (trigger, spawn, arena lock, clear, lose + restart), the boom, crates/bins/signs, draw calls + triangle budget, street physics cost
+node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street)
+node test/vr.js        # 52 checks: level 2 in VR (start outside, stick walking, held in by the stretch), tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
 node test/physics.js   # 47 checks: heights for all 9 goons, skinned mesh vs skeleton, one mesh per goon/stool, shove + recover, launch, get-up, dominoes, the cook's lob accuracy, Rocco & Ivan tag + enrage
 node test/bot.js 1 400 --mode=aggro    # a bot plays all four rounds (catches pots, throws them back); prints hits, losses, catches, tags, per-round times, errors
 ```

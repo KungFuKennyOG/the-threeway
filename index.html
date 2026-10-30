@@ -49,6 +49,7 @@ summary { cursor: pointer; color: var(--ink); }
       <button id="vrBtn" disabled>Enter VR</button>
       <button id="deskBtn" class="alt">Fight on desktop</button>
     </div>
+    <label class="note"><input type="checkbox" id="streetStart"> Start outside, in Tripoint Square (level 2)</label>
     <p class="note" id="vrNote">Checking for a headset…</p>
     <details>
       <summary>Controls</summary>
@@ -120,6 +121,11 @@ const CFG = {
     bat:    { dmg: 10, poiseMult: 1.8, durability: 8, grabRadius: 0.22, hitRadius: 0.1, reach: 0.75, length: 0.75 },
     potato: { dmg: 5, poiseMult: 1.0, durability: 1, grabRadius: 0.18, hitRadius: 0.07, playerDmg: 6 },
     pot:    { dmg: 9, poiseMult: 2.0, durability: 99, grabRadius: 0.2, hitRadius: 0.12, playerDmg: 10 },
+    // street props
+    crate:  { dmg: 9, poiseMult: 2.0, durability: 2, grabRadius: 0.34, hitRadius: 0.24, reach: 0.5, size: 0.46 },
+    bin:    { dmg: 7, poiseMult: 1.7, durability: 99, grabRadius: 0.32, hitRadius: 0.24, reach: 0.5, size: 0.44, height: 0.62 },
+    sign:   { dmg: 11, poiseMult: 1.8, durability: 5, grabRadius: 0.24, hitRadius: 0.17, reach: 1.1, length: 1.25 },
+    swingMult: { stool: 1.2, bat: 1.3, sign: 1.25, bin: 1.1 },   // big things hit as if swung a bit faster
     drinkHeal: 30, drinkTime: 0.8, mouthRadius: 0.16,
     thrownHitSpeed: 3.0,
     throwAssistDeg: 20,       // thrown props curve a little toward a goon inside this cone
@@ -150,7 +156,7 @@ const CFG = {
   // Quest performance: auto quality steps physics down when the frame rate sags, back up when it recovers
   perf: { autoQuality: true, levels: [[120, 4], [90, 4], [90, 3], [72, 3], [60, 2]], targetVR: 72, targetDesktop: 55,
           dropAfter: 1.5, raiseAfter: 8, panelHz: 4 },
-  render: { desktopLines: 240, vrFramebufferScale: 0.9,
+  render: { desktopLines: 240, vrFramebufferScale: 0.9, camFar: 600,
             desktopVertexSnap: true, vrVertexSnap: true,       // fine grid: a slight wobble, not a shake
             desktopSnapLines: 600, vrSnapLines: 560,           // snap grid size in lines (higher = subtler)
             desktopAffine: true, vrAffine: false,
@@ -158,6 +164,37 @@ const CFG = {
             fogNear: 4.5, fogFar: 12.5 },
   hands: { modelPitchDeg: -30, fistForward: 0.02 },   // tilt of the fist model inside the controller grip
   move: { speed: 2.2, snapTurnDeg: 30, deadzone: 0.3 },
+  // ---- level 2: out the door into Tripoint Square, down the old road to the militia checkpoint
+  street: {
+    doorSpeed: 0.9, doorOpenDeg: 100,          // the bar's door swings out onto the square once the bar is clear
+    start: [0, 7.2],                           // where "start in the street" puts you (x, z), facing down the road
+    finishZ: 54.6,                             // walk up to the boom and the level is done
+    spawnGap: 1.1, clearedPause: 1.6, healBetween: 20,
+    // each stretch: walk past `trigger` (z) and you're held between arena[0] and arena[1] until it's clear.
+    // spawn: [type, x, z]; respawn: where you restart that stretch after going down
+    encounters: [
+      { name: 'square', trigger: 7.5, arena: [5.6, 21.6], respawn: [0, 7.6], sign: 'square',
+        spawn: [['boso', -16.5, 14.5], ['kicker', 16.5, 13], ['boso', 0, 21]] },
+      { name: 'road', trigger: 27, arena: [22.5, 44.5], respawn: [0, 27.5], sign: 'road',
+        spawn: [['boxer', 1.5, 43.5], ['batboy', -2.5, 43.8], ['cook', 0.5, 44.2]] },
+      { name: 'checkpoint', trigger: 46, arena: [44.6, 55.6], respawn: [0, 46.2], sign: 'last',
+        spawn: [['secguard', 0, 55.2], ['wrestler', -3.4, 55], ['kicker', 3.2, 45]] },
+    ],
+    // street props: crates, bins and street signs you can pick up and swing or throw ([type, x, z])
+    props: [['crate', 11.6, 6.6], ['crate', 11.9, 7.4], ['bin', -11.4, 9.2], ['sign', -12.2, 19.6], ['bin', 9.8, 20.6],
+            ['crate', 3.7, 30.5], ['crate', 3.8, 31.3], ['bin', -3.7, 34.4], ['sign', 3.8, 37.5], ['crate', -3.8, 39.2],
+            ['bin', 3.7, 46.6], ['crate', -3.7, 50.3], ['sign', -3.8, 52.6]],
+    fog: { near: 9, far: 42 },                 // outside (the bar's is render.fogNear / fogFar); blends at the door
+    skylineFog: 0.5,                           // the far skylines get at most this much fog
+    atlasGutter: 8,                            // px of wrapped border per street texture, so the atlas can be mipmapped
+    beaconBlink: 1.6,                          // s per on/off cycle of the towers' red beacons
+    light: { ambient: [0.09, 0.075, 0.11], sky: [0.05, 0.075, 0.11],          // night + a little moonlight on roofs
+             gas: '#dbe8c4', gasRadius: 9.5, gasK: 1.6,                         // pale gaslight (not Krasnovian sodium)
+             flood: '#eef4ff', floodRadius: 14, floodK: 1.5,                     // the checkpoint's floodlight
+             sodium: '#ff9a3c', amber: '#ffc870', hinoGlow: '#ff3a5a',
+             skylineAmbient: [0.22, 0.2, 0.26], skylineSky: [0.05, 0.05, 0.08] },
+    sky: { top: '#0e0710', horizon: '#2a1424', hino: '#8a1434', kras: '#6a3008', colu: '#5a4414' },
+  },
   debugLabels: true,          // floating LIGHT / SOLID / HEAVY labels at hit points
   labelScale: 0.0035,         // metres per label pixel
 };
@@ -180,7 +217,7 @@ renderer.xr.setReferenceSpaceType('local-floor');
 renderer.xr.setFramebufferScaleFactor(CFG.render.vrFramebufferScale);
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x140b12);
-const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.03, 40);
+const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.03, CFG.render.camFar);
 const rig = new THREE.Group();           // player dolly: locomotion + snap turn move this
 rig.add(camera);
 scene.add(rig);
@@ -200,13 +237,15 @@ const SU = {   // shared uniforms (same objects in every material)
 const VS = `
 uniform vec3 uLightPos[${MAXL}]; uniform vec3 uLightCol[${MAXL}]; uniform float uLightRad[${MAXL}];
 uniform vec3 uAmbient; uniform float uEmissive; uniform float uFogNear; uniform float uFogFar; uniform float uFogOn;
-uniform float uSnap; uniform vec2 uSnapRes; uniform float uAffine; uniform vec2 uUvOffset;
+uniform float uSnap; uniform vec2 uSnapRes; uniform float uAffine; uniform vec2 uUvOffset; uniform float uBaked;
+attribute vec3 bake;   // static geometry: light baked per vertex at build time (any number of lamps, zero cost)
 varying vec3 vLight; varying float vFog; varying vec3 vUvA;
 void main() {
   vec4 wp = modelMatrix * vec4(position, 1.0);
   vec3 n = normalize(mat3(modelMatrix) * normal);
   vec3 L = uAmbient;
-  for (int i = 0; i < ${MAXL}; i++) {
+  if (uBaked > 0.5) L = bake;
+  else for (int i = 0; i < ${MAXL}; i++) {
     vec3 d = uLightPos[i] - wp.xyz; float dist = length(d) + 1e-4;
     float ndl = clamp((dot(n, d / dist) + 0.25) / 1.25, 0.0, 1.0);
     float att = clamp(1.0 - dist / uLightRad[i], 0.0, 1.0); att *= att;
@@ -229,7 +268,7 @@ void main() {
   vec2 uv = vUvA.xy / vUvA.z;
   vec4 t = texture2D(map, uv);
   if (t.a < 0.5) discard;
-  vec3 c = t.rgb * vLight * uTint;
+  vec3 c = t.rgb * mix(vLight, vec3(1.0), clamp((1.0 - t.a) * 5.0, 0.0, 1.0)) * uTint;   // alpha 0.8 = the texel glows by itself (windows, neon); mipmaps blend it
   c = mix(c, vec3(1.0), uFlash);
   c = mix(c, uFogColor, vFog);
   c = clamp(c, 0.0, 1.0);
@@ -245,6 +284,7 @@ const texCache = {};
 const loader = new THREE.TextureLoader();
 function tex(name) {
   if (texCache[name]) return texCache[name];
+  if (!TEX[name] && name.startsWith('sign_')) { const st = signTex(name); if (st) return (texCache[name] = st); }
   const t = loader.load(TEX[name]);
   t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter;
   t.generateMipmaps = false; t.flipY = false;
@@ -252,27 +292,31 @@ function tex(name) {
   texCache[name] = t;
   return t;
 }
+const fogAmt = (o) => o.fog === false ? 0 : (typeof o.fog === 'number' ? o.fog : 1);   // a number caps the fog (far skylines)
 function makeMat(texName, o = {}) {
   const tint = o.tint || [1, 1, 1];
-  return new THREE.ShaderMaterial({
+  const m = new THREE.ShaderMaterial({
     uniforms: Object.assign({}, SU, {
       map: { value: tex(texName) }, uTint: { value: new V3(tint[0], tint[1], tint[2]) }, uFlash: { value: 0 },
-      uEmissive: { value: o.emissive ? 1 : 0 }, uUvOffset: { value: new THREE.Vector2() }, uFogOn: { value: o.fog === false ? 0 : 1 },
+      uEmissive: { value: o.emissive ? 1 : 0 }, uUvOffset: { value: new THREE.Vector2() }, uFogOn: { value: fogAmt(o) },
+      uBaked: { value: o.baked ? 1 : 0 },
     }),
     vertexShader: VS, fragmentShader: FS,
     side: o.side || THREE.FrontSide, depthTest: o.depthTest !== false, depthWrite: o.depthWrite !== false,
   });
+  if (m.defaultAttributeValues) m.defaultAttributeValues.bake = [0, 0, 0];
+  return m;
 }
 const sharedMats = {};
 function sharedMat(texName, o = {}) {
-  const k = texName + '|' + (o.emissive ? 1 : 0) + '|' + (o.tint || '') + '|' + (o.fog === false ? 0 : 1) + '|' + (o.depthTest === false ? 0 : 1) + '|' + (o.side || 0);
+  const k = texName + '|' + (o.emissive ? 1 : 0) + '|' + (o.tint || '') + '|' + fogAmt(o) + '|' + (o.depthTest === false ? 0 : 1) + '|' + (o.side || 0) + '|' + (o.baked ? 1 : 0);
   if (!sharedMats[k]) sharedMats[k] = makeMat(texName, o);
   return sharedMats[k];
 }
 
 // ============================== geometry builders ===========================
 class GeoAcc {
-  constructor() { this.p = []; this.n = []; this.u = []; }
+  constructor() { this.p = []; this.n = []; this.u = []; this.c = []; this.tint = [1, 1, 1]; }
   get empty() { return this.p.length === 0; }
   // c: four corners [x,y,z] in order around the quad; uv: matching [u,v]; outward: normal hint
   quad(c, uv, outward, sub = 1) {
@@ -292,15 +336,17 @@ class GeoAcc {
     n.normalize();
     let P = [A, B, Cc, D], UV = uv;
     if (outward && n.x * outward[0] + n.y * outward[1] + n.z * outward[2] < 0) { P = [A, D, Cc, B]; UV = [uv[0], uv[3], uv[2], uv[1]]; n.negate(); }
+    const T = this.tint;
     for (const i of [0, 1, 2, 0, 2, 3]) {
-      this.p.push(P[i].x, P[i].y, P[i].z); this.n.push(n.x, n.y, n.z); this.u.push(UV[i][0], UV[i][1]);
+      this.p.push(P[i].x, P[i].y, P[i].z); this.n.push(n.x, n.y, n.z); this.u.push(UV[i][0], UV[i][1]); this.c.push(T[0], T[1], T[2]);
     }
   }
-  geometry() {
+  geometry(light) {
     const g = new THREE.BufferGeometry();
     g.setAttribute('position', new THREE.Float32BufferAttribute(this.p, 3));
     g.setAttribute('normal', new THREE.Float32BufferAttribute(this.n, 3));
     g.setAttribute('uv', new THREE.Float32BufferAttribute(this.u, 2));
+    if (light) g.setAttribute('bake', new THREE.Float32BufferAttribute(bakeLight(this.p, this.n, this.c, light), 3));
     g.computeBoundingSphere();
     return g;
   }
@@ -333,6 +379,35 @@ function tbox(acc, accFace, y0, y1, w0, d0, w1, d1, uvs, o = {}) {
     target.quad(q, U(k), out, sub);
   }
 }
+
+// Static light, baked per vertex with exactly the shader's formula: any number of lamps, no per-frame cost.
+// light: { ambient: [r,g,b], sky: [r,g,b] (extra on up-facing surfaces), lights: [[pos, [r,g,b] pre-scaled, radius]] }
+function bakeLight(P, N, Cv, light) {
+  const out = new Float32Array(P.length), A = light.ambient, S = light.sky || [0, 0, 0], Ls = light.lights;
+  for (let i = 0; i < P.length; i += 3) {
+    const px = P[i], py = P[i + 1], pz = P[i + 2], nx = N[i], ny = N[i + 1], nz = N[i + 2], up = Math.max(0, ny);
+    let r = A[0] + S[0] * up, g = A[1] + S[1] * up, b = A[2] + S[2] * up;
+    for (const [lp, lc, rad] of Ls) {
+      const dx = lp[0] - px, dy = lp[1] - py, dz = lp[2] - pz, dist = Math.hypot(dx, dy, dz) + 1e-4;
+      if (dist >= rad) continue;
+      const ndl = clamp(((nx * dx + ny * dy + nz * dz) / dist + 0.25) / 1.25, 0, 1);
+      let att = 1 - dist / rad; att *= att;
+      r += lc[0] * ndl * att; g += lc[1] * ndl * att; b += lc[2] * ndl * att;
+    }
+    out[i] = r * Cv[i]; out[i + 1] = g * Cv[i + 1]; out[i + 2] = b * Cv[i + 2];
+  }
+  return out;
+}
+// a light set: what the dynamic (non-baked) things are lit by in an area
+function applyLights(lights, ambient) {
+  for (let i = 0; i < MAXL; i++) {
+    const L = lights[i];
+    if (L) { SU.uLightPos.value[i].set(L[0][0], L[0][1], L[0][2]); SU.uLightCol.value[i].set(L[1][0], L[1][1], L[1][2]); SU.uLightRad.value[i] = L[2]; }
+    else { SU.uLightPos.value[i].set(0, -99, 0); SU.uLightCol.value[i].set(0, 0, 0); SU.uLightRad.value[i] = 1; }
+  }
+  SU.uAmbient.value.set(ambient[0], ambient[1], ambient[2]);
+}
+const lightFromHex = (p, c, r, k) => { const col = new THREE.Color(c); return [p, [col.r * k, col.g * k, col.b * k], r]; };
 
 // Static world geometry, batched per material.
 const statics = new Map();
@@ -372,11 +447,11 @@ function box(texName, mn, mx, o = {}) {
     acc.quad(q, [[u0, v0], [u1, v0], [u1, v1], [u0, v1]], fc.map((v, i) => v - c[i]), o.sub || 1);
   }
 }
-function flushStatics() {
+function flushStatics(light) {
   let tris = 0;
   for (const { acc, texName, o } of statics.values()) {
     if (acc.empty) continue;
-    const m = new THREE.Mesh(acc.geometry(), sharedMat(texName, o));
+    const m = new THREE.Mesh(acc.geometry(light), sharedMat(texName, Object.assign({}, o, { baked: !!light && !o.emissive })));
     m.matrixAutoUpdate = false; m.updateMatrix();
     scene.add(m); tris += acc.tris;
   }
@@ -400,6 +475,47 @@ const BLOCKERS = [   // xz boxes nobody walks through
   { x0: POOL.x - POOL.hx, x1: POOL.x + POOL.hx, z0: POOL.z - POOL.hz, z1: POOL.z + POOL.hz },
   { x0: -4.95, x1: -4.35, z0: 1.0, z1: 1.95 },  // jukebox
 ];
+// Where anyone can stand: a union of xz rectangles (the bar, the doorway once the door is open, the street).
+// Walls are wherever these rectangles end. `on()` gates a rectangle (the doorway needs an open door).
+// Walking bounds are (edge - r) + pad; walls for ragdoll particles sit at w* (edge + 1 cm unless given).
+const WALK = [
+  { x0: -ROOM.wall, x1: ROOM.wall, z0: -ROOM.wall, z1: ROOM.wall, pad: 0.3, wx0: -(ROOM.x - 0.04), wx1: ROOM.x - 0.04, wz0: -(ROOM.z - 0.04), wz1: ROOM.z - 0.04, area: 'bar' },
+];
+function addWalk(w) { w.pad = w.pad || 0; for (const [k, s] of [['x0', -1], ['x1', 1], ['z0', -1], ['z1', 1]]) if (w['w' + k] === undefined) w['w' + k] = w[k] + s * 0.01; WALK.push(w); }
+// banded lookup so the street's many boxes don't cost the bar anything: boxes are filed by z band
+const BAND = 4;
+function bandIndex(list, get, margin) {
+  const bands = new Map();
+  for (const it of list) {
+    const [z0, z1] = get(it);
+    for (let k = Math.floor((z0 - margin) / BAND); k <= Math.floor((z1 + margin) / BAND); k++) { if (!bands.has(k)) bands.set(k, []); bands.get(k).push(it); }
+  }
+  return bands;
+}
+const NONE = [];
+let blockerBands = null, worldBoxBands = null;
+function indexWorld() {
+  blockerBands = bandIndex(BLOCKERS, b => [b.z0, b.z1], 0.8);
+  worldBoxBands = bandIndex(WORLD_BOXES, B => [B[2], B[5]], 0.6);
+}
+const blockersNear = (z) => (blockerBands && blockerBands.get(Math.floor(z / BAND))) || NONE;
+const boxesNear = (z) => (worldBoxBands && worldBoxBands.get(Math.floor(z / BAND))) || NONE;
+// keep an xz point (radius r) inside the walkable union; returns true if it had to move. walls: ragdoll particles
+function keepInWalk(p, r, walls) {
+  let best = null, bestD = 1e9, bx = 0, bz = 0;
+  for (const w of WALK) {
+    if (w.on && !w.on()) continue;
+    let x0, x1, z0, z1;
+    if (walls) { x0 = w.wx0 + r; x1 = w.wx1 - r; z0 = w.wz0 + r; z1 = w.wz1 - r; }
+    else { x0 = (w.x0 + r) - w.pad; x1 = (w.x1 - r) + w.pad; z0 = (w.z0 + r) - w.pad; z1 = (w.z1 - r) + w.pad; }
+    if (x0 > x1 || z0 > z1) continue;
+    if (p.x >= x0 && p.x <= x1 && p.z >= z0 && p.z <= z1) return false;
+    const qx = clamp(p.x, x0, x1), qz = clamp(p.z, z0, z1), d = (p.x - qx) ** 2 + (p.z - qz) ** 2;
+    if (d < bestD) { bestD = d; best = w; bx = qx; bz = qz; }
+  }
+  if (!best) return false;
+  p.x = bx; p.z = bz; return true;
+}
 let neonMat, roundSignMat, roomTris = 0;
 
 function buildRoom() {
@@ -411,8 +527,13 @@ function buildRoom() {
   grid('tile', [-X, 0, Z], [0, 0, -1], [0, 1, 0], 2 * Z, 1.6, 0.8, 0.8, 1.0, [1, 0, 0]);
   grid('concrete', [-X, 1.6, Z], [0, 0, -1], [0, 1, 0], 2 * Z, Y - 1.6, 1.2, 1.2, 1.0, [1, 0, 0]);
   grid('brick', [X, 0, -Z], [0, 0, 1], [0, 1, 0], 2 * Z, Y, 0.9, 0.9, 1.0, [-1, 0, 0]);
-  grid('wood_panel', [X, 0, Z], [-1, 0, 0], [0, 1, 0], 2 * X, 1.2, 1.0, 1.2, 1.0, [0, 0, -1]);
-  grid('concrete', [X, 1.2, Z], [-1, 0, 0], [0, 1, 0], 2 * X, Y - 1.2, 1.2, 1.2, 1.0, [0, 0, -1]);
+  // front wall, with the doorway cut out (the door itself is a hinged mesh: it opens onto Tripoint Square)
+  const DW = DOOR.w / 2;
+  for (const x0 of [X, -DW]) {
+    grid('wood_panel', [x0, 0, Z], [-1, 0, 0], [0, 1, 0], X - DW, 1.2, 1.0, 1.2, 1.0, [0, 0, -1]);
+    grid('concrete', [x0, 1.2, Z], [-1, 0, 0], [0, 1, 0], X - DW, Y - 1.2, 1.2, 1.2, 1.0, [0, 0, -1]);
+  }
+  grid('concrete', [DW, DOOR.h, Z], [-1, 0, 0], [0, 1, 0], 2 * DW, Y - DOOR.h, 1.2, 1.2, 1.0, [0, 0, -1]);
   box('brass', [-X, 2.68, -Z], [X, 2.78, -Z + 0.06], { faces: 'ftd' });
 
   // ---- Hinomoto: bar, back shelf, lanterns, neon
@@ -454,17 +575,17 @@ function buildRoom() {
   box('darkwood', [px - 0.35, 1.95, pz - 0.65], [px + 0.35, 2.08, pz + 0.65], { faces: 'fblrt' });
   box('teal', [px - 0.33, 1.949, pz - 0.63], [px + 0.33, 1.95, pz + 0.63], { uvs: { '*': [0, 0, 1, 1] }, emissive: true, faces: 'd' });
   box('black', [px - 0.01, 2.08, pz - 0.01], [px + 0.01, Y, pz + 0.01], { faces: 'fblr' });
-  // ---- front wall: door
-  sacc('door').quad([[0.6, 2.3, 4.97], [-0.6, 2.3, 4.97], [-0.6, 0, 4.97], [0.6, 0, 4.97]], [[0, 0], [1, 0], [1, 1], [0, 1]], [0, 0, -1], 2);
-  box('darkwood', [-0.72, 0, 4.9], [-0.6, 2.42, 5], { faces: 'fblrt' });
-  box('darkwood', [0.6, 0, 4.9], [0.72, 2.42, 5], { faces: 'fblrt' });
-  box('darkwood', [-0.72, 2.3, 4.9], [0.72, 2.42, 5]);
+  // ---- front wall: the door frame runs through the wall to the street
+  box('darkwood', [-DW - 0.12, 0, 4.9], [-DW, DOOR.h + 0.12, DOOR.z1], { faces: 'fblrt' });
+  box('darkwood', [DW, 0, 4.9], [DW + 0.12, DOOR.h + 0.12, DOOR.z1], { faces: 'fblrt' });
+  box('darkwood', [-DW - 0.12, DOOR.h, 4.9], [DW + 0.12, DOOR.h + 0.12, DOOR.z1]);
   // ---- tables
   for (const t of TABLES) {
     box('counter', [t.x - 0.45, 0.74, t.z - 0.45], [t.x + 0.45, 0.79, t.z + 0.45], { tile: 0.5 });
     box('chrome', [t.x - 0.05, 0, t.z - 0.05], [t.x + 0.05, 0.74, t.z + 0.05], { faces: 'fblr' });
   }
-  roomTris = flushStatics();
+  roomTris = flushStatics(BAR_LIGHT);
+  buildDoor();
 
   // dynamic signs: flickering neon + round sign
   const neonAcc = new GeoAcc();
@@ -476,21 +597,752 @@ function buildRoom() {
   roundSignMat = makeMat('round1', { emissive: true });
   scene.add(new THREE.Mesh(rs.geometry(), roundSignMat));
 
-  // 6 point lights, per-vertex only
-  const L = [
-    [[0, 2.3, -4.2], '#ff4f9a', 5.0, 0.7],    // THE THREEWAY neon
-    [[0, 2.6, -3.0], '#e8352b', 6.0, 1.0],    // lanterns
-    [[-4.2, 2.1, 0.0], '#ff9a3c', 6.5, 1.5],  // sodium lamp
-    [[2.7, 1.8, 1.2], '#ffc870', 4.5, 1.5],   // pool lamp (green-glass banker's shade)
-    [[0, 2.6, 4.3], '#ffd8a0', 6.5, 1.3],     // round sign over the door
-    [[4.2, 2.0, -1.6], '#5a6cff', 4.0, 0.8],  // night window spill
+  applyLights(BAR_LIGHT.lights, BAR_LIGHT.ambient);
+}
+// 6 point lights: baked into the room, live on goons, props and hands
+const BAR_LIGHT = { ambient: [0.2, 0.13, 0.19], lights: [
+  lightFromHex([0, 2.3, -4.2], '#ff4f9a', 5.0, 0.7),    // THE THREEWAY neon
+  lightFromHex([0, 2.6, -3.0], '#e8352b', 6.0, 1.0),    // lanterns
+  lightFromHex([-4.2, 2.1, 0.0], '#ff9a3c', 6.5, 1.5),  // sodium lamp
+  lightFromHex([2.7, 1.8, 1.2], '#ffc870', 4.5, 1.5),   // pool lamp (green-glass banker's shade)
+  lightFromHex([0, 2.6, 4.3], '#ffd8a0', 6.5, 1.3),     // round sign over the door
+  lightFromHex([4.2, 2.0, -1.6], '#5a6cff', 4.0, 0.8),  // night window spill
+] };
+// the front door: hinged on its right edge (seen from inside), swings out onto the square
+const DOOR = { w: 1.2, h: 2.3, z: 4.97, z1: 5.32, open: 0, target: 0 };
+let doorPivot = null;
+function buildDoor() {
+  const acc = new GeoAcc(), DW = DOOR.w / 2;
+  acc.quad([[DW, DOOR.h, 0], [-DW, DOOR.h, 0], [-DW, 0, 0], [DW, 0, 0]], [[0, 0], [1, 0], [1, 1], [0, 1]], [0, 0, -1], 2);       // inside face
+  acc.quad([[-DW, DOOR.h, 0.05], [DW, DOOR.h, 0.05], [DW, 0, 0.05], [-DW, 0, 0.05]], [[0, 0], [1, 0], [1, 1], [0, 1]], [0, 0, 1], 2);   // street face
+  const g = acc.geometry(); const pos = g.attributes.position.array;
+  for (let i = 0; i < pos.length; i += 3) pos[i] -= DW;   // hinge at the local origin
+  doorPivot = new THREE.Group(); doorPivot.position.set(DW, 0, DOOR.z);
+  doorPivot.add(new THREE.Mesh(g, sharedMat('door')));
+  scene.add(doorPivot);
+}
+function updateDoor(dt) {
+  if (!doorPivot) return;
+  DOOR.open += clamp(DOOR.target - DOOR.open, -dt * CFG.street.doorSpeed, dt * CFG.street.doorSpeed);
+  doorPivot.rotation.y = DOOR.open * CFG.street.doorOpenDeg * DEG;
+}
+
+// ============================== the street: painted textures ================
+// Tripoint Square, the old road and the militia checkpoint. Every street texture is painted in code here
+// (same painter as the Vostburg map) and packed into one atlas, so the whole street is one draw call and
+// the skylines another. Alpha 204 = the texel glows by itself (windows, neon, gas mantles).
+const EM = 204;
+let prng = (() => { let s = 1; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })();
+const seedPaint = (key) => { let s = key.split('').reduce((a, ch) => (a * 31 + ch.charCodeAt(0)) % 99991, 7) + 1; prng = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; };
+const hexRGB = (h) => { const n = parseInt(h.slice(1), 16); return [(n >> 16) & 255, (n >> 8) & 255, n & 255]; };
+class Pix {
+  constructor(w, h) { this.w = w; this.h = h; this.d = new Uint8Array(w * h * 4); }
+  set(x, y, col, a = 255) {
+    x = Math.round(x); y = Math.round(y); if (x < 0 || y < 0 || x >= this.w || y >= this.h) return;
+    const c = typeof col === 'string' ? hexRGB(col) : col, i = (y * this.w + x) * 4;
+    this.d[i] = c[0]; this.d[i + 1] = c[1]; this.d[i + 2] = c[2]; this.d[i + 3] = a;
+  }
+  rect(x, y, w, h, col, a = 255) { const c = typeof col === 'string' ? hexRGB(col) : col; for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) this.set(x + i, y + j, c, a); }
+  fill(col, a = 255) { this.rect(0, 0, this.w, this.h, col, a); }
+  speck(col, n, a = 255) { for (let k = 0; k < n; k++) this.set(Math.floor(prng() * this.w), Math.floor(prng() * this.h), col, a); }
+  checker(x, y, w, h, col, a = 255) { for (let j = 0; j < h; j++) for (let i = (j & 1); i < w; i += 2) this.set(x + i, y + j, col, a); }
+  text(s, x, y, col, a = 255) {
+    let cx = x;
+    for (const ch of String(s).toUpperCase()) { const g = GLYPHS[ch]; if (g) for (let i = 0; i < 35; i++) if (g[i] === '1') this.set(cx + (i % 5), y + Math.floor(i / 5), col, a); cx += 6; }
+  }
+  bigText(s, x, y, col, a = 255, k = 2) {   // the 5x7 font at k x k pixels per dot
+    let cx = x;
+    for (const ch of String(s).toUpperCase()) { const g = GLYPHS[ch]; if (g) for (let i = 0; i < 35; i++) if (g[i] === '1') this.rect(cx + (i % 5) * k, y + Math.floor(i / 5) * k, k, k, col, a); cx += 6 * k; }
+  }
+  glyph(g, x, y, col, a = 255) { const G2 = BRUSH[g % BRUSH.length]; for (let j = 0; j < 7; j++) for (let i = 0; i < 5; i++) if (G2[j][i] === '1') this.set(x + i, y + j, col, a); }
+}
+const textW = (s) => String(s).length * 6 - 1;
+const GLYPHS = {
+  A: '01110100011000111111100011000110001', B: '11110100011000111110100011000111110', C: '01110100011000010000100001000101110',
+  D: '11100100101000110001100011001011100', E: '11111100001000011110100001000011111', F: '11111100001000011110100001000010000',
+  G: '01110100011000010111100011000101111', H: '10001100011000111111100011000110001', I: '01110001000010000100001000010001110',
+  J: '00111000100001000010000101001001100', K: '10001100101010011000101001001010001', L: '10000100001000010000100001000011111',
+  M: '10001110111010110101100011000110001', N: '10001100011100110101100111000110001', O: '01110100011000110001100011000101110',
+  P: '11110100011000111110100001000010000', Q: '01110100011000110001101011001001101', R: '11110100011000111110101001001010001',
+  S: '01111100001000001110000010000111110', T: '11111001000010000100001000010000100', U: '10001100011000110001100011000101110',
+  V: '10001100011000110001100010101000100', W: '10001100011000110101101011010101010', X: '10001100010101000100010101000110001',
+  Y: '10001100011000101010001000010000100', Z: '11111000010001000100010001000011111',
+  0: '01110100011001110101110011000101110', 1: '00100011000010000100001000010001110', 2: '01110100010000100010001000100011111',
+  3: '11111000100010000010000011000101110', 4: '00010001100101010010111110001000010', 5: '11111100001111000001000011000101110',
+  6: '00110010001000011110100011000101110', 7: '11111000010001000100010000100001000', 8: '01110100011000101110100011000101110',
+  9: '01110100011000101111000010001001100', '.': '00000000000000000000000000110001100', '-': '00000000000000011111000000000000000',
+  '!': '00100001000010000100001000000000100', '·': '00000000000000001100011000000000000',
+};
+const BRUSH = [
+  ['11111', '00100', '11111', '00100', '01110', '10101', '00100'], ['10001', '11111', '10101', '11111', '00100', '11111', '00100'],
+  ['00100', '11111', '01010', '11111', '01010', '11011', '10001'], ['11110', '10010', '11110', '00100', '11111', '00100', '01010'],
+  ['01000', '11111', '01001', '01111', '01001', '11111', '00001'], ['00100', '01010', '10001', '01110', '00100', '11111', '00100'],
+];
+const PC = {
+  plum: '#140b12', brass: '#c9a04a', cream: '#e6dac0', lantern: '#e8352b', sodium: '#ff9a3c', pink: '#ff4f9a', teal: '#33e0d0', gold: '#f2c14e',
+  fluor: '#eef8ff', banner: '#b8231e', warm: '#ffcf86', gas: '#e8f2d0', militia: '#4a2440',
+};
+// each painter returns a Pix. Sizes are small on purpose: nearest-filtered, ≤16 colours each.
+const PAINT = {
+  // ---- old Vostburg (the Old Quarter)
+  cobble() {   // basalt setts in staggered rows, a few worn bright, moss in the joints
+    const p = new Pix(32, 32); p.fill('#231c20');
+    for (let y = 0; y < 32; y += 4) for (let x = ((y >> 2) & 1) * 3 - 3; x < 32; x += 6) {
+      const c = ['#5a4e52', '#52474b', '#625458', '#4a4044'][Math.floor(prng() * 4)];
+      p.rect(x + 1, y + 1, 4, 3, c); p.set(x + 1, y + 1, '#5e5154'); p.set(x + 4, y + 3, '#2c2428');
+    }
+    p.speck('#2e3a2a', 10); return p;
+  },
+  setts() {   // the square: fan-laid setts (arcs)
+    const p = new Pix(32, 32); p.fill('#241d21');
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      const cx = (x % 16) - 8, cy = (y % 16), d = Math.hypot(cx, cy), ring = Math.floor(d / 3), ang = Math.atan2(cy, cx);
+      const brick = Math.floor(ang * (2 + ring) * 1.3);
+      if (d % 3 > 0.8 && (ang * (2 + ring) * 1.3) % 1 > 0.18) p.set(x, y, (ring + brick) % 3 === 0 ? '#524649' : (ring + brick) % 3 === 1 ? '#463c40' : '#3e3539');
+    }
+    p.speck('#5e5154', 12); return p;
+  },
+  flags() {   // pavement: big worn flagstones
+    const p = new Pix(16, 16); p.fill('#4e4646');
+    p.rect(0, 0, 16, 1, '#3a3234'); p.rect(0, 8, 16, 1, '#3a3234'); p.rect(0, 0, 1, 8, '#3a3234'); p.rect(9, 8, 1, 8, '#3a3234');
+    p.speck('#5a5252', 14); p.speck('#433b3c', 10); return p;
+  },
+  curb() { const p = new Pix(16, 4); p.fill('#6a6264'); p.rect(0, 0, 16, 1, '#8a8284'); p.rect(0, 3, 16, 1, '#3a3234'); p.rect(7, 0, 1, 4, '#4a4244'); return p; },
+  brassLine() { const p = new Pix(8, 4); p.fill('#c9a04a'); p.rect(0, 0, 8, 1, '#ffe7a0'); p.rect(0, 3, 8, 1, '#7a5a22'); p.set(3, 1, '#ffe7a0'); return p; },
+  // plaster tenement upper floors: 4 bays x 2 floors; plaster colour comes from the vertex tint
+  tenement() {   // Krasnovian painted window surrounds with peaked crowns
+    const p = new Pix(64, 32); p.fill('#d8d0c4');
+    const frames = ['#2a8a7a', '#b8231e', '#c9a04a', '#2a4a8a'];
+    for (let f = 0; f < 2; f++) {
+      p.rect(0, f * 16 + 15, 64, 1, '#b0a898');
+      for (let b = 0; b < 4; b++) {
+        const x = b * 16 + 5, y = f * 16 + 5, lit = prng() < 0.4, fr = frames[(b + f * 2) % 4];
+        p.rect(x - 2, y - 3, 10, 13, fr); p.rect(x - 1, y - 4, 8, 1, fr); p.rect(x + 1, y - 5, 4, 1, fr);
+        p.rect(x, y, 6, 8, lit ? PC.warm : '#2a2430', lit ? EM : 255); p.rect(x + 2, y, 2, 8, '#3a3036'); p.rect(x, y + 3, 6, 1, '#3a3036');
+        p.rect(x - 2, y + 9, 10, 1, '#f2ede4');
+      }
+    }
+    return p;
+  },
+  tenementPlain() {   // plain Central European: tall windows, shutters
+    const p = new Pix(64, 32); p.fill('#d8d0c4');
+    for (let f = 0; f < 2; f++) {
+      p.rect(0, f * 16 + 15, 64, 1, '#b8b0a4'); p.rect(0, f * 16 + 14, 64, 1, '#c8c0b4');
+      for (let b = 0; b < 4; b++) {
+        const x = b * 16 + 5, y = f * 16 + 3, lit = prng() < 0.33;
+        p.rect(x - 1, y - 1, 8, 11, '#3a3036'); p.rect(x, y, 6, 9, lit ? PC.warm : '#2a2430', lit ? EM : 255);
+        if (lit && prng() < 0.5) p.rect(x, y + 6, 6, 3, '#e8a868', EM);   // a lamp in the room
+        p.rect(x + 2, y, 2, 9, '#3a3036'); p.rect(x - 3, y, 2, 9, '#7a6a5a'); p.rect(x + 7, y, 2, 9, '#7a6a5a');
+        p.rect(x - 1, y + 10, 8, 1, '#efe6da');
+      }
+    }
+    return p;
+  },
+  shops() {   // Columbian cast-iron fronts: green iron columns, big warm glass, a brass sign band
+    const p = new Pix(64, 16); p.fill('#1e2a24');
+    for (let k = 0; k < 4; k++) {
+      const x = k * 16, lit = prng() < 0.55;
+      p.rect(x, 0, 16, 3, PC.brass); p.rect(x + 2, 1, 12, 1, '#4a3020');
+      p.rect(x + 2, 5, 9, 10, lit ? '#d8955a' : '#2a2a30', lit ? EM : 255); p.rect(x + 6, 5, 1, 10, '#1e2a24'); p.rect(x + 12, 6, 3, 10, '#3a2418');
+      if (lit) { p.rect(x + 2, 5, 9, 1, '#ffd8a0', EM); p.rect(x + 3, 11, 3, 4, '#8a4a2a', EM); p.rect(x + 8, 10, 2, 5, '#6a3a5a', EM); p.rect(x + 2, 14, 9, 1, '#5a3020', EM); }
+      p.rect(x, 3, 1, 13, '#3a4a42'); p.rect(x + 15, 3, 1, 13, '#3a4a42');
+    }
+    return p;
+  },
+  shopsPlain() {   // shuttered Vostburger shops, cream signboards
+    const p = new Pix(64, 16); p.fill('#4a3020');
+    for (let k = 0; k < 4; k++) {
+      const x = k * 16, lit = prng() < 0.4;
+      p.rect(x + 1, 1, 14, 4, PC.cream); p.rect(x + 1, 1, 14, 1, PC.brass);
+      if (lit) { p.rect(x + 2, 7, 8, 8, '#d8955a', EM); p.rect(x + 2, 7, 8, 1, '#ffd8a0', EM); p.rect(x + 3, 11, 2, 4, '#7a4026', EM); p.rect(x + 6, 12, 3, 3, '#5a3a4a', EM); } else { p.rect(x + 2, 7, 8, 8, '#5a5a62'); for (let y = 8; y < 15; y += 2) p.rect(x + 2, y, 8, 1, '#44444c'); }
+      p.rect(x + 11, 7, 4, 9, '#2a1a12'); p.set(x + 12, 11, PC.brass);
+    }
+    return p;
+  },
+  mansard() { const p = new Pix(32, 16); p.fill('#34343f'); for (let x = 0; x < 32; x += 3) p.rect(x, 0, 1, 16, '#2a2a34'); for (let x = 4; x < 32; x += 12) { p.rect(x, 4, 7, 9, '#5a5464'); p.rect(x + 1, 6, 5, 7, prng() < 0.45 ? PC.warm : '#22202a', prng() < 0.45 ? EM : 255); p.rect(x - 1, 3, 9, 1, '#6a6474'); } p.rect(0, 15, 32, 1, PC.brass); return p; },
+  copper() { const p = new Pix(32, 16); p.fill('#46806e'); for (let x = 0; x < 32; x += 3) p.rect(x, 0, 1, 16, '#3a6c5e'); p.speck('#62a08a', 14); p.speck('#2e5a4c', 8); for (let x = 4; x < 32; x += 12) { p.rect(x, 4, 7, 9, '#3a6a5c'); p.rect(x + 1, 6, 5, 7, prng() < 0.5 ? PC.warm : '#22202a', prng() < 0.5 ? EM : 255); p.rect(x - 1, 3, 9, 1, '#5aa08a'); } p.rect(0, 15, 32, 1, PC.brass); return p; },
+  copperTop() { const p = new Pix(16, 16); p.fill('#46806e'); for (let x = 0; x < 16; x += 3) p.rect(x, 0, 1, 16, '#3a6c5e'); p.speck('#62a08a', 8); return p; },
+  slate() { const p = new Pix(16, 16); p.fill('#2e2e38'); for (let y = 0; y < 16; y += 3) for (let x = (y % 2) * 2; x < 16; x += 4) p.rect(x, y, 3, 2, '#3a3a46'); return p; },
+  kawara() { const p = new Pix(16, 16); p.fill('#4a4e58'); for (let x = 0; x < 16; x += 3) p.rect(x, 0, 1, 16, '#363a44'); for (let y = 3; y < 16; y += 4) p.rect(0, y, 16, 1, '#5a606c'); return p; },
+  lacquer() { const p = new Pix(8, 8); p.fill('#9a1e18'); p.rect(0, 0, 8, 1, '#c8342a'); return p; },
+  onion() { const p = new Pix(16, 16); p.fill('#2a8a7a'); for (let y = 0; y < 16; y += 4) for (let x = (y >> 2 & 1) * 2; x < 16; x += 4) p.rect(x, y, 2, 2, '#c9a04a'); return p; },
+  gilt() { const p = new Pix(8, 8); p.fill(PC.gold); p.rect(0, 0, 8, 1, '#fff0b0'); p.rect(0, 7, 8, 1, '#9a7420'); return p; },
+  iron() { const p = new Pix(8, 8); p.fill('#22262a'); p.rect(0, 0, 8, 1, '#3e4448'); p.rect(0, 0, 1, 8, '#34393e'); return p; },
+  stone() { const p = new Pix(16, 16); p.fill('#8a8070'); p.rect(0, 7, 16, 1, '#6a6254'); p.rect(0, 15, 16, 1, '#6a6254'); p.rect(5, 0, 1, 7, '#6a6254'); p.rect(12, 8, 1, 7, '#6a6254'); p.speck('#9a9080', 10); return p; },
+  plaster() { const p = new Pix(16, 16); p.fill('#d0c8bc'); p.speck('#c0b8ac', 18); p.speck('#ddd6ca', 8); return p; },
+  darkwood() { const p = new Pix(8, 8); p.fill('#3a2418'); p.rect(0, 3, 8, 1, '#2a180e'); p.set(5, 1, '#4a3020'); return p; },
+  black() { const p = new Pix(4, 4); p.fill('#0a0608'); return p; },
+  // ---- the Threeway's own front
+  threewayFront() {   // 48x16: dark lacquered wood, two big windows glowing pink and amber from inside, door gap in the middle
+    const p = new Pix(48, 16); p.fill('#2a1410');
+    p.rect(0, 0, 48, 2, PC.brass); p.rect(0, 15, 48, 1, '#1a0c08');
+    for (const x of [2, 30]) { p.rect(x, 4, 16, 9, '#ff9ab8', EM); p.rect(x, 4, 16, 1, '#ffd0a0', EM); p.rect(x + 5, 4, 1, 9, '#2a1410'); p.rect(x + 10, 4, 1, 9, '#2a1410'); p.rect(x + 2, 9, 3, 4, '#c03a6a', EM); p.rect(x + 12, 8, 2, 5, '#e8a040', EM); }
+    p.rect(20, 3, 8, 13, '#140806');
+    return p;
+  },
+  neonThreeway() { const p = new Pix(152, 20); p.fill('#1a0a14', EM); p.bigText('THE THREEWAY', 5, 3, '#6a1838', EM); p.bigText('THE THREEWAY', 4, 2, PC.pink, EM); p.rect(0, 0, 152, 1, '#a8285e', EM); p.rect(0, 19, 152, 1, '#a8285e', EM); return p; },
+  // ---- street furniture
+  gaslamp() { const p = new Pix(8, 8); p.fill('#e8f2d0', EM); p.rect(0, 0, 8, 1, '#22262a'); p.rect(0, 7, 8, 1, '#22262a'); p.rect(0, 0, 1, 8, '#22262a'); p.rect(7, 0, 1, 8, '#22262a'); p.rect(3, 2, 2, 4, '#ffffff', EM); return p; },
+  clockFace() { const p = new Pix(16, 16); p.fill(PC.brass); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.hypot(x - 7.5, y - 7.5); if (d < 6.6) p.set(x, y, '#f4ead0', EM); if (d >= 5.6 && d < 6.6 && (Math.round(Math.atan2(y - 7.5, x - 7.5) / Math.PI * 6) % 1 === 0)) p.set(x, y, '#3a2a1a', EM); } p.rect(7, 3, 2, 5, '#1a1008', EM); p.rect(8, 7, 3, 2, '#1a1008', EM); p.set(7, 7, '#b8231e', EM); return p; },
+  enamel() { const p = new Pix(32, 8); p.fill(PC.militia); p.rect(0, 0, 32, 1, PC.brass); p.rect(0, 7, 32, 1, PC.brass); p.text('TRIPOINT', 2, 1, '#f2ede4'); return p; },
+  station() {   // the sealed metro entrance: an iron arch sign over welded plate
+    const p = new Pix(48, 16); p.fill('#22262a');
+    p.rect(0, 0, 48, 9, '#1e3a6a'); p.rect(0, 0, 48, 1, PC.brass); p.rect(0, 8, 48, 1, PC.brass); p.text('TRIPOINT', 4, 1, '#f2ede4'); p.text('M', 41, 1, PC.lantern);
+    for (let x = 0; x < 48; x += 4) p.rect(x, 9, 1, 7, '#3e4448');
+    p.rect(0, 12, 48, 1, '#5a3a20'); p.rect(14, 10, 20, 5, '#e8dcc0'); p.text('SEALED', 15, 9, '#b8231e');
+    return p;
+  },
+  barricade() { const p = new Pix(32, 8); for (let x = 0; x < 32; x++) p.rect(x, 0, 1, 8, Math.floor((x + 2) / 4) % 2 ? '#f2ede4' : PC.militia); p.rect(0, 0, 32, 1, '#1a1014'); return p; },
+  closed() { const p = new Pix(48, 16); p.fill('#f2ede4'); p.rect(0, 0, 48, 2, PC.militia); p.rect(0, 14, 48, 2, PC.militia); p.text('ROAD', 12, 3, PC.militia); p.text('CLOSED', 6, 9 - 1, '#b8231e'); return p; },
+  // ---- the joint-militia checkpoint
+  booth() { const p = new Pix(32, 32); p.fill('#c8c4bc'); p.rect(0, 0, 32, 4, PC.militia); p.rect(0, 4, 32, 1, PC.brass); p.rect(3, 8, 26, 12, '#dff0ff', EM); p.rect(15, 8, 2, 12, '#9a968e'); p.rect(4, 15, 6, 5, '#a8c0d8', EM); p.rect(0, 24, 32, 2, '#9a968e'); p.speck('#b0aca4', 20); return p; },
+  boom() { const p = new Pix(16, 4); for (let x = 0; x < 16; x++) p.rect(x, 0, 1, 4, Math.floor(x / 4) % 2 ? '#f2ede4' : '#b8231e'); p.set(2, 1, '#ffe8c0', EM); p.set(10, 1, '#ff6040', EM); return p; },
+  concrete() { const p = new Pix(16, 16); p.fill('#8a867e'); p.rect(0, 0, 16, 1, '#a8a49c'); p.rect(7, 0, 1, 16, '#6e6a62'); p.speck('#76726a', 16); p.speck('#9a968e', 8); return p; },
+  wallTop() { const p = new Pix(16, 8); p.fill('#9a968e'); p.rect(0, 0, 16, 2, '#b8b4ac'); for (let x = 0; x < 16; x += 2) p.set(x, 0, '#3a3a40'); return p; },
+  sandbag() { const p = new Pix(16, 8); p.fill('#6a6048'); for (let y = 0; y < 8; y += 4) for (let x = (y / 4 % 2) * 4; x < 16; x += 8) { p.rect(x, y, 7, 3, '#8a7c5c'); p.rect(x, y, 7, 1, '#9a8c6a'); } return p; },
+  militiaSign() { const p = new Pix(128, 32); p.fill(PC.militia); p.rect(0, 0, 128, 2, PC.brass); p.rect(0, 30, 128, 2, PC.brass); p.bigText('CHECKPOINT', 4, 3, '#f2ede4'); p.text('JOINT CITY MILITIA', 4, 21, PC.brass); p.rect(116, 6, 7, 20, PC.brass); p.rect(118, 8, 3, 18, PC.militia); return p; },
+  halt() { const p = new Pix(28, 12); p.fill('#b8231e', EM); p.rect(0, 0, 28, 1, '#ffffff', EM); p.rect(0, 11, 28, 1, '#ffffff', EM); p.text('HALT', 3, 3, '#ffffff', EM); return p; },
+  flood() { const p = new Pix(8, 8); p.fill('#f4f8ff', EM); p.rect(0, 0, 8, 1, '#5a5a62'); p.rect(0, 7, 8, 1, '#5a5a62'); return p; },
+  // ---- flags (Hinomoto, Krasnovia, Columbia, the old Free City): from the art set
+  flag_hino() { const p = new Pix(24, 16); p.fill('#eef3f8'); p.rect(0, 13, 24, 2, PC.lantern); p.rect(7, 2, 10, 10, PC.gold); p.rect(8, 3, 8, 8, PC.lantern); p.rect(10, 4, 4, 1, '#ffffff'); p.rect(11, 5, 2, 4, '#ffffff'); p.rect(9, 7, 6, 1, '#ffffff'); p.set(10, 9, '#ffffff'); p.set(13, 9, '#ffffff'); return p; },
+  flag_kras() { const p = new Pix(24, 16); p.fill(PC.banner); p.rect(0, 0, 6, 16, PC.sodium); for (let y = -4; y <= 4; y++) for (let x = -4; x <= 4; x++) { const d = Math.hypot(x, y); if (d <= 4.2 && d >= 2.4) p.set(15 + x, 8 + y, PC.gold); } for (let a = 0; a < 8; a++) { const t = a / 8 * Math.PI * 2; p.set(15 + Math.round(Math.cos(t) * 5), 8 + Math.round(Math.sin(t) * 5), PC.gold); } return p; },
+  flag_colu() {
+    const p = new Pix(24, 16); p.fill('#1a2a5a');
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 24; x++) { const dx = x - 11.5, dy = 11 - y, d = Math.hypot(dx, dy), a = Math.atan2(dy, dx); if (dy >= 0 && d < 9.6 && (d < 3.2 || Math.floor(a / Math.PI * 13) % 2 === 0)) p.set(x, y, d < 3.2 ? '#fff0b0' : PC.gold); }
+    p.rect(0, 11, 24, 1, PC.gold); p.rect(0, 12, 24, 1, '#c8202c'); p.rect(0, 13, 24, 1, '#f0e6cc'); p.rect(0, 14, 24, 1, '#c8202c');
+    p.rect(0, 0, 24, 1, PC.gold); p.rect(0, 15, 24, 1, PC.gold); p.rect(0, 0, 1, 16, PC.gold); p.rect(23, 0, 1, 16, PC.gold); return p;
+  },
+  flag_vost() { const p = new Pix(24, 16); p.rect(0, 0, 24, 8, '#4a2440'); p.rect(0, 8, 24, 8, PC.brass); p.rect(10, 3, 4, 10, PC.brass); p.rect(11, 4, 2, 9, '#4a2440'); p.rect(9, 2, 6, 2, PC.brass); return p; },
+  poster() { const p = new Pix(16, 24); p.fill('#d8c8a0'); p.rect(1, 1, 14, 12, '#b8231e'); p.rect(4, 3, 8, 8, '#f2c14e'); p.rect(1, 15, 14, 1, '#2a2018'); p.rect(1, 18, 10, 1, '#2a2018'); p.rect(1, 21, 12, 1, '#2a2018'); p.speck('#a89870', 10); return p; },
+  // ---- props (crate, bin, street sign)
+  crate() { const p = new Pix(16, 16); p.fill('#8a6a3a'); for (let y = 0; y < 16; y += 4) p.rect(0, y, 16, 1, '#5a4020'); p.rect(0, 0, 2, 16, '#6a4a24'); p.rect(14, 0, 2, 16, '#6a4a24'); for (let k = 0; k < 14; k++) p.set(1 + k, 1 + k, '#6a4a24'); p.text('V', 6, 5, '#2a1a0c'); return p; },
+  bin() { const p = new Pix(16, 16); p.fill('#7a8088'); for (let x = 0; x < 16; x += 4) p.rect(x, 0, 1, 16, '#5a6068'); p.rect(0, 0, 16, 2, '#9aa0a8'); p.rect(0, 7, 16, 1, '#5a6068'); p.speck('#6a5040', 8); return p; },
+  signPlate() { const p = new Pix(16, 8); p.fill(PC.militia); p.rect(0, 0, 16, 1, PC.brass); p.rect(0, 7, 16, 1, PC.brass); p.rect(2, 3, 12, 2, '#f2ede4'); p.rect(12, 2, 2, 4, '#f2ede4'); return p; },
+  // ---- the three sectors, far away (skyline): ported from the map
+  glassN() {   // black glass, floors lit in runs (offices), a few neon-coloured floors
+    const p = new Pix(32, 32); p.fill('#141826'); for (let x = 0; x < 32; x += 8) p.rect(x, 0, 1, 32, '#20263a');
+    for (let y = 1; y < 32; y += 4) { let x = 0; while (x < 32) { const run = 4 + Math.floor(prng() * 10), q = prng(); if (q < 0.45) p.rect(x, y, Math.min(run, 32 - x), 2, q < 0.06 ? PC.pink : (q < 0.12 ? PC.teal : '#cfe0f8'), EM); x += run + 1 + Math.floor(prng() * 4); } }
+    return p;
+  },
+  neonSigns() { const p = new Pix(48, 48), rows = [['#e8352b', '#ffffff', '#ffffff'], ['#120812', '#ff3fb0', '#ff3fb0'], ['#06141a', '#3ff0ff', '#3ff0ff'], ['#f4f8fc', '#e8352b', '#1a1e26']]; rows.forEach(([bg, fg, edge], k) => { const y = k * 12; p.rect(0, y, 48, 12, bg, EM); p.rect(0, y, 48, 1, edge, EM); p.rect(0, y + 11, 48, 1, edge, EM); for (let g = 0; g < 7; g++) p.glyph(k * 3 + g, 2 + g * 6 + (g > 3 ? 1 : 0), y + 3, fg, EM); }); return p; },
+  neonV() { const p = new Pix(32, 48), cols = [['#e8352b', '#fff'], ['#ff3fb0', '#140812'], ['#3ff0ff', '#06141a'], ['#f2c14e', '#1a1208']]; cols.forEach(([bg, fg], k) => { p.rect(k * 8, 0, 8, 48, bg, EM); for (let g = 0; g < 5; g++) p.glyph(k * 5 + g, k * 8 + 1, 2 + g * 9, fg, EM); }); return p; },
+  litRed() { const p = new Pix(4, 4); p.fill('#ff3020', EM); return p; },
+  litCyan() { const p = new Pix(4, 4); p.fill('#3ff0ff', EM); return p; },
+  litMagenta() { const p = new Pix(4, 4); p.fill('#ff3fb0', EM); return p; },
+  litWarm() { const p = new Pix(4, 4); p.fill('#ffe8b0', EM); return p; },
+  litSodium() { const p = new Pix(4, 4); p.fill(PC.sodium, EM); return p; },
+  panel() { const p = new Pix(32, 32); p.fill('#4e4a46'); for (let y = 0; y < 32; y += 8) p.rect(0, y, 32, 1, '#3a3632'); for (let y = 2; y < 32; y += 8) for (let x = 2; x < 32; x += 8) { const lit = prng() < 0.32; p.rect(x, y, 5, 4, lit ? '#ffb060' : '#221c1a', lit ? EM : 255); } return p; },
+  stepped() { const p = new Pix(32, 32); p.fill('#6e6454'); for (let x = 0; x < 32; x += 4) p.rect(x, 0, 1, 32, '#564e42'); for (let y = 1; y < 32; y += 4) for (let x = 2; x < 32; x += 4) { const lit = prng() < 0.4; p.rect(x, y, 1, 2, lit ? '#ffc070' : '#2a2420', lit ? EM : 255); } return p; },
+  banner() { const p = new Pix(16, 32); p.fill(PC.banner, EM); p.rect(0, 0, 16, 6, PC.sodium, EM); for (let a = 0; a < 12; a++) { const t = a / 12 * Math.PI * 2; p.set(8 + Math.round(Math.cos(t) * 5), 16 + Math.round(Math.sin(t) * 5), PC.gold, EM); } p.rect(7, 15, 2, 2, PC.gold, EM); return p; },
+  cog() { const p = new Pix(16, 16); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.hypot(x - 7.5, y - 7.5), a = Math.atan2(y - 7.5, x - 7.5); if ((d < 5.6 && d > 3) || (d < 7.4 && d >= 5.6 && Math.cos(a * 8) > 0.2)) p.set(x, y, PC.gold, EM); } return p; },
+  decoStone() {   // cream piers, deep-green spandrels, warm offices: vertical strips that read from far away
+    const p = new Pix(32, 32); p.fill('#a89c84'); for (let x = 0; x < 32; x += 8) p.rect(x, 0, 3, 32, '#c8bca2');
+    for (let x = 3; x < 32; x += 8) { const litCol = prng() < 0.6; for (let y = 0; y < 32; y += 4) { const lit = litCol ? prng() < 0.75 : prng() < 0.15; p.rect(x, y, 5, 3, lit ? '#ffc870' : '#2e2a22', lit ? EM : 255); p.rect(x, y + 3, 5, 1, '#1e4a42'); } }
+    return p;
+  },
+  decoGold() { const p = new Pix(16, 8); p.fill('#c9a04a', EM); p.rect(0, 0, 16, 1, '#fff0b0', EM); for (let x = 1; x < 16; x += 3) p.rect(x, 2, 1, 6, '#9a7420', EM); return p; },
+  sunburst() { const p = new Pix(16, 16); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const a = Math.atan2(15 - y, x - 7.5), d = Math.hypot(x - 7.5, 15 - y); if (a > 0 && d < 8.5 && (Math.floor(a / Math.PI * 11) % 2 === 0 || d < 2.5)) p.set(x, y, d < 2.5 ? '#fff0b0' : PC.gold, EM); } return p; },
+  roofDark() { const p = new Pix(8, 8); p.fill('#1e1c22'); p.speck('#2a2830', 6); return p; },
+  beam() { const p = new Pix(8, 8); for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if ((x + y) % 3 === 0) p.set(x, y, '#ffe8b8', EM); return p; },
+  smoke() { const p = new Pix(8, 8); for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if ((x + y) & 1 && (x - 3.5) ** 2 + (y - 3.5) ** 2 < 14) p.set(x, y, '#3a2e34'); return p; },
+  white() { const p = new Pix(4, 4); p.fill('#ffffff'); return p; },
+};
+// pack every painting into one atlas (shelf packing); returns { tex, rect: { key: [u0, v0, u1, v1] } }
+function paintAtlas() {
+  const keys = Object.keys(PAINT), imgs = {};
+  for (const k of keys) { seedPaint(k); imgs[k] = PAINT[k](); }
+  // Each picture gets an 8 px gutter of its own wrapped pixels, on an 8 px grid, so the atlas can be mipmapped:
+  // up close it's still nearest-filtered PS1 texels, far away it averages instead of sparkling.
+  const G = CFG.street.atlasGutter, W = 512, al = (v) => Math.ceil(v / G) * G;
+  const order = keys.slice().sort((a, b) => imgs[b].h - imgs[a].h || imgs[b].w - imgs[a].w);
+  let x = 0, y = 0, rowH = 0; const at = {};
+  for (const k of order) {
+    const im = imgs[k], cw = al(im.w) + 2 * G, ch = al(im.h) + 2 * G;
+    if (x + cw > W) { x = 0; y += rowH; rowH = 0; }
+    at[k] = [x + G, y + G]; x += cw; rowH = Math.max(rowH, ch);
+  }
+  let H = 1; while (H < y + rowH) H *= 2;
+  const data = new Uint8Array(W * H * 4), rect = {};
+  for (const k of keys) {
+    const im = imgs[k], [ax, ay] = at[k];
+    for (let j = -G; j < al(im.h) + G; j++) for (let i = -G; i < al(im.w) + G; i++) {
+      const sx = ((i % im.w) + im.w) % im.w, sy = ((j % im.h) + im.h) % im.h, si = (sy * im.w + sx) * 4, di = ((ay + j) * W + ax + i) * 4;
+      data[di] = im.d[si]; data[di + 1] = im.d[si + 1]; data[di + 2] = im.d[si + 2]; data[di + 3] = im.d[si + 3];
+    }
+    const e = 0.02;   // stay a hair inside each picture so nearest sampling never picks a neighbour
+    rect[k] = [(ax + e) / W, (ay + e) / H, (ax + im.w - e) / W, (ay + im.h - e) / H];
+  }
+  const t = new THREE.DataTexture(data, W, H, THREE.RGBAFormat);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestMipmapLinearFilter; t.generateMipmaps = true; t.flipY = false; t.needsUpdate = true;
+  return { tex: t, rect, W, H, size: (k) => [imgs[k].w, imgs[k].h] };
+}
+
+// ============================== the street: geometry ========================
+// Out the Threeway's door: Tripoint Square (Old Quarter, 1962-frozen), the old road between the Krasnovian and
+// Columbian lines, and the joint-militia checkpoint where the Ring Road starts. +z runs from the door down the road.
+const STREET = {
+  fz: 5.32,                                   // the Threeway's front wall (outside face)
+  sq: { x: 13, z1: 22 },                      // Tripoint Square: x ±13, from the Threeway's front to z 22
+  road: { x: 4.5, z1: 55 },                   // the old road: x ±4.5, from the square to the checkpoint
+  west: { z0: 12, z1: 17, x1: -34 },          // side-road mouths (barricaded: the other two old roads)
+  east: { z0: 10.5, z1: 15.5, x1: 34 },
+  chk: { z: 56 },                             // the boom across the road
+  clock: [6.5, 15.2], station: [-7.4, 15],
+  hino: [-70, -250], kras: [-170, 230], colu: [95, 250],   // where the three skylines stand
+};
+const ST = { atlas: null, lit: null, sky: null, skyMesh: null, lamps: [], tris: 0, skyTris: 0, keyTris: {} };
+const dist3 = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+const lerp3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
+function uvBreaks(a, b, len, cell) {
+  const pts = [0, 1], lo = Math.min(a, b), hi = Math.max(a, b);
+  if (hi - lo > 1e-6) for (let k = Math.floor(lo + 1e-6) + 1; k < hi - 1e-6; k++) pts.push((k - a) / (b - a));
+  const n = Math.min(64, Math.ceil(len / cell)); for (let i = 1; i < n; i++) pts.push(i / n);
+  pts.sort((p, q) => p - q);
+  return pts.filter((p, i) => i === 0 || p - pts[i - 1] > 1e-4);
+}
+// One quad into the atlas: corners A B C D (top-left, top-right, bottom-right, bottom-left seen from the front),
+// uv = [u0, v0, u1, v1] in texture repeats (u runs A→B, v runs A→D). It is cut wherever a repeat ends (an atlas
+// can't wrap) and into cells of at most `cell` metres so the baked light has vertices to live on.
+// flat colours never need cutting at texture repeats
+const SOLID = new Set(['litRed', 'litCyan', 'litMagenta', 'litWarm', 'litSodium', 'roofDark', 'black', 'white', 'iron', 'gilt', 'lacquer']);
+function aq(acc, key, A, B, C, D, uv, out, cell = 2.2) {
+  const R = ST.atlas.rect[key]; if (!R) throw new Error('no painting ' + key);
+  if (SOLID.has(key)) uv = [0, 0, 1, 1];
+  const t0 = acc.tris;
+  const [u0, v0, u1, v1] = uv;
+  const sB = uvBreaks(u0, u1, Math.max(dist3(A, B), dist3(D, C)), cell), tB = uvBreaks(v0, v1, Math.max(dist3(A, D), dist3(B, C)), cell);
+  const P = (s, t) => lerp3(lerp3(A, B, s), lerp3(D, C, s), t);
+  for (let i = 0; i < sB.length - 1; i++) {
+    const sa = sB[i], sb = sB[i + 1], ua = u0 + (u1 - u0) * sa, ub = u0 + (u1 - u0) * sb, tu = Math.floor(Math.min(ua, ub) + 1e-6);
+    const mu = (u) => R[0] + clamp(u - tu, 0, 1) * (R[2] - R[0]);
+    for (let j = 0; j < tB.length - 1; j++) {
+      const ta = tB[j], tb = tB[j + 1], va = v0 + (v1 - v0) * ta, vb = v0 + (v1 - v0) * tb, tv = Math.floor(Math.min(va, vb) + 1e-6);
+      const mv = (v) => R[1] + clamp(v - tv, 0, 1) * (R[3] - R[1]);
+      acc.quad([P(sa, ta), P(sb, ta), P(sb, tb), P(sa, tb)], [[mu(ua), mv(va)], [mu(ub), mv(va)], [mu(ub), mv(vb)], [mu(ua), mv(vb)]], out);
+    }
+  }
+  ST.keyTris[key] = (ST.keyTris[key] || 0) + acc.tris - t0;   // where the triangles go (perf check)
+}
+// local (lx, lz) around (cx, cz) turned by phi about y (local +z = the front)
+const LP = (cx, cz, phi, lx, lz) => { const c = Math.cos(phi), s = Math.sin(phi); return [cx + lx * c + lz * s, cz - lx * s + lz * c]; };
+const LN = (phi, nx, nz) => { const c = Math.cos(phi), s = Math.sin(phi); return [nx * c + nz * s, 0, -nx * s + nz * c]; };
+// a vertical wall from (x0,z0) to (x1,z1) (left to right seen from the front); faces left-hand of the run
+function wall(acc, key, x0, z0, x1, z1, y0, y1, um, vm, o = {}) {
+  const len = Math.hypot(x1 - x0, z1 - z0), n = [-(z1 - z0) / len, 0, (x1 - x0) / len], U0 = o.u0 || 0, V0 = o.v0 || 0;
+  aq(acc, key, [x0, y1, z0], [x1, y1, z1], [x1, y0, z1], [x0, y0, z0], [U0, V0, U0 + len / um, V0 + (y1 - y0) / vm], n, o.cell);
+}
+// flat ground rectangle, tiled every `tile` metres
+function ground(acc, key, x0, z0, x1, z1, y, tile, o = {}) {
+  aq(acc, key, [x0, y, z0], [x1, y, z0], [x1, y, z1], [x0, y, z1], [x0 / tile, z0 / tile, x1 / tile, z1 / tile], [0, 1, 0], o.cell || 1.6);
+}
+// a tapered box (frustum) around (cx, cz), turned by phi. Side faces tile every u x v metres from the top down.
+function frustum(acc, key, cx, y0, cz, w0, d0, w1, d1, h, phi, o = {}) {
+  const y1 = y0 + h, um = o.u || 4, vm = o.v || 4;
+  const b = [[-w0 / 2, -d0 / 2], [w0 / 2, -d0 / 2], [w0 / 2, d0 / 2], [-w0 / 2, d0 / 2]].map(([x, z]) => LP(cx, cz, phi, x, z));
+  const t = [[-w1 / 2, -d1 / 2], [w1 / 2, -d1 / 2], [w1 / 2, d1 / 2], [-w1 / 2, d1 / 2]].map(([x, z]) => LP(cx, cz, phi, x, z));
+  const faces = [[3, 2, [0, 0, 1], w0, 'f'], [2, 1, [1, 0, 0], d0, 'r'], [1, 0, [0, 0, -1], w0, 'b'], [0, 3, [-1, 0, 0], d0, 'l']];
+  for (const [i, j, nn, len, f] of faces) {
+    if (o.skip && o.skip.includes(f)) continue;
+    const k = (o.faceKey && o.faceKey[f]) || key, slope = Math.max(w0 - w1, d0 - d1) / 2 / Math.max(h, 0.01);
+    const n = LN(phi, nn[0], nn[2]); n[1] = slope;
+    const sh = Math.hypot(h, slope * h);
+    aq(acc, k, [t[i][0], y1, t[i][1]], [t[j][0], y1, t[j][1]], [b[j][0], y0, b[j][1]], [b[i][0], y0, b[i][1]], [0, 0, len / um, sh / vm], n, o.cell);
+  }
+  if (o.top !== false && (w1 > 0.01 || d1 > 0.01)) {
+    const tk = o.top || key, tm = o.tu || 4;
+    aq(acc, tk, [t[0][0], y1, t[0][1]], [t[1][0], y1, t[1][1]], [t[2][0], y1, t[2][1]], [t[3][0], y1, t[3][1]], [0, 0, w1 / tm, d1 / tm], [0, 1, 0], o.cell);
+  }
+}
+const sbox = (acc, key, cx, y0, cz, w, d, h, phi, o) => frustum(acc, key, cx, y0, cz, w, d, w, d, h, phi, o);
+function cyl(acc, key, cx, y0, cz, r0, r1, h, n, o = {}) {
+  const um = o.u || 4, vm = o.v || 4;
+  for (let i = 0; i < n; i++) {
+    const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2, am = (a0 + a1) / 2;
+    const P = (r, a, y) => [cx + Math.cos(a) * r, y, cz + Math.sin(a) * r], seg = 2 * Math.PI * Math.max(r0, r1) / n;
+    aq(acc, key, P(r1, a1, y0 + h), P(r1, a0, y0 + h), P(r0, a0, y0), P(r0, a1, y0), [0, 0, seg / um, h / vm], [Math.cos(am), (r0 - r1) / Math.max(h, 0.01), Math.sin(am)], o.cell);
+  }
+}
+function onion(acc, cx, y, cz, r, h, n = 8, key = 'onion') {   // bulb + gilt spike
+  const prof = [[0.55, 0], [0.95, 0.18], [1.0, 0.36], [0.75, 0.58], [0.38, 0.78], [0.06, 0.95]];
+  for (let i = 0; i < prof.length - 1; i++) cyl(acc, key, cx, y + prof[i][1] * h, cz, prof[i][0] * r, prof[i + 1][0] * r, (prof[i + 1][1] - prof[i][1]) * h, n, { u: r * 1.2, v: r * 1.2 });
+  cyl(acc, 'gilt', cx, y + 0.95 * h, cz, 0.06 * r + 0.02, 0.01, h * 0.35, 4, { u: 1, v: 1 });
+}
+// a flat picture (sign, flag, poster) facing local +z at (cx, cy, cz); off = distance out from the wall
+function plate(acc, key, cx, cy, cz, w, h, phi, off = 0.04, uv = [0, 0, 1, 1], two = false) {
+  const [x0, z0] = LP(cx, cz, phi, -w / 2, off), [x1, z1] = LP(cx, cz, phi, w / 2, off);
+  aq(acc, key, [x0, cy + h / 2, z0], [x1, cy + h / 2, z1], [x1, cy - h / 2, z1], [x0, cy - h / 2, z0], uv, LN(phi, 0, 1), 99);
+  if (two) aq(acc, key, [x1, cy + h / 2, z1], [x0, cy + h / 2, z0], [x0, cy - h / 2, z0], [x1, cy - h / 2, z1], uv, LN(phi, 0, -1), 99);
+}
+function tileRoof(acc, cx, y, cz, w, d, phi, h = 2.2, over = 0.7) {   // Hinomoto tile roof: upturned tips, red brackets
+  frustum(acc, 'kawara', cx, y, cz, w + over * 2, d + over * 2, w * 0.4, d * 0.15, h, phi, { u: 3.2, v: 3.2, top: 'kawara', tu: 3.2, cell: 3 });
+  for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const [tx, tz] = LP(cx, cz, phi, sx * (w / 2 + over + 0.1), sz * (d / 2 + over + 0.1)); sbox(acc, 'kawara', tx, y - 0.05, tz, 0.35, 0.35, 0.4, phi, { u: 1.6, v: 1.6 }); }
+  for (let k = 0; k < Math.max(2, Math.round(w / 2.4)); k++) { const sx = -w / 2 + 0.6 + k * (w - 1.2) / Math.max(1, Math.round(w / 2.4) - 1); const [bx, bz] = LP(cx, cz, phi, sx, d / 2 + 0.3); sbox(acc, 'lacquer', bx, y - 0.55, bz, 0.18, 0.6, 0.55, phi, { u: 1, v: 1 }); }
+}
+// an Old Quarter tenement: shopfront, plaster floors, a roof. Footprint [x0,x1] x [z0,z1]; which faces show is up to the caller.
+const PLASTER = [[0.92, 0.84, 0.66], [0.78, 0.62, 0.74], [0.66, 0.78, 0.7], [0.9, 0.62, 0.5], [0.86, 0.84, 0.78], [0.84, 0.72, 0.52], [0.62, 0.74, 0.8]];
+function tenement(acc, b) {
+  const { x0, x1, z0, z1 } = b, floors = b.floors || 3, shopH = 4.0, fh = 3.2, top = shopH + floors * fh;
+  const cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, w = x1 - x0, d = z1 - z0;
+  const col = b.col || PLASTER[b.tint || 0];
+  acc.tint = col;
+  const shopKey = b.shops || 'shopsPlain', upKey = b.painted ? 'tenement' : 'tenementPlain';
+  // faces: [x0,z0]→ etc. run left-to-right seen from outside
+  const F = { s: [x0, z1, x1, z1], n: [x1, z0, x0, z0], e: [x1, z1, x1, z0], w: [x0, z0, x0, z1] };
+  for (const f of (b.faces || 'nsew')) {
+    const [ax, az, bx, bz] = F[f], len = Math.hypot(bx - ax, bz - az), bays = Math.max(1, Math.round(len / 2.6));
+    acc.tint = [col[0] * 0.55 + 0.25, col[1] * 0.55 + 0.25, col[2] * 0.55 + 0.25];
+    wall(acc, shopKey, ax, az, bx, bz, 0, shopH, len / bays * 4, shopH, { u0: (b.seed || 0) * 0.25 });
+    acc.tint = col;
+    wall(acc, upKey, ax, az, bx, bz, shopH, top, len / bays * 4, fh * 2, { u0: (b.seed || 0) * 0.25 });
+    acc.tint = [1, 1, 1];
+    // a gilt cornice between the shops and the flats (brass city)
+    const n = [-(bz - az) / len, (bx - ax) / len];
+    aq(acc, 'gilt', [ax + n[0] * 0.08, shopH + 0.12, az + n[1] * 0.08], [bx + n[0] * 0.08, shopH + 0.12, bz + n[1] * 0.08], [bx + n[0] * 0.08, shopH - 0.02, bz + n[1] * 0.08], [ax + n[0] * 0.08, shopH - 0.02, az + n[1] * 0.08], [0, 0, len / 2, 1], [n[0], 0, n[1]], 4);
+  }
+  acc.tint = [1, 1, 1];
+  if (b.roof === 'tile') tileRoof(acc, cx, top, cz, w, d, 0, 2.4, 0.6);
+  else if (b.roof === 'flat') ground(acc, 'slate', x0, z0, x1, z1, top, 4);
+  else {
+    const rk = b.roof === 'copper' ? 'copper' : 'mansard', inset = Math.min(1.6, Math.min(w, d) * 0.3);
+    frustum(acc, rk, cx, top, cz, w + 0.3, d + 0.3, w - inset * 2, d - inset * 2, 3.0, 0, { u: 4.4, v: 3.0, top: rk === 'copper' ? 'copperTop' : 'slate', tu: 3, skip: b.roofSkip });
+    sbox(acc, 'gilt', cx, top - 0.1, cz, w + 0.36, d + 0.36, 0.14, 0, { u: 2, v: 1, top: false });
+  }
+  if (b.onion) {   // a Krasnovian onion-domed corner turret
+    const [ox, oz] = b.onion; acc.tint = col;
+    cyl(acc, upKey, ox, 0, oz, 1.3, 1.3, top + 1.2, 8, { u: 4, v: 6.4 }); acc.tint = [1, 1, 1];
+    onion(acc, ox, top + 1.2, oz, 1.7, 3.6, 8);
+  }
+  if (b.bay) {   // a Columbian cast-iron bay window on the front
+    const [bx, bz, phi] = b.bay;
+    sbox(acc, 'shops', bx, shopH + 0.2, bz, 2.4, 0.8, fh * floors - 0.6, phi, { u: 9.6, v: 4, top: 'slate' });
+  }
+}
+function gasLamp(acc, x, z, y = 0) {
+  sbox(acc, 'iron', x, y, z, 0.32, 0.32, 0.5, 0, { u: 1, v: 1 });
+  sbox(acc, 'iron', x, y + 0.5, z, 0.14, 0.14, 2.9, 0, { u: 1, v: 1, top: false });
+  sbox(acc, 'iron', x, y + 3.35, z, 0.5, 0.5, 0.06, 0, { u: 1, v: 1 });
+  frustum(acc, 'gaslamp', x, y + 3.4, z, 0.3, 0.3, 0.42, 0.42, 0.52, 0, { u: 0.36, v: 0.52, top: false });
+  frustum(acc, 'iron', x, y + 3.92, z, 0.5, 0.5, 0.06, 0.06, 0.3, 0, { u: 1, v: 1 });
+  ST.lamps.push(lightFromHex([x, y + 3.65, z], CFG.street.light.gas, CFG.street.light.gasRadius, CFG.street.light.gasK));
+  WORLD_BOXES.push([x - 0.16, 0, z - 0.16, x + 0.16, 3.9, z + 0.16]);
+  BLOCKERS.push({ x0: x - 0.16, x1: x + 0.16, z0: z - 0.16, z1: z + 0.16 });
+}
+function wallLamp(acc, x, y, z, phi) {   // brass bracket lantern on a facade
+  const [cx, cz] = LP(x, z, phi, 0, 0.35);
+  frustum(acc, 'gaslamp', cx, y - 0.25, cz, 0.24, 0.24, 0.32, 0.32, 0.4, phi, { u: 0.3, v: 0.4, top: false });
+  frustum(acc, 'iron', cx, y + 0.15, cz, 0.36, 0.36, 0.04, 0.04, 0.22, phi, { u: 1, v: 1 });
+  ST.lamps.push(lightFromHex([cx, y, cz], CFG.street.light.gas, CFG.street.light.gasRadius * 0.8, CFG.street.light.gasK));
+}
+function bracket(acc, x, y, z, phi) { const [px, pz] = LP(x, z, phi, 0, 0.18); sbox(acc, 'iron', px, y + 0.12, pz, 0.06, 0.36, 0.06, phi, { u: 1, v: 1 }); }
+
+function buildThreewayFront(acc) {
+  const Z = STREET.fz, X = 5.32, DW = DOOR.w / 2 + 0.12, H0 = 4.0, top = 7.4;
+  // shopfront: dark wood with the bar's two big windows either side of the door
+  acc.tint = [1, 1, 1];
+  wall(acc, 'threewayFront', -X, Z, -DW, Z, 0, H0, (X - DW) * 2, H0, { u0: 0 });
+  wall(acc, 'threewayFront', DW, Z, X, Z, 0, H0, (X - DW) * 2, H0, { u0: 0.5 });
+  wall(acc, 'darkwood', -DW, Z, DW, Z, DOOR.h + 0.12, H0, 1, 1);
+  // door reveal (the wall's thickness) is the bar's darkwood frame
+  aq(acc, 'neonThreeway', [-2.6, 3.86, Z + 0.1], [2.6, 3.86, Z + 0.1], [2.6, 3.18, Z + 0.1], [-2.6, 3.18, Z + 0.1], [0, 0, 1, 1], [0, 0, 1], 99);
+  sbox(acc, 'iron', 0, 3.1, Z + 0.06, 5.3, 0.1, 0.06, 0, { u: 1, v: 1 });
+  ST.lamps.push(lightFromHex([0, 3.9, Z + 1.1], '#ff4f9a', 6.5, 0.6));   // the neon's pink on the cobbles and the flags
+  sbox(acc, 'gilt', 0, H0 - 0.06, Z, X * 2 + 0.2, 0.3, 0.2, 0, { u: 2, v: 1 });
+  // upper floor: ochre plaster, Krasnovian painted surrounds
+  acc.tint = [0.92, 0.78, 0.55];
+  wall(acc, 'tenement', -X, Z, X, Z, H0, top, 10.4, 6.4);
+  for (const [a, b] of [[X, -5.4], [-X, Z]]) { /* side walls hidden by the neighbours */ }
+  acc.tint = [1, 1, 1];
+  tileRoof(acc, 0, top, (Z - 5.4) / 2, X * 2, Z + 5.4, 0, 2.8, 0.8);
+  // Tripoint Day: all three flags over the door
+  for (const [sx, k] of [[-2.4, 'flag_hino'], [0, 'flag_kras'], [2.4, 'flag_colu']]) {
+    sbox(acc, 'iron', sx, 4.6, Z + 0.6, 0.05, 1.2, 0.05, 0, { u: 1, v: 1 });
+    plate(acc, k, sx, 4.2, Z + 0.95, 1.2, 0.8, 0, 0, [0, 0, 1, 1], true);
+  }
+  wallLamp(acc, -1.7, 2.7, Z, 0); wallLamp(acc, 1.7, 2.7, Z, 0);
+  bracket(acc, -1.7, 2.7, Z, 0); bracket(acc, 1.7, 2.7, Z, 0);
+}
+function brassClock(acc, x, z) {   // 1888: Columbian railway money, Vostburger founders, a Hinomoto carpenter's roof
+  sbox(acc, 'stone', x, 0, z, 1.1, 1.1, 0.9, 0, { u: 1.2, v: 1.2 });
+  sbox(acc, 'iron', x, 0.9, z, 0.42, 0.42, 3.5, 0, { u: 1, v: 1, top: false });
+  for (const y of [1.0, 2.6]) sbox(acc, 'gilt', x, y, z, 0.56, 0.56, 0.12, 0, { u: 1, v: 1 });
+  sbox(acc, 'iron', x, 4.4, z, 1.0, 1.0, 1.0, 0, { u: 1, v: 1 });
+  for (let a = 0; a < 4; a++) plate(acc, 'clockFace', x, 4.9, z, 0.8, 0.8, a * Math.PI / 2, 0.51);
+  sbox(acc, 'gilt', x, 5.4, z, 1.16, 1.16, 0.1, 0, { u: 1, v: 1 });
+  frustum(acc, 'kawara', x, 5.5, z, 1.7, 1.7, 0.3, 0.3, 0.7, 0, { u: 1.6, v: 1.6 });
+  onion(acc, x, 6.2, z, 0.35, 0.9, 6);
+  WORLD_BOXES.push([x - 0.55, 0, z - 0.55, x + 0.55, 0.9, z + 0.55], [x - 0.21, 0.9, z - 0.21, x + 0.21, 4.4, z + 0.21]);
+  BLOCKERS.push({ x0: x - 0.55, x1: x + 0.55, z0: z - 0.55, z1: z + 0.55 });
+  ST.lamps.push(lightFromHex([x, 4.9, z], '#f4ead0', 3.5, 0.5));
+}
+function sealedStation(acc, x, z) {   // Tripoint Station: three metro lines met under the square; sealed by the Accords in 1962
+  const w = 3.0, d = 4.2;
+  ground(acc, 'concrete', x - w / 2, z - d / 2, x + w / 2, z + d / 2, 0.06, 2);
+  for (const [ax, az, bx, bz] of [[x - w / 2, z + d / 2, x + w / 2, z + d / 2], [x + w / 2, z - d / 2, x - w / 2, z - d / 2], [x + w / 2, z + d / 2, x + w / 2, z - d / 2], [x - w / 2, z - d / 2, x - w / 2, z + d / 2]]) {
+    const len = Math.hypot(bx - ax, bz - az), n = Math.round(len / 0.5);
+    for (let k = 0; k <= n; k++) { const px = ax + (bx - ax) * k / n, pz = az + (bz - az) * k / n; sbox(acc, 'iron', px, 0, pz, 0.05, 0.05, 1.0, 0, { u: 1, v: 1, top: false }); }
+    const nx = -(bz - az) / len, nz = (bx - ax) / len;
+    aq(acc, 'gilt', [ax, 1.04, az], [bx, 1.04, bz], [bx, 0.96, bz], [ax, 0.96, az], [0, 0, len, 1], [nx, 0, nz], 4);
+    aq(acc, 'gilt', [bx, 1.04, bz], [ax, 1.04, az], [ax, 0.96, az], [bx, 0.96, bz], [0, 0, len, 1], [-nx, 0, -nz], 4);
+  }
+  // the iron arch with the enamel sign, on the side facing the Threeway
+  for (const s of [-1, 1]) sbox(acc, 'iron', x + s * 1.3, 0, z - d / 2, 0.1, 0.1, 2.9, 0, { u: 1, v: 1 });
+  sbox(acc, 'iron', x, 2.9, z - d / 2, 2.8, 0.1, 0.12, 0, { u: 1, v: 1 });
+  plate(acc, 'station', x, 2.45, z - d / 2, 2.6, 0.86, Math.PI, 0.06, [0, 0, 1, 1], true);
+  WORLD_BOXES.push([x - w / 2, 0, z - d / 2, x + w / 2, 1.05, z + d / 2]);
+  BLOCKERS.push({ x0: x - w / 2, x1: x + w / 2, z0: z - d / 2, z1: z + d / 2 });
+}
+function barricade(acc, x, z, phi, len) {   // the other two old roads: closed with militia sawhorses
+  for (let k = 0; k < 2; k++) {
+    const [cx, cz] = LP(x, z, phi, 0, k * 0.6);
+    sbox(acc, 'barricade', cx, 0.75, cz, len, 0.08, 0.3, phi, { u: 2, v: 0.3, top: false });
+    for (const s of [-1, 1]) { const [lx, lz] = LP(cx, cz, phi, s * (len / 2 - 0.2), 0); sbox(acc, 'iron', lx, 0, lz, 0.08, 0.5, 0.78, phi, { u: 1, v: 1 }); }
+  }
+  const [px, pz] = LP(x, z, phi, 0, -0.05);
+  plate(acc, 'closed', px, 1.3, pz, 1.5, 0.5, phi, 0, [0, 0, 1, 1], true);
+}
+function checkpoint(acc, z) {   // the joint city militia: shields and batons, no badges from any one power
+  const bx = 2.9, bz = z + 0.4;
+  sbox(acc, 'booth', bx, 0, bz, 2.0, 2.2, 2.7, 0, { u: 2.0, v: 2.7, top: 'concrete', faceKey: { b: 'booth', l: 'booth' } });
+  sbox(acc, 'concrete', bx, 2.7, bz, 2.4, 2.6, 0.2, 0, { u: 2, v: 1 });
+  plate(acc, 'militiaSign', 0, 4.4, z - 0.6, 4.0, 1.0, Math.PI, 0, [0, 0, 1, 1], true);
+  for (const s of [-1, 1]) sbox(acc, 'iron', s * 2.1, 0, z - 0.6, 0.12, 0.12, 4.9, 0, { u: 1, v: 1 });
+  // the boom across the road and its counterweight post
+  sbox(acc, 'iron', 1.7, 0, z, 0.3, 0.3, 1.1, 0, { u: 1, v: 1 });
+  plate(acc, 'halt', -2.0, 1.3, z, 0.84, 0.36, Math.PI, 0.08, [0, 0, 1, 1], true);
+  // sandbags and concrete either side, flags of the Free City and the three powers
+  for (const s of [-1, 1]) sbox(acc, 'sandbag', s * 4.0, 0, z + 1.2, 1.2, 1.2, 1.0, 0, { u: 1.2, v: 0.6, top: 'sandbag', tu: 1.2 });
+  for (const [fx, k] of [[-3.8, 'flag_kras'], [-2.6, 'flag_vost'], [4.2, 'flag_colu'], [5.2, 'flag_hino']]) {
+    sbox(acc, 'iron', fx, 0, z + 1.6, 0.06, 0.06, 3.6, 0, { u: 1, v: 1 });
+    plate(acc, k, fx + 0.45, 3.2, z + 1.6, 0.9, 0.6, 0, 0, [0, 0, 1, 1], true);
+  }
+  // floodlight mast
+  sbox(acc, 'iron', 4.6, 0, z - 0.4, 0.16, 0.16, 6.2, 0, { u: 1, v: 1 });
+  sbox(acc, 'flood', 4.3, 6.0, z - 0.6, 0.6, 0.3, 0.4, 0.5, { u: 0.6, v: 0.4 });
+  ST.lamps.push(lightFromHex([3.6, 5.6, z - 1.4], CFG.street.light.flood, CFG.street.light.floodRadius, CFG.street.light.floodK));
+  ST.lamps.push(lightFromHex([bx - 1.1, 2.0, bz], '#cfe6ff', 4.5, 0.8));
+  WORLD_BOXES.push([bx - 1.0, 0, bz - 1.1, bx + 1.0, 2.7, bz + 1.1], [-4.4, 0.85, z - 0.07, 1.7, 1.06, z + 0.07]);
+  BLOCKERS.push({ x0: bx - 1.0, x1: bx + 1.0, z0: bz - 1.1, z1: bz + 1.1 });
+}
+// the Ring Road beyond the checkpoint, and the Accords wall starting down the middle of the old road
+function ringRoad(acc, z) {
+  ground(acc, 'cobble', -40, z + 2, 40, z + 16, 0.0, 2);
+  for (let k = 0; k < 8; k++) { const wz = z + 16 + k * 5; sbox(acc, 'concrete', 0, 0, wz + 2.5, 0.6, 5, 4.2, 0, { u: 2, v: 2, top: 'wallTop', tu: 1 }); }
+  sbox(acc, 'concrete', 0, 0, z + 54, 3.2, 3.2, 9, 0, { u: 2, v: 2, top: 'concrete' });   // watchtower
+  sbox(acc, 'booth', 0, 9, z + 54, 4, 4, 2.4, 0, { u: 4, v: 2.4, top: 'concrete' });
+  ST.lamps.push(lightFromHex([0, 11.5, z + 54], CFG.street.light.flood, 16, 0.9));
+  // the first blocks of the sectors: Columbian brownstones (+x), Krasnovian slabs (-x)
+  for (let k = 0; k < 5; k++) {
+    acc.tint = [0.72 + (k % 3) * 0.06, 0.44, 0.36];
+    sbox(acc, 'tenementPlain', 9 + k * 7.2, 0, z + 24, 7, 10, 9 + (k % 2) * 3.2, 0, { u: 9.6, v: 6.4, top: 'slate', cell: 4 });
+    acc.tint = [1, 1, 1];
+    sbox(acc, 'panel', -14 - k * 13, 0, z + 30 + (k % 2) * 6, 12, 10, 12 + (k % 3) * 3, 0, { u: 12, v: 12, top: 'roofDark', cell: 6 });
+  }
+  ST.lamps.push(lightFromHex([-10, 6, z + 10], CFG.street.light.sodium, 14, 1.2));
+  ST.lamps.push(lightFromHex([10, 6, z + 10], CFG.street.light.amber, 14, 1.0));
+  for (const [lx, c] of [[-10, 'litSodium'], [10, 'litWarm']]) { sbox(acc, 'iron', lx, 0, z + 10, 0.2, 0.2, 6, 0, { u: 1, v: 1 }); sbox(acc, c, lx, 6, z + 10, 0.8, 0.3, 0.2, 0, { u: 1, v: 1 }); }
+}
+function buildStreetGeometry() {
+  const acc = ST.lit, Z = STREET.fz, SX = STREET.sq.x, SZ = STREET.sq.z1, RX = STREET.road.x, RZ = STREET.road.z1, W = STREET.west, E = STREET.east;
+  // ---- ground: setts in the square, cobbles and pavements down the road, a brass line down the middle
+  ground(acc, 'setts', -SX, Z, SX, SZ, 0, 2);
+  ground(acc, 'cobble', -RX + 1.6, SZ, RX - 1.6, RZ + 1, 0, 2);
+  for (const s of [-1, 1]) {
+    ground(acc, 'flags', s > 0 ? RX - 1.6 : -RX, SZ, s > 0 ? RX : -RX + 1.6, RZ + 1, 0, 1.6);
+    const cx = s * (RX - 1.6);
+    aq(acc, 'curb', [cx, 0.01, SZ], [cx, 0.01, RZ + 1], [cx + s * 0.18, 0.01, RZ + 1], [cx + s * 0.18, 0.01, SZ], [0, 0, (RZ + 1 - SZ) / 2, 1], [0, 1, 0], 2);
+  }
+  ground(acc, 'cobble', W.x1, W.z0, -SX, W.z1, 0, 2); ground(acc, 'cobble', SX, E.z0, E.x1, E.z1, 0, 2);
+  // three brass lines in the cobbles, meeting at the Threeway's door: the Accords borders
+  const line = (pts) => { for (let i = 0; i < pts.length - 1; i++) { const [ax, az] = pts[i], [bx, bz] = pts[i + 1], L = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / L * 0.07, nz = (bx - ax) / L * 0.07; aq(acc, 'brassLine', [ax + nx, 0.015, az + nz], [bx + nx, 0.015, bz + nz], [bx - nx, 0.015, bz - nz], [ax - nx, 0.015, az - nz], [0, 0, L / 0.5, 1], [0, 1, 0], 2); } };
+  line([[0, Z + 0.02], [0, RZ + 1.2]]);
+  line([[0, Z + 0.02], [-SX, (W.z0 + W.z1) / 2], [W.x1, (W.z0 + W.z1) / 2]]);
+  line([[0, Z + 0.02], [SX, (E.z0 + E.z1) / 2], [E.x1, (E.z0 + E.z1) / 2]]);
+  // ---- the Threeway and its neighbours on the north side of the square
+  buildThreewayFront(acc);
+  const B = [
+    { x0: 5.32, x1: 9.6, z0: -6, z1: Z, floors: 2, roof: 'copper', tint: 2, painted: true, shops: 'shops', faces: 's' },
+    { x0: 9.6, x1: 21, z0: -6, z1: Z, floors: 2, roof: 'mansard', tint: 4, faces: 's', seed: 1 },
+    { x0: -9.8, x1: -5.32, z0: -6, z1: Z, floors: 2, roof: 'tile', tint: 1, painted: true, faces: 's', seed: 2 },
+    { x0: -21, x1: -9.8, z0: -6, z1: Z, floors: 3, roof: 'mansard', tint: 0, faces: 's', seed: 3 },
+    // east side of the square, either side of the east road
+    { x0: SX, x1: 22, z0: Z, z1: E.z0, floors: 2, roof: 'mansard', tint: 4, faces: 'ws', seed: 4 },
+    { x0: SX, x1: 22, z0: E.z1, z1: SZ, floors: 3, roof: 'copper', tint: 3, painted: true, shops: 'shops', faces: 'wn', onion: [SX + 1.3, SZ - 1.3], seed: 5 },
+    { x0: 22, x1: E.x1 + 2, z0: 2, z1: E.z0, floors: 3, roof: 'mansard', tint: 6, faces: 's', seed: 6, blocker: false },
+    { x0: 22, x1: E.x1 + 2, z0: E.z1, z1: 26, floors: 2, roof: 'copper', tint: 5, faces: 'n', seed: 7, blocker: false },
+    // west side
+    { x0: -22, x1: -SX, z0: Z, z1: W.z0, floors: 3, roof: 'copper', tint: 5, faces: 'es', seed: 8 },
+    { x0: -22, x1: -SX, z0: W.z1, z1: SZ, floors: 2, roof: 'tile', tint: 2, painted: true, shops: 'shops', faces: 'en', seed: 9 },
+    { x0: W.x1 - 2, x1: -22, z0: 2, z1: W.z0, floors: 2, roof: 'mansard', tint: 1, faces: 's', seed: 10, blocker: false },
+    { x0: W.x1 - 2, x1: -22, z0: W.z1, z1: 26, floors: 3, roof: 'mansard', tint: 0, painted: true, faces: 'n', seed: 11, blocker: false },
+    // the south side of the square: the road's two corner buildings
+    { x0: RX, x1: SX, z0: SZ, z1: 31, floors: 3, roof: 'mansard', tint: 0, painted: true, shops: 'shops', faces: 'nw', bay: [RX - 0.4, 27, -Math.PI / 2], seed: 12 },
+    { x0: SX, x1: 22, z0: SZ, z1: 31, floors: 2, roof: 'mansard', tint: 1, faces: 'n', seed: 13 },
+    { x0: -SX, x1: -RX, z0: SZ, z1: 30, floors: 2, roof: 'tile', tint: 6, painted: true, faces: 'ne', seed: 14 },
+    { x0: -22, x1: -SX, z0: SZ, z1: 30, floors: 3, roof: 'copper', tint: 4, faces: 'n', seed: 15 },
+    // down the road
+    { x0: RX, x1: 13, z0: 31, z1: 38, floors: 2, roof: 'copper', tint: 2, faces: 'w', seed: 16 },
+    { x0: RX, x1: 13, z0: 38, z1: 43, floors: 3, roof: 'mansard', tint: 5, faces: 'w', seed: 17 },
+    { x0: RX + 1.4, x1: 13, z0: 43, z1: 45, floors: 1, roof: 'flat', tint: 4, faces: 'w', seed: 18 },
+    { x0: RX, x1: 13, z0: 45, z1: 51, floors: 3, roof: 'tile', tint: 3, painted: true, faces: 'w', seed: 19 },
+    { x0: RX, x1: 13, z0: 51, z1: RZ, floors: 2, roof: 'mansard', tint: 0, faces: 'ws', seed: 20 },
+    { x0: -13, x1: -RX, z0: 30, z1: 36, floors: 3, roof: 'mansard', tint: 1, painted: true, shops: 'shops', faces: 'e', seed: 21 },
+    { x0: -13, x1: -RX, z0: 36, z1: 41, floors: 2, roof: 'copper', tint: 6, faces: 'e', seed: 22 },
+    { x0: -13, x1: -RX - 1.4, z0: 41, z1: 43, floors: 1, roof: 'flat', tint: 4, faces: 'e', seed: 23 },
+    { x0: -13, x1: -RX, z0: 43, z1: 49, floors: 3, roof: 'copper', tint: 0, faces: 'e', onion: [-RX - 1.3, 47.7], seed: 24 },
+    { x0: -13, x1: -RX, z0: 49, z1: RZ, floors: 2, roof: 'mansard', tint: 5, painted: true, faces: 'es', seed: 25 },
   ];
-  L.forEach(([p, c, r, k], i) => {
-    const col = new THREE.Color(c);
-    SU.uLightPos.value[i].set(p[0], p[1], p[2]);
-    SU.uLightCol.value[i].set(col.r * k, col.g * k, col.b * k);
-    SU.uLightRad.value[i] = r;
-  });
+  for (const b of B) tenement(acc, b);
+  wallLamp(acc, -RX, 3.4, 29, Math.PI / 2); bracket(acc, -RX, 3.4, 29, Math.PI / 2);
+  // St. Vost Cathedral's onion domes over the west roofs (1740s, Krasnovian craftsmen)
+  acc.tint = [0.9, 0.86, 0.76];
+  sbox(acc, 'stone', -32, 0, 6, 10, 16, 15, 0, { u: 4, v: 4, top: 'slate' });
+  cyl(acc, 'stone', -32, 15, 6, 4.2, 4.2, 3, 10, { u: 4, v: 4 }); acc.tint = [1, 1, 1];
+  onion(acc, -32, 18, 6, 5.6, 9, 10);
+  for (const [ox, oz] of [[-27.5, -1], [-36.5, 13]]) { acc.tint = [0.9, 0.86, 0.76]; cyl(acc, 'stone', ox, 0, oz, 1.6, 1.6, 19, 8, { u: 4, v: 4 }); acc.tint = [1, 1, 1]; onion(acc, ox, 19, oz, 2.0, 4.4); }
+  // landmarks in the square
+  brassClock(acc, ...STREET.clock);
+  sealedStation(acc, ...STREET.station);
+  // gaslight
+  for (const [x, z] of [[-10.6, 8.2], [10.6, 8.6], [-10.6, 20.4], [10.6, 20.2], [3.9, 26.5], [-3.9, 33.5], [3.9, 40.5], [-3.9, 47.5], [3.9, 53.2]]) gasLamp(acc, x, z);
+  wallLamp(acc, -17, 3.6, W.z0, 0); wallLamp(acc, 17, 3.6, E.z1, Math.PI);
+  // the other two old roads: barricaded, glowing with whichever sector lies down them
+  barricade(acc, W.x1 + 15, (W.z0 + W.z1) / 2, Math.PI / 2, W.z1 - W.z0);
+  barricade(acc, E.x1 - 15, (E.z0 + E.z1) / 2, -Math.PI / 2, E.z1 - E.z0);
+  ST.lamps.push(lightFromHex([W.x1 + 6, 5, (W.z0 + W.z1) / 2], CFG.street.light.hinoGlow, 14, 1.0));
+  ST.lamps.push(lightFromHex([E.x1 - 6, 5, (E.z0 + E.z1) / 2], CFG.street.light.amber, 14, 0.9));
+  // alley gates down the road (dark, iron)
+  for (const [x, z0, z1] of [[RX + 0.05, 43, 45], [-RX - 0.05, 41, 43]]) {
+    const n = 8; for (let k = 0; k <= n; k++) sbox(acc, 'iron', x, 0, z0 + (z1 - z0) * k / n, 0.05, 0.05, 2.6, 0, { u: 1, v: 1, top: false });
+    sbox(acc, 'iron', x, 2.5, (z0 + z1) / 2, 0.08, z1 - z0, 0.08, 0, { u: 1, v: 1 });
+    ground(acc, 'black', Math.min(x, x + Math.sign(x) * 8), z0, Math.max(x, x + Math.sign(x) * 8), z1, 0.005, 2);
+  }
+  // posters and street-name plates
+  for (const [x, z, phi] of [[RX - 0.02, 34, -Math.PI / 2], [-RX + 0.02, 38.5, Math.PI / 2], [-SX + 0.02, 9, Math.PI / 2], [SX - 0.02, 19, -Math.PI / 2], [RX - 0.02, 48, -Math.PI / 2]]) plate(acc, 'poster', x, 1.6, z, 0.8, 1.2, phi, 0.02);
+  plate(acc, 'enamel', -RX + 0.02, 3.2, SZ + 1.2, 1.4, 0.35, Math.PI / 2, 0.03);
+  checkpoint(acc, STREET.chk.z);
+  ringRoad(acc, STREET.chk.z);
+}
+// ============================== the three skylines ===========================
+// Built cheaply and far away (fog capped so they stay readable): Hinomoto's neon spike behind the Threeway,
+// Krasnovia's even field of slabs to the right of the road, Columbia's gold-crowned ridge to the left.
+function hinoTower(acc, x, z, w, d, h, phi, rng, hero) {
+  sbox(acc, 'glassN', x, 0, z, w, d, h, phi, { u: 14, v: 14, top: false, cell: 999 });
+  const cols = rng() < 0.5 ? ['litRed', 'litRed'] : ['litCyan', 'litMagenta'];
+  for (const [sx, sz, k] of [[-1, 1, 0], [1, 1, 1], [1, -1, 0]]) { const [ex, ez] = LP(x, z, phi, sx * w / 2, sz * d / 2); sbox(acc, cols[k], ex, 0, ez, 2.0, 2.0, h, phi, { u: 4, v: 4, top: false, cell: 999 }); }
+  for (let y = 30; y < h - 12; y += 34) { frustum(acc, 'kawara', x, y, z, w + 5, d + 5, w + 1, d + 1, 2.5, phi, { u: 40, v: 6, top: false, cell: 999 }); sbox(acc, 'litRed', x, y - 0.5, z, w + 5.1, d + 5.1, 0.5, phi, { u: 4, v: 4, top: false, cell: 999 }); }
+  const nS = 2 + Math.floor(rng() * 4);
+  for (let k = 0; k < nS; k++) { const row = Math.floor(rng() * 4), [sx, sz] = LP(x, z, phi, (rng() - 0.5) * w * 0.5, d / 2); plate(acc, 'neonSigns', sx, 10 + k * 9, sz, Math.min(w * 0.8, 18), 4.5, phi, 0.3, [0, row / 4, 1, (row + 1) / 4]); }
+  if (rng() < 0.7) { const col = Math.floor(rng() * 4), [sx, sz] = LP(x, z, phi, -w * 0.3, d / 2); plate(acc, 'neonV', sx, h * 0.5, sz, 5, Math.min(40, h * 0.4), phi, 0.4, [col / 4, 0, (col + 1) / 4, 1]); }
+  let top = h;
+  for (let k = 0; k < 3; k++) { const s = 1 - k * 0.26; frustum(acc, 'kawara', x, top, z, (w + 5) * s, (d + 5) * s, w * s * 0.55, d * s * 0.55, 5, phi, { u: 40, v: 8, top: 'kawara', tu: 40, cell: 999 }); sbox(acc, 'litRed', x, top - 0.3, z, (w + 5.2) * s, (d + 5.2) * s, 0.4, phi, { u: 4, v: 4, top: false, cell: 999 }); top += 5.3; }
+  if (hero) { const [bx, bz] = LP(x, z, phi, 0, 0); plate(acc, 'neonSigns', bx, top + 8, bz, w * 1.2, w * 0.3, phi, 0, [0, 0, 1, 0.25], true); }
+  cyl(acc, 'iron', x, top, z, 0.4, 0.1, hero ? 30 : 14, 4, { cell: 999 });
+  ST.beacons.push([x, top + (hero ? 30 : 14), z]);
+}
+function buildSkylines() {
+  const acc = ST.sky, rng = (() => { let s = 1986; return () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; }; })();
+  // Hinomoto: a tight cluster of black glass megatowers by the river, Aoki Development tallest
+  const [hx, hz] = STREET.hino;
+  for (let k = 0; k < 22; k++) {
+    const a = rng() * Math.PI * 2, r = 20 + rng() * 90, x = hx + Math.cos(a) * r * 1.4, z = hz + Math.sin(a) * r * 0.7;
+    const h = 70 + (1 - r / 110) * 150 * (0.6 + rng() * 0.5), w = 16 + rng() * 14;
+    hinoTower(acc, x, z, w, w * (0.8 + rng() * 0.3), h, (rng() - 0.5) * 0.5, rng, false);
+  }
+  hinoTower(acc, hx + 30, hz + 20, 34, 30, 280, 0.1, rng, true);   // Aoki Development
+  for (let k = 0; k < 2; k++) {   // the elevated expressway, streaked with tail lights
+    const y = 22 + k * 9, z = hz + 70 + k * 18;
+    sbox(acc, 'roofDark', hx, y, z, 260, 6, 1.5, 0.08 * (k ? -1 : 1), { u: 8, v: 8, cell: 999 });
+    sbox(acc, k ? 'litWarm' : 'litRed', hx, y + 1.5, z, 260, 6.2, 0.35, 0.08 * (k ? -1 : 1), { u: 4, v: 4, top: false, cell: 999 });
+  }
+  // Krasnovia: concrete panel slabs on a regular grid, the Tower of Labor, the TV tower
+  const [kx, kz] = STREET.kras;
+  for (let i = -4; i <= 4; i++) for (let j = -3; j <= 3; j++) {
+    const x = kx + i * 36, z = kz + j * 42; if (Math.abs(i) <= 1 && Math.abs(j) <= 1) continue;
+    if (x > -40) continue;
+    const h = 34 + ((i * 7 + j * 13) % 4 + 4) % 4 * 8, long = (i + j) % 2 === 0;
+    sbox(acc, 'panel', x, 0, z, long ? 30 : 11, long ? 11 : 30, h, 0, { u: 12, v: 12, top: 'roofDark', tu: 8, cell: 999 });
+    if ((i * 3 + j) % 5 === 0) plate(acc, 'banner', x, h * 0.55, z + (long ? 5.5 : 15), 5, 18, 0, 0.2);
+  }
+  let y = 0;
+  for (const [w, d, h] of [[64, 50, 54], [48, 38, 42], [34, 27, 34], [20, 17, 28]]) { sbox(acc, 'stepped', kx, y, kz, w, d, h, 0, { u: 10, v: 10, top: 'roofDark', tu: 8, cell: 999 }); y += h; }
+  cyl(acc, 'gilt', kx, y, kz, 2, 0.2, 36, 6, { cell: 999 });
+  plate(acc, 'cog', kx, y + 14, kz, 13, 13, 0, 1.2, [0, 0, 1, 1], true);
+  ST.beacons.push([kx, y + 36, kz]);
+  const tx = kx - 70, tz = kz + 110;   // TV tower
+  cyl(acc, 'concrete', tx, 0, tz, 7, 2.5, 200, 8, { u: 8, v: 8, cell: 999 });
+  cyl(acc, 'stepped', tx, 135, tz, 10, 13, 12, 10, { u: 8, v: 8, cell: 999 });
+  cyl(acc, 'iron', tx, 200, tz, 1, 0.3, 40, 4, { cell: 999 });
+  ST.beacons.push([tx, 240, tz], [tx, 147, tz]);
+  for (const [cx, cz] of [[kx - 120, kz - 40], [kx - 140, kz + 10]]) cyl(acc, 'panel', cx, 0, cz, 6, 4, 90, 8, { u: 8, v: 8, cell: 999 });
+  // Columbia: Liberty Avenue's ridge of cream-limestone, gold-crowned setback towers; mid-rise deco in front
+  const [cx0, cz0] = STREET.colu;
+  for (let k = 0; k < 10; k++) {
+    const t = k / 9, x = cx0 - 50 + t * 110 + (rng() - 0.5) * 10, z = cz0 - 90 + t * 200, h = (k === 5 ? 210 : 90 + rng() * 90), w = 20 + rng() * 10;
+    decoTower(acc, x, z, w, w * 0.9, h, 0.1, rng, k === 5);
+  }
+  for (let k = 0; k < 12; k++) { const x = 40 + k * 14, z = 120 + (k % 3) * 22; sbox(acc, 'decoStone', x, 0, z, 12, 12, 24 + (k * 7) % 22, 0.1, { u: 10, v: 10, top: 'roofDark', tu: 8, cell: 999 }); sbox(acc, 'decoGold', x, 24 + (k * 7) % 22, z, 12.6, 12.6, 0.8, 0.1, { u: 6, v: 0.8, top: false, cell: 999 }); }
+  ST.skyTris = acc.tris;
+  // blinking aircraft beacons on every tower: one small mesh that toggles
+  const bacc = new GeoAcc();
+  for (const [x, y, z] of ST.beacons) sbox(bacc, 'litRed', x, y, z, 3, 3, 3, 0, { u: 4, v: 4, cell: 999 });
+  ST.beaconMesh = new THREE.Mesh(bacc.geometry({ ambient: [1, 1, 1], lights: [] }), makeMat('street', { baked: true, fog: CFG.street.skylineFog }));
+  ST.beaconMesh.frustumCulled = false; scene.add(ST.beaconMesh);
+}
+function decoTower(acc, x, z, w, d, h, phi, rng, mast) {
+  let y = 0;
+  for (const [s, fr] of [[1, 0.55], [0.8, 0.2], [0.62, 0.13], [0.42, 0.08]]) {
+    const hh = h * fr; sbox(acc, 'decoStone', x, y, z, w * s, d * s, hh, phi, { u: 10, v: 10, top: 'roofDark', tu: 8, cell: 999 }); y += hh;
+    sbox(acc, 'decoGold', x, y - 0.8, z, w * s + 0.8, d * s + 0.8, 0.8, phi, { u: 6, v: 0.8, top: false, cell: 999 });
+  }
+  for (let a = 0; a < 4; a++) { const ph = phi + a * Math.PI / 2, [sx, sz] = LP(x, z, ph, 0, d * 0.42 / 2); plate(acc, 'sunburst', sx, y - h * 0.04, sz, w * 0.38, w * 0.38, ph, 0.1); }
+  sbox(acc, 'decoGold', x, y, z, w * 0.3, d * 0.3, 4, phi, { u: 4, v: 4, top: 'decoGold', tu: 4, cell: 999 });
+  cyl(acc, 'gilt', x, y + 4, z, 1.0, 0.1, mast ? 40 : 18, 4, { cell: 999 });
+  ST.beacons.push([x, y + (mast ? 44 : 22), z]);
+  if (rng() < 0.4) ST.searchlights.push([x, y + 4, z]);
+}
+// the sky: a band around the player, dark overhead, glowing over each sector (red Hinomoto, sodium Krasnovia, gold Columbia)
+function buildSky() {
+  const R = 420, n = 32, rows = [[-60, 0.9], [6, 1], [70, 0.7], [200, 0.38], [520, 0.12], [1400, 0]], P = [], N = [], U = [], C = [], W = ST.atlas.rect.white;
+  const glow = [[STREET.hino, CFG.street.sky.hino], [STREET.kras, CFG.street.sky.kras], [STREET.colu, CFG.street.sky.colu]].map(([p, c]) => [Math.atan2(p[1], p[0]), new THREE.Color(c)]);
+  const top = new THREE.Color(CFG.street.sky.top), hor = new THREE.Color(CFG.street.sky.horizon);
+  const colAt = (a, k) => {
+    let r = hor.r, g = hor.g, b = hor.b;
+    for (const [ga, gc] of glow) { const d = Math.cos(a - ga); if (d > 0) { const f = Math.pow(d, 6); r += gc.r * f; g += gc.g * f; b += gc.b * f; } }
+    return [top.r + (r - top.r) * k, top.g + (g - top.g) * k, top.b + (b - top.b) * k];
+  };
+  for (let i = 0; i < n; i++) for (let j = 0; j < rows.length - 1; j++) {
+    const a0 = i / n * Math.PI * 2, a1 = (i + 1) / n * Math.PI * 2, [y0, k0] = rows[j], [y1, k1] = rows[j + 1];
+    const v = [[a0, y1, k1], [a1, y1, k1], [a1, y0, k0], [a0, y1, k1], [a1, y0, k0], [a0, y0, k0]];
+    for (const [a, y, k] of v) { P.push(Math.cos(a) * R, y, Math.sin(a) * R); N.push(-Math.cos(a), 0, -Math.sin(a)); U.push((W[0] + W[2]) / 2, (W[1] + W[3]) / 2); C.push(...colAt(a, k)); }
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setAttribute('bake', new THREE.Float32BufferAttribute(C, 3));
+  const m = makeMat('street', { baked: true, fog: false, side: THREE.DoubleSide, depthWrite: false });
+  ST.skyMesh = new THREE.Mesh(g, m); ST.skyMesh.renderOrder = -10; ST.skyMesh.frustumCulled = false;
+  scene.add(ST.skyMesh);
+  scene.background = new THREE.Color(CFG.street.sky.top);   // straight up: the band's top colour
+}
+function buildStreet() {
+  ST.atlas = paintAtlas(); texCache.street = ST.atlas.tex;
+  ST.lit = new GeoAcc(); ST.sky = new GeoAcc(); ST.lamps = []; ST.beacons = []; ST.searchlights = [];
+  buildStreetGeometry();
+  buildSkylines();
+  const L = CFG.street.light;
+  const litMesh = new THREE.Mesh(ST.lit.geometry({ ambient: L.ambient, sky: L.sky, lights: ST.lamps }), makeMat('street', { baked: true }));
+  const skyMesh = new THREE.Mesh(ST.sky.geometry({ ambient: L.skylineAmbient, sky: L.skylineSky, lights: [] }), makeMat('street', { baked: true, fog: CFG.street.skylineFog }));
+  for (const m of [litMesh, skyMesh]) { m.matrixAutoUpdate = false; m.updateMatrix(); m.frustumCulled = false; scene.add(m); }
+  ST.tris = ST.lit.tris; ST.litMesh = litMesh; ST.skylineMesh = skyMesh;
+  buildSky();
+  // where you can walk: the doorway (once the door's open), the square, the side-road mouths, the road
+  const Z = STREET.fz, W = STREET.west, E = STREET.east;
+  [ { x0: -DOOR.w / 2, x1: DOOR.w / 2, z0: 4.2, z1: Z + 1.0, area: 'door', on: () => DOOR.open > 0.6 },
+    { x0: -STREET.sq.x + 0.2, x1: STREET.sq.x - 0.2, z0: Z, z1: STREET.sq.z1 - 0.1, area: 'square' },
+    { x0: W.x1 + 17.4, x1: -STREET.sq.x + 2, z0: W.z0 + 0.2, z1: W.z1 - 0.2, area: 'west' },   // rectangles overlap so you can cross
+    { x0: STREET.sq.x - 2, x1: E.x1 - 17.4, z0: E.z0 + 0.2, z1: E.z1 - 0.2, area: 'east' },
+    { x0: -STREET.road.x + 0.2, x1: STREET.road.x - 0.2, z0: STREET.sq.z1 - 1, z1: STREET.chk.z - 0.3, area: 'road' },
+  ].forEach(addWalk);
+  ST.lamps.sort((a, b) => a[0][2] - b[0][2]);
 }
 
 // ============================== characters ==================================
@@ -770,7 +1622,13 @@ function killFx(f) { if (!f) return; const i = fxList.indexOf(f); if (i >= 0) { 
 let bigSign = null;
 function showSign(name, dur = 2.5) {
   if (bigSign) killFx(bigSign);
-  bigSign = fx(['sign_' + name], new V3(0, 2.85, 4.3), { life: dur, scale: 0.016 });
+  let at = new V3(0, 2.85, 4.3);
+  if (level.name === 'street' || player.head.z > STREET.fz - 0.4) {   // outside: up ahead of you, wherever you're looking
+    camera.getWorldDirection(_v1); _v1.y = 0; if (_v1.lengthSq() < 1e-4) _v1.set(0, 0, 1); _v1.normalize();
+    at = player.head.clone().addScaledVector(_v1, 4.5); at.y = 2.7;
+  }
+  if (!imgSize['sign_' + name]) tex('sign_' + name);
+  bigSign = fx(['sign_' + name], at, { life: dur, scale: 0.016 });
 }
 
 // ============================== player ======================================
@@ -889,7 +1747,7 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyE') deskGrab();
   if (e.code === 'KeyQ') deskThrow();
   if (e.code === 'KeyG') player.headbuttT = 0.18;
-  if (e.code === 'KeyR' && (game.state === 'won' || game.state === 'lost')) startGame();
+  if (e.code === 'KeyR' && (game.state === 'won' || game.state === 'lost')) { if (level.name === 'street') startStreet(false); else startGame(); }
   if (e.code === 'KeyJ') deskPunch(hands.left, e.shiftKey);
   if (e.code === 'KeyK') deskPunch(hands.right, e.shiftKey);
   if (e.code === 'Space') e.preventDefault();
@@ -1088,9 +1946,12 @@ function solveC(c) {
 function collideWorld(p, b) {
   const r = p.r; let impact = 0;
   if (p.p.y < r) { impact = Math.max(impact, -p.v.y); p.p.y = r; p.ground = true; }
-  const lim = ROOM.x - 0.04 - r;
-  for (const ax of ['x', 'z']) if (Math.abs(p.p[ax]) > lim) { impact = Math.max(impact, Math.abs(p.v[ax])); p.p[ax] = Math.sign(p.p[ax]) * lim; }
-  for (const B of WORLD_BOXES) {
+  const ox = p.p.x, oz = p.p.z;
+  if (keepInWalk(p.p, r, true)) {   // hit a wall
+    if (p.p.x !== ox) impact = Math.max(impact, Math.abs(p.v.x));
+    if (p.p.z !== oz) impact = Math.max(impact, Math.abs(p.v.z));
+  }
+  for (const B of boxesNear(p.p.z)) {
     const qx = clamp(p.p.x, B[0], B[3]), qy = clamp(p.p.y, B[1], B[4]), qz = clamp(p.p.z, B[2], B[5]);
     const dx = p.p.x - qx, dy = p.p.y - qy, dz = p.p.z - qz, d2 = dx * dx + dy * dy + dz * dz;
     if (d2 >= r * r) continue;
@@ -1277,6 +2138,29 @@ class Prop {
       body.add('knob', pos.clone(), 0.035, 3);
       body.add('tip', pos.clone().add(new V3(0, L, 0)), 0.05, 3);
       body.stick('knob', 'tip');
+    } else if (type === 'crate' || type === 'bin') {   // three particles like the stool: top, bottom, an edge for the spin
+      const acc = new GeoAcc(), c = this.cfg, R = ST.atlas.rect[type], uv = { '*': [R[0], R[1], R[2], R[3]] }, hw = c.size / 2, H = c.height || c.size;
+      if (type === 'crate') box('street', [-hw, -H / 2, -hw], [hw, H / 2, hw], { acc, uvs: uv });
+      else {
+        tbox(acc, null, -H / 2, H / 2 - 0.04, c.size * 0.82, c.size * 0.82, c.size, c.size, { '*': [0, 0, 16, 16] }, { sheetW: 16, sheetH: 16, faces: 'fblrd' });
+        tbox(acc, null, H / 2 - 0.04, H / 2 + 0.02, c.size + 0.04, c.size + 0.04, c.size * 0.9, c.size * 0.9, { '*': [0, 0, 16, 3] }, { sheetW: 16, sheetH: 16 });
+        const u = acc.u; for (let i = 0; i < u.length; i += 2) { u[i] = R[0] + u[i] * (R[2] - R[0]); u[i + 1] = R[1] + u[i + 1] * (R[3] - R[1]); }
+      }
+      geo = acc.geometry(); mat = sharedMat('street');
+      const o = pos.clone().add(new V3(0, H / 2, 0)), r = Math.min(hw, H / 2);
+      body.add('seat', o.clone().add(new V3(0, H / 2 - r * 0.6, 0)), r, 4);
+      body.add('base', o.clone().add(new V3(0, -H / 2 + r * 0.6, 0)), r, 4);
+      body.add('rim', o.clone().add(new V3(hw, H / 2 - r * 0.6, 0)), 0.05, 4);
+      body.stick('seat', 'base'); body.stick('seat', 'rim'); body.stick('base', 'rim');
+      this.half = H / 2 - r * 0.6;
+    } else if (type === 'sign') {    // a cast-iron street sign on its post: grip at the bottom, plate at the top
+      const acc = new GeoAcc(), L = this.cfg.length, I = ST.atlas.rect.iron, P = ST.atlas.rect.signPlate;
+      box('street', [-0.025, 0, -0.025], [0.025, L, 0.025], { acc, uvs: { '*': [I[0], I[1], I[2], I[3]] }, faces: 'fblrt' });
+      box('street', [-0.26, L - 0.3, -0.015], [0.26, L - 0.04, 0.015], { acc, uvs: { '*': [P[0], P[1], P[2], P[3]] } });
+      geo = acc.geometry(); mat = sharedMat('street');
+      body.add('knob', pos.clone().add(new V3(0, 0.05, 0)), 0.04, 3);
+      body.add('tip', pos.clone().add(new V3(0, L - 0.15, 0)), 0.14, 3);
+      body.stick('knob', 'tip');
     } else {                         // potato / pot: one particle that spins as it flies
       const acc = new GeoAcc();
       if (type === 'potato') { box('potato', [-0.05, -0.04, -0.065], [0.05, 0.04, 0.065], { acc, uvs: { '*': [0, 0, 1, 1] } }); body.add('c', pos.clone(), 0.055, 2); }
@@ -1305,10 +2189,14 @@ class Prop {
       _by.subVectors(b.seat.x, b.base.x).normalize();
       frameQ(_by, _pa.subVectors(b.rim.x, b.seat.x), _pb.set(0, 0, 1), _bq);
       setPart(this.obj, _pc.copy(b.seat.x).addScaledVector(_by, -0.32), _bq, 1);
-    } else if (this.type === 'bat') {
+    } else if (this.type === 'bat' || this.type === 'sign') {
       _by.subVectors(b.tip.x, b.knob.x).normalize();
       frameQ(_by, _pa.set(1, 0, 0), _pb.set(0, 0, 1), _bq);
-      setPart(this.obj, b.knob.x, _bq, 1);
+      setPart(this.obj, this.type === 'sign' ? _pc.copy(b.knob.x).addScaledVector(_by, -0.05) : b.knob.x, _bq, 1);
+    } else if (this.type === 'crate' || this.type === 'bin') {
+      _by.subVectors(b.seat.x, b.base.x).normalize();
+      frameQ(_by, _pa.subVectors(b.rim.x, b.seat.x), _pb.set(0, 0, 1), _bq);
+      setPart(this.obj, _pc.addVectors(b.seat.x, b.base.x).multiplyScalar(0.5), _bq, 1);
     } else {
       const c = b.c;
       if (!this.heldBy && !this.heldByEnemy && !this.body.sleep) this.spin += c.v.length() * 0.06;
@@ -1319,12 +2207,15 @@ class Prop {
   get airborne() { return this.thrown || this.hostile; }
   grabPoint(out) {
     if (this.type === 'bat') return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, 0.15);
+    if (this.type === 'sign') return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, 0.25);
     return out.copy(this.body.center.lengthSq() ? this.body.center : this.body.ps[0].x);
   }
   hitPoint(out) {
     if (this.type === 'bottle') return out.copy(this.body.by.base.x);
     if (this.type === 'stool') return out.copy(this.body.by.seat.x);
     if (this.type === 'bat') return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, 0.8);
+    if (this.type === 'sign') return out.copy(this.body.by.tip.x);
+    if (this.type === 'crate' || this.type === 'bin') return out.addVectors(this.body.by.seat.x, this.body.by.base.x).multiplyScalar(0.5);
     return out.copy(this.body.ps[0].x);
   }
   // held: particles ride the fist, pointing along the knuckles
@@ -1335,6 +2226,10 @@ class Prop {
     if (this.type === 'bottle') { b.neck.pin.copy(h.fist); b.base.pin.copy(h.fist).addScaledVector(K, 0.26); }
     else if (this.type === 'stool') { b.base.pin.copy(h.fist).addScaledVector(K, 0.06); b.seat.pin.copy(h.fist).addScaledVector(K, 0.57); b.rim.pin.copy(b.seat.pin).addScaledVector(X, 0.2); }
     else if (this.type === 'bat') { b.knob.pin.copy(h.fist).addScaledVector(K, -0.06); b.tip.pin.copy(h.fist).addScaledVector(K, this.cfg.length - 0.06); }
+    else if (this.type === 'sign') { b.knob.pin.copy(h.fist).addScaledVector(K, -0.1); b.tip.pin.copy(h.fist).addScaledVector(K, this.cfg.length - 0.25); }
+    else if (this.type === 'crate' || this.type === 'bin') {   // held by the near edge, sticking out past the knuckles
+      b.base.pin.copy(h.fist).addScaledVector(K, 0.12); b.seat.pin.copy(b.base.pin).addScaledVector(K, this.half * 2); b.rim.pin.copy(b.seat.pin).addScaledVector(X, this.cfg.size / 2);
+    }
     else b.c.pin.copy(h.fist).addScaledVector(K, 0.04);
   }
   pinAll() { for (const q of this.body.ps) q.pin = q.x.clone(); this.body.wake(); }
@@ -1348,9 +2243,9 @@ class Prop {
       AU.glass();
       for (let i = 0; i < (this.type === 'bottle' ? 7 : 4); i++)
         fx(['fx_glass'], p.clone().add(new V3(rand(-0.15, 0.15), rand(-0.1, 0.15), rand(-0.15, 0.15))), { life: 0.5, rise: rand(-0.6, 0.4), scale: 0.012 });
-    } else {   // potato splat, splintered bat
+    } else {   // potato splat, splintered bat / crate / sign
       if (this.type === 'potato') AU.splat(); else AU.wood();
-      fx(['fx_dust'], p, { life: 0.4, scale: 0.012 });
+      fx(['fx_dust'], p, { life: 0.4, scale: this.type === 'crate' ? 0.02 : 0.012 });
     }
     if (this.heldBy) { this.heldBy.held = null; this.heldBy.desk.mode = 'guard'; this.heldBy = null; }
     if (this.heldByEnemy) { const e = this.heldByEnemy; if (e.weapon === this) e.weapon = null; if (e.carry === this) e.carry = null; this.heldByEnemy = null; }
@@ -2142,12 +3037,9 @@ class Enemy {
 const ZERO3 = [0, 0, 0];
 function tokensInUse() { let n = 0; for (const e of enemies) if (e.hasToken) n++; return n; }
 function pushOutXZ(p, r, includeBlockers = true) {
-  let moved = false;   // false | true (wall) | the blocker box
-  const W = ROOM.wall - r + 0.3;
-  if (p.x > W) { p.x = W; moved = true; } if (p.x < -W) { p.x = -W; moved = true; }
-  if (p.z > W) { p.z = W; moved = true; } if (p.z < -W) { p.z = -W; moved = true; }
+  let moved = keepInWalk(p, r);   // false | true (wall) | the blocker box
   if (!includeBlockers) return moved;
-  for (const b of BLOCKERS) {
+  for (const b of blockersNear(p.z)) {
     const x0 = b.x0 - r, x1 = b.x1 + r, z0 = b.z0 - r, z1 = b.z1 + r;
     if (p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1) {
       const dx0 = p.x - x0, dx1 = x1 - p.x, dz0 = p.z - z0, dz1 = z1 - p.z, m = Math.min(dx0, dx1, dz0, dz1);
@@ -2234,7 +3126,7 @@ function checkPlayerHits(now) {
     const weapon = h.held && h.held.isProp ? h.held : null;
     if (h.held && !weapon) continue;              // holding a goon: that hand is busy
     if (h.speed < CFG.punch.minContactSpeed) continue;          // resting contact never counts
-    const speed = h.peak * (weapon ? ({ stool: 1.2, bat: 1.3 }[weapon.type] || 1) : 1);
+    const speed = h.peak * (weapon ? (CFG.weapons.swingMult[weapon.type] || 1) : 1);
     const at = weapon ? weapon.hitPoint(new V3()) : h.fist;
     const rad = weapon ? weapon.cfg.hitRadius : CFG.punch.fistRadius;
     const mag = speed >= CFG.punch.magnetismMinSpeed ? CFG.punch.magnetism : 0;
@@ -2345,6 +3237,7 @@ function stockProps() {
   for (const t of TABLES) { new Prop('stool', new V3(t.x + 0.7, 0, t.z + 0.1)); new Prop('stool', new V3(t.x - 0.6, 0, t.z - 0.4)); }
 }
 function startGame() {
+  level.name = 'bar'; level.encounter = -1; level.arena = null; DOOR.target = 0; DOOR.open = 0;
   clearEnemies(); stockProps();
   player.hp = CFG.player.health; player.hurtT = 0; game.catches = 0; game.disarms = 0;
   game.wave = 0; startWave(0);
@@ -2363,6 +3256,12 @@ function loseRound() {
 }
 function updateGame(dt) {
   game.timer += dt;
+  if (level.name === 'street') { updateStreet(dt); return; }
+  if (game.state === 'won') {   // bar cleared: the door swings open; walk out onto the square
+    if (game.timer > 2.5 && DOOR.target === 0) { DOOR.target = 1; showSign('doorOpen', 3.0); AU.bell(); }
+    if (DOOR.open > 0.6 && player.head.z > STREET.fz + 0.4) startStreet(true);
+    return;
+  }
   if (game.state === 'intro') {
     if (game.timer > 2.0) {
       game.state = 'fight'; game.timer = 0;
@@ -2382,7 +3281,7 @@ function updateGame(dt) {
     updateDuo(dt);
     if (!game.queue.length && enemies.every(e => !e.alive)) {
       if (game.wave < CFG.waves.length - 1) { game.state = 'cleared'; game.timer = 0; showSign('ko', 2.0); }
-      else { game.state = 'won'; game.timer = 0; showSign('clear', 1e9); AU.bell(); }
+      else { game.state = 'won'; game.timer = 0; showSign('clear', 2.5); AU.bell(); }
     }
     return;
   }
@@ -2390,6 +3289,122 @@ function updateGame(dt) {
   if (game.state === 'lost' && game.timer > 3.5) {
     clearEnemies(); stockProps(); player.hp = CFG.player.health; startWave(game.wave);
   }
+}
+
+// ============================== the street: the fight =======================
+// Walk out of the Threeway into Tripoint Square, fight down the old road, reach the militia checkpoint.
+// Encounters lock you into a stretch of street (an arena) until it's clear; then the street opens up again.
+const level = { name: 'bar', encounter: -1, arena: null };
+let boomPivot = null;
+function buildBoom() {   // the checkpoint's barrier arm: lifts when you reach it
+  const acc = new GeoAcc(), R = ST.atlas.rect.boom, L = 5.9;
+  box('street', [-L, -0.07, -0.06], [0, 0.07, 0.06], { acc, uvs: { '*': [R[0], R[1], R[2], R[3]] }, faces: 'fbtd' });
+  boomPivot = new THREE.Group(); boomPivot.position.set(1.55, 0.99, STREET.chk.z);
+  boomPivot.add(new THREE.Mesh(acc.geometry(), sharedMat('street'))); scene.add(boomPivot);
+}
+function stockStreetProps() {
+  for (const [type, x, z] of CFG.street.props) new Prop(type, new V3(x, 0, z));
+}
+function placePlayer(x, z, yaw) {
+  rig.position.set(x, 0, z);
+  if (xrMode) rig.rotation.set(0, yaw, 0); else desk.yaw = yaw;
+}
+function startStreet(fromBar) {
+  level.name = 'street'; level.encounter = -1; level.arena = null;
+  DOOR.target = 1;
+  if (!fromBar) {
+    DOOR.open = 1; clearEnemies(); stockProps();
+    player.hp = CFG.player.health; player.hurtT = 0; game.catches = 0; game.disarms = 0;
+    placePlayer(CFG.street.start[0], CFG.street.start[1], Math.PI);
+  }
+  if (boomPivot) boomPivot.rotation.z = 0;
+  stockStreetProps();
+  game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
+  showSign('street', 2.6);
+}
+function startEncounter(i) {
+  const E = CFG.street.encounters[i];
+  level.encounter = i; level.arena = E.arena;
+  game.state = 'intro'; game.timer = 0; game.queue = E.spawn.slice(); game.spawnT = 0.3; game.bosses = [];
+  showSign(E.sign || 'fight', 1.4); AU.bell();
+}
+function updateStreet(dt) {
+  const S = CFG.street, enc = S.encounters, z = player.head.z;
+  if (game.state === 'walk') {
+    const next = level.encounter + 1;
+    if (next < enc.length && z > enc[next].trigger) startEncounter(next);
+    else if (next >= enc.length && z > S.finishZ) {
+      game.state = 'won'; game.timer = 0; showSign('checkpoint', 1e9); AU.bell();
+    }
+    return;
+  }
+  if (game.state === 'intro') { if (game.timer > 0.9) { game.state = 'fight'; game.timer = 0; } return; }
+  if (game.state === 'fight') {
+    game.spawnT -= dt;
+    if (game.queue.length && game.spawnT <= 0) {
+      const [type, x, zz] = game.queue.shift(), e = new Enemy(type);
+      e.placeAt(x, zz, Math.atan2(player.head.x - x, player.head.z - zz));
+      const d = _v1.set(player.head.x - x, 0, player.head.z - zz); const L = d.length();
+      e.target.set(x, 0, zz).addScaledVector(d.divideScalar(L || 1), Math.min(2.5, L * 0.5));
+      enemies.push(e); game.spawnT = S.spawnGap;
+    }
+    if (!game.queue.length && enemies.every(e => !e.alive)) { game.state = 'cleared'; game.timer = 0; showSign('ko', 1.6); }
+    return;
+  }
+  if (game.state === 'cleared' && game.timer > S.clearedPause) {
+    level.arena = null; game.state = 'walk'; game.timer = 0;
+    player.hp = Math.min(CFG.player.health, player.hp + S.healBetween);
+    showSign(level.encounter + 1 < enc.length ? 'go' : 'goCheck', 2.0);
+    return;
+  }
+  if (game.state === 'lost' && game.timer > 3.5) {   // back to the start of this stretch, full health
+    const E = enc[level.encounter];
+    clearEnemies(); player.hp = CFG.player.health;
+    placePlayer(E.respawn[0], E.respawn[1], Math.PI);
+    startEncounter(level.encounter);
+  }
+  if (game.state === 'won' && boomPivot) boomPivot.rotation.z = Math.max(-1.35, boomPivot.rotation.z - dt * 0.9);
+}
+// encounter walls: only the player is held in; goons walk in from outside them
+function keepPlayerIn(p, r) {
+  pushOutXZ(p, r);
+  if (level.name === 'street' && level.arena) p.z = clamp(p.z, level.arena[0] + r, level.arena[1] - r);
+}
+// lights and fog follow you: the bar's six inside, the nearest six street lamps outside
+const _lampD = [];
+function updateArea(dt) {
+  const hz = player.head.z, out = clamp((hz - (STREET.fz - 1.2)) / 3.0, 0, 1);
+  const R = CFG.render, F = CFG.street.fog;
+  SU.uFogNear.value = R.fogNear + (F.near - R.fogNear) * out; SU.uFogFar.value = R.fogFar + (F.far - R.fogFar) * out;
+  if (hz < STREET.fz - 0.4) applyLights(BAR_LIGHT.lights, BAR_LIGHT.ambient);
+  else {
+    _lampD.length = 0;
+    for (const L of ST.lamps) _lampD.push([(L[0][0] - player.head.x) ** 2 + (L[0][2] - hz) ** 2, L]);
+    _lampD.sort((a, b) => a[0] - b[0]);
+    applyLights(_lampD.slice(0, MAXL).map(d => d[1]), CFG.street.light.ambient);
+  }
+  if (ST.skyMesh) { camera.getWorldPosition(_v1); ST.skyMesh.position.set(_v1.x, 0, _v1.z); ST.skyMesh.updateMatrix(); }
+  if (ST.beaconMesh) { ST.beaconT = (ST.beaconT || 0) + dt; ST.beaconMesh.visible = (ST.beaconT % CFG.street.beaconBlink) < CFG.street.beaconBlink * 0.5; }
+  updateDoor(dt);
+}
+// big signs painted in code (same pixel font as the street), with a hard drop shadow
+const SIGN_TEXT = { street: ['TRIPOINT SQUARE', '#c9a04a'], go: ['GO!', '#33e0d0'], goCheck: ['TO THE CHECKPOINT', '#33e0d0'],
+  checkpoint: ['CHECKPOINT', '#f2ede4'], doorOpen: ['THE DOOR IS OPEN', '#ff9a3c'], square: ['FIGHT!', '#f2c14e'], road: ['FIGHT!', '#f2c14e'], last: ['LAST STRETCH', '#ff4f9a'] };
+function paintSign(text, col) {
+  const s = 3, w = textW(text) * s + 6, h = 7 * s + 6, p = new Pix(w, h);
+  for (const [dx, dy, c] of [[3, 3, '#000000'], [0, 0, col]]) {
+    let cx = 1 + dx;
+    for (const ch of text) { const g = GLYPHS[ch]; if (g) for (let i = 0; i < 35; i++) if (g[i] === '1') p.rect(cx + (i % 5) * s, 1 + dy + Math.floor(i / 5) * s, s, s, c); cx += 6 * s; }
+  }
+  return p;
+}
+function signTex(name) {   // 'sign_street' etc: painted on first use
+  const def = SIGN_TEXT[name.slice(5)]; if (!def) return null;
+  const p = paintSign(def[0], def[1]);
+  const t = new THREE.DataTexture(p.d, p.w, p.h, THREE.RGBAFormat);
+  t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestFilter; t.generateMipmaps = false; t.flipY = false; t.needsUpdate = true;
+  imgSize[name] = [p.w, p.h];
+  return t;
 }
 
 // ============================== Rocco & Ivan ================================
@@ -2475,10 +3490,10 @@ function updateLocomotion(dt) {
       if (Math.abs(x) < 0.3) snapReady = true;
     }
     // restart after a win / loss
-    if (R && (game.state === 'won') && R.buttons[4] && R.buttons[4].pressed) startGame();
+    if (R && (game.state === 'won') && R.buttons[4] && R.buttons[4].pressed) { if (level.name === 'street') startStreet(false); else startGame(); }
     // keep the head inside the room and out of the bar
     camera.getWorldPosition(_v1);
-    _v2.copy(_v1); pushOutXZ(_v2, 0.25);
+    _v2.copy(_v1); keepPlayerIn(_v2, 0.25);
     rig.position.x += _v2.x - _v1.x; rig.position.z += _v2.z - _v1.z;
     return;
   }
@@ -2499,7 +3514,7 @@ function updateLocomotion(dt) {
     rig.position.x += (-sin * f + cos * s) * sp;
     rig.position.z += (-cos * f - sin * s) * sp;
   }
-  _v1.set(rig.position.x, 0, rig.position.z); pushOutXZ(_v1, 0.3);
+  _v1.set(rig.position.x, 0, rig.position.z); keepPlayerIn(_v1, 0.3);
   rig.position.x = _v1.x; rig.position.z = _v1.z;
 }
 
@@ -2553,7 +3568,9 @@ function updateHud(dt) {
     hpFill.style.width = (frac * 100).toFixed(0) + '%';
     const t = lastHit ? `${lastHit.tier.toUpperCase()} · ${lastHit.speed.toFixed(1)} m/s · ${lastHit.zone} · ${lastHit.dmg} dmg` : 'Punch something.';
     const bosses = game.bosses.filter(e => e.alive).map(e => `${e.type.toUpperCase()} ${Math.max(0, Math.ceil(e.hp))}${e.benched ? ' (waiting)' : ''}${e.enraged ? ' (ENRAGED)' : ''}`).join(' · ');
-    const wave = game.state === 'won' ? 'Bar cleared — R to restart' : game.state === 'lost' ? 'You got tossed' : `Round ${game.wave + 1} / ${CFG.waves.length}${bosses ? '  ·  ' + bosses : ''}`;
+    const street = level.name === 'street', E = CFG.street.encounters;
+    const wave = street ? (game.state === 'won' ? 'Checkpoint reached — R to restart the street' : game.state === 'lost' ? 'You got tossed' : game.state === 'walk' ? (level.encounter + 1 < E.length ? 'Tripoint Square — head down the road' : 'Walk up to the checkpoint') : `Street ${level.encounter + 1} / ${E.length}`)
+      : game.state === 'won' ? (DOOR.target ? 'Bar cleared — walk out the door (R to restart)' : 'Bar cleared') : game.state === 'lost' ? 'You got tossed' : `Round ${game.wave + 1} / ${CFG.waves.length}${bosses ? '  ·  ' + bosses : ''}`;
     const held = hands.right.held ? (hands.right.held.isProp ? `Holding: ${hands.right.held.type}` : 'Holding a goon — Q to throw') : '';
     infoEl.textContent = `${wave}   ·   ${t}${held ? '   ·   ' + held : ''}${player.clinchedBy ? '   ·   CLINCHED: punch his arms or G to headbutt' : ''}`;
   }
@@ -2682,6 +3699,7 @@ function frame() {
     checkPlayerHits(NOW);
     updateGame(dt);
   }
+  updateArea(dt);
   updateBossBars();
   updateFx(dt);
   updateHud(dt);
@@ -2700,6 +3718,7 @@ function boot() {
     const img = new Image(); img.onload = () => { imgSize[k] = [img.width, img.height]; }; img.src = TEX[k];
   }
   buildRoom();
+  buildStreet(); buildBoom(); indexWorld();
   for (const h of handList) { h.anchor.rotation.order = 'XYZ'; h.anchor.position.set(...DH.guard[h.side]); }
   attachHandsDesktop();
   rig.position.set(0, 0, -1.4); rig.rotation.y = Math.PI;
@@ -2709,14 +3728,17 @@ function boot() {
   loadTune();
   renderer.setAnimationLoop(frame);
   window.__tw = { CFG, game, player, enemies, props, bodies, hands, scene, camera, rig, renderer, playerHit, startGame, Enemy, Prop, updatePhysics,
-    perf, perfPanel, TUNE, bossBars, roomTris: () => roomTris };
+    perf, perfPanel, TUNE, bossBars, roomTris: () => roomTris, level, startStreet, STREET, ST, WALK, DOOR, keepInWalk, pushOutXZ, WORLD_BOXES, BLOCKERS, desk };
 }
 
+const streetBox = document.getElementById('streetStart');
+if (streetBox && /[?&]level=street/.test((window.location && window.location.search) || '')) streetBox.checked = true;
+const begin = () => { if (streetBox && streetBox.checked) startStreet(false); else startGame(); };
 const menu = document.getElementById('menu'), vrBtn = document.getElementById('vrBtn'), deskBtn = document.getElementById('deskBtn'), vrNote = document.getElementById('vrNote');
 deskBtn.addEventListener('click', () => {
   AU.init(); menu.hidden = true; hudEl.hidden = false; xrMode = false;
   attachHandsDesktop(); setRenderMode(false); resize();
-  startGame();
+  begin();
   if (canvas.requestPointerLock) canvas.requestPointerLock();
 });
 if (navigator.xr && navigator.xr.isSessionSupported) {
@@ -2737,7 +3759,7 @@ vrBtn.addEventListener('click', async () => {
     for (const h of handList) { h.anchor.position.set(0, 0, 0); attachHandVR(h); }
     camera.position.set(0, 0, 0); camera.rotation.set(0, 0, 0);
     rig.position.set(0, 0, -1.4); rig.rotation.set(0, Math.PI, 0);
-    startGame();
+    begin();
     session.addEventListener('end', () => {
       xrMode = false; menu.hidden = false; hudEl.hidden = true; game.state = 'menu';
       clearEnemies(); for (const h of handList) { if (h.held) releaseHeld(h); h.anchor.rotation.set(DH.guard.rx * DEG, 0, 0); h.anchor.position.set(...DH.guard[h.side]); }
