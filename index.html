@@ -1322,6 +1322,7 @@ function buildSkylines() {
   for (const [x, y, z] of ST.beacons) sbox(bacc, 'litRed', x, y, z, 3, 3, 3, 0, { u: 4, v: 4, cell: 999 });
   ST.beaconMesh = new THREE.Mesh(bacc.geometry({ ambient: [1, 1, 1], lights: [] }), makeMat('street', { baked: true, fog: CFG.street.skylineFog }));
   ST.beaconMesh.frustumCulled = false; scene.add(ST.beaconMesh);
+  ST.beaconMesh.material.uniforms.uFogNear = { value: CFG.street.fog.near }; ST.beaconMesh.material.uniforms.uFogFar = { value: CFG.street.fog.far };
 }
 function decoTower(acc, x, z, w, d, h, phi, rng, mast) {
   let y = 0;
@@ -1390,6 +1391,10 @@ function buildStreet() {
   const litMesh = new THREE.Mesh(ST.lit.geometry({ ambient: L.ambient, sky: L.sky, lights: ST.lamps }), makeMat('street', { baked: true }));
   const skyMesh = new THREE.Mesh(ST.sky.geometry({ ambient: L.skylineAmbient, sky: L.skylineSky, lights: [] }), makeMat('street', { baked: true, fog: CFG.street.skylineFog }));
   for (const m of [litMesh, skyMesh]) { m.matrixAutoUpdate = false; m.updateMatrix(); m.frustumCulled = false; scene.add(m); }
+  // the street keeps its own outdoor fog wherever you stand: seen through the door from inside the bar it isn't
+  // drowned in the bar's short fog (the shared fog, for goons and props, still follows you)
+  const F = CFG.street.fog;
+  for (const m of [litMesh, skyMesh]) { m.material.uniforms.uFogNear = { value: F.near }; m.material.uniforms.uFogFar = { value: F.far }; }
   ST.tris = ST.lit.tris; ST.litMesh = litMesh; ST.skylineMesh = skyMesh;
   buildSky();
   // where you can walk: the doorway (once the door's open), the square, the side-road mouths, the road

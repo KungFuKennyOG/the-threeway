@@ -56,6 +56,7 @@ try {
   step(Math.ceil(2.4 / DT)); key('keyup', 'KeyW');
   check('walking out of the door starts the street', TW.level.name === 'street' && TW.player.head.z > 5.3, `level ${TW.level.name}, z ${TW.player.head.z.toFixed(2)}`);
   check('outside, the live lights are the nearest street lamps', run('SU.uAmbient.value.x') === S.light.ambient[0] && run('SU.uLightRad.value').some(r => r > 6), 'ambient ' + run('SU.uAmbient.value.x'));
+  check('the street keeps its outdoor fog even seen from inside the bar', TW.ST.litMesh.material.uniforms.uFogFar.value === S.fog.far && TW.ST.litMesh.material.uniforms.uFogFar !== run('SU.uFogFar'));
   check('the fog opens up outside', run('SU.uFogFar.value') > TW.CFG.render.fogFar + 10, 'far ' + run('SU.uFogFar.value').toFixed(1));
 
   // ---- walls and crossings
