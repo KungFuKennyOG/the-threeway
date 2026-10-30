@@ -28,7 +28,10 @@ Desktop: mouse look, WASD, left/right click (or J/K) punch, Shift heavy, hold X 
 
 ## What's in
 
-- The Threeway bar in the art spec's PS1 look: vertex-lit, 16-colour hand-pixeled textures, 15-bit colour with 4×4 Bayer dither, plum fog, 6 per-vertex lights. Desktop renders 240 lines with vertex snap and affine warp; VR keeps the dither and fog but turns snap and affine off.
+- **Physics-first goons.** Every goon is an active ragdoll: 15 joint particles held together by sticks (position-based dynamics, 120 Hz). Standing, they're pulled toward their animation, so every hit physically shoves them at the spot you hit and they spring back. Knockdowns, launches and throws drop the pull and they go limp, then get up onto a knee and stand. Grab a collar and the rest of the body dangles from your fist. Thrown goons bowl over other goons and scatter the bar stools; slamming them into walls or the bar hurts.
+- **Real scale.** Goons are 1.71–1.75 m. Your body is a capsule nobody can walk or punch through, so goons stop at arm's length instead of ending up inside your face.
+- **Props are physical too:** bottles and stools tumble, get kicked around by goons, knocked off the bar by your fists, and bottles shatter on hard impacts.
+- The Threeway bar in the art spec's PS1 look: vertex-lit, ≤16-colour hand-pixeled textures, 6-bit colour with a soft 4×4 Bayer dither, plum fog, 6 per-vertex lights, fine vertex snap (a slight wobble). Desktop also renders 240 lines with affine warp; VR keeps snap but turns affine off.
 - Velocity punching with the four tiers, 40–60 ms hitstop on the enemy (never the player's view), haptics.
 - Hidden poise per enemy: flinch → stagger (bonus-damage window) → knockdown → launch. Head hits do more damage, body hits more poise.
 - Forearm block, parry, dodge by moving your head.
@@ -36,11 +39,10 @@ Desktop: mouse look, WASD, left/right click (or J/K) punch, Shift heavy, hold X 
 - Bōsōzoku punk (fodder), Columbian boxer (fast jab combos, high guard: go to the body), Krasnovian wrestler (clinches you).
 - Attack tokens (two attackers at once, the rest circle), three escalating rounds.
 - Damage feedback is a red dithered vignette, haptics and sound. The camera never moves on its own.
-- MVP simplification from the spec: knocked-down goons tumble as one rigid body.
 
 ## Tuning
 
-Every number lives in `CFG` at the top of the game script in `index.html`: tier thresholds, damage and poise per tier, hitstop, knockback, magnetism, block and dodge distances, grab and throw, weapons, per-enemy stats, waves, render settings (desktop lines, VR framebuffer scale, snap/affine per mode), and `hands.modelPitchDeg` for how the fist model sits in the controller.
+Every number lives in `CFG` at the top of the game script in `index.html`: physics (`CFG.physics`: how hard goons follow their animation, hit shoves, personal space, domino and impact speeds), tier thresholds, damage and poise per tier, hitstop, knockback, magnetism, block and dodge distances, grab and throw, weapons, per-enemy stats, waves, render settings (desktop lines, VR framebuffer scale, snap/affine per mode), and `hands.modelPitchDeg` for how the fist model sits in the controller.
 
 ## Tests
 
@@ -48,6 +50,7 @@ No headset needed. The tests run the real game script against a small stand-in f
 
 ```
 node test/vr.js        # fake Quest controllers: tiers, flick, block, parry, clinch, grab/throw, drink, locomotion
+node test/physics.js   # heights, ragdoll vs skeleton, shove + recover, launch, get-up, dominoes, stools, dangling grabs
 node test/bot.js 1 240 --mode=sloppy   # a bot plays all three rounds; prints hits by tier, damage taken, errors
 ```
 

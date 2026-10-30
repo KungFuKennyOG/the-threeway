@@ -98,6 +98,7 @@ try {
     ctx.__frame ? ctx.__frame() : TW.renderer.loop();
     stats.frames++;
     stats.minHp = Math.min(stats.minHp, TW.player.hp);
+    for (const e of TW.enemies) { if (e.state === 'held') continue; for (const q of e.body.ps) { const d = q.x.distanceTo(TW.player.head) - q.r; if (d < (stats.closest ?? 9)) { stats.closest = d; stats.closestWhat = e.type + ':' + e.state + ':' + q.name; } } }
     const lh = run('lastHit');
     if (lh && lh !== lastHitRef) { lastHitRef = lh; stats.tiers[lh.tier] = (stats.tiers[lh.tier] || 0) + 1; if (VERBOSE) console.log('HIT', clock.toFixed(2), JSON.stringify(lh)); }
     for (const e of TW.enemies) stats.states[e.type + ':' + e.state] = (stats.states[e.type + ':' + e.state] || 0) + 1;
@@ -107,7 +108,7 @@ try {
 
 const out = { mode: MODE, seed: SEED, simSeconds: +clock.toFixed(1), final: TW.game.state, wave: TW.game.wave + 1, frames: stats.frames, minHp: Math.round(stats.minHp),
   hpNow: Math.round(TW.player.hp), tiers: stats.tiers, drinks: stats.drinks, grabs: stats.grabs, throws: stats.throws, blocks: stats.blocks,
-  clinchFrames: stats.clinchFrames || 0, lostFrames: stats.lost || 0, enemiesLeft: TW.enemies.length, props: TW.props.length,
+  closestToHead: +(stats.closest ?? 9).toFixed(3), closestWhat: stats.closestWhat, clinchFrames: stats.clinchFrames || 0, lostFrames: stats.lost || 0, enemiesLeft: TW.enemies.length, props: TW.props.length,
   roomTris: TW.roomTris(), enemyTris: ['boso', 'boxer', 'wrestler'].map(t => { const e = new TW.Enemy(t); const n = e.tris; e.remove(); return t + ':' + n; }).join(' '),
   errors: stats.errors };
 if (VERBOSE) out.states = stats.states;

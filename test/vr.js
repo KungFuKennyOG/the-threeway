@@ -42,7 +42,7 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     check('hands routed by handedness', TW.hands.right.grip === grips[0] && TW.hands.left.grip === grips[1]);
     check('hand models attached to grips', TW.hands.right.anchor.parent === grips[0] && TW.hands.left.anchor.parent === grips[1]);
     check('xrMode on, menu hidden', run('xrMode') === true && els.menu.hidden === true);
-    check('vertex snap off in VR, affine off', run('SU.uSnap.value') === 0 && run('SU.uAffine.value') === 0);
+    check('VR: fine vertex snap on, affine off, 6-bit colour', run('SU.uSnap.value') === 1 && run('SU.uAffine.value') === 0 && run('SU.uLevels.value') === 63);
     const cam = TW.camera;
     cam.position.set(0, 1.65, 0);   // stands in for the XR head pose (local to the rig)
     const R = grips[0], L = grips[1];
@@ -54,8 +54,8 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     // ---- drink: grab the nearest bar bottle by walking the rig there
     TW.rig.position.set(-1.6, 0, -2.95); TW.rig.rotation.y = 0;   // facing -z, toward the bar
     step(2);
-    const bottle = TW.props.find(p => p.type === 'bottle' && Math.abs(p.obj.position.x + 1.6) < 0.01);
-    const bp = bottle.obj.getWorldPosition(new THREE.Vector3());
+    const bottle = TW.props.find(p => p.type === 'bottle' && Math.abs(p.body.by.base.x.x + 1.6) < 0.01);
+    const bp = bottle.body.by.neck.x.clone().add(new THREE.Vector3(0, -0.12, 0));
     // place right grip at the bottle (world == rig-local here since rig yaw 0)
     setGrip(R, bp.x + 1.6, bp.y, bp.z + 2.95); step(2);
     pads[0].buttons[1].pressed = true; step(2);
@@ -66,15 +66,15 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     // throw it: swing forward fast and release mid-swing
     for (let i = 0; i < 6; i++) { setGrip(R, 0.1, 1.5, -0.1 - i * 0.07); step(1); }
     pads[0].buttons[1].pressed = false; step(1);
-    check('release mid-swing throws the bottle', !bottle.heldBy && (bottle.thrown || !bottle.alive), 'vel ' + bottle.vel.length().toFixed(2));
+    check('release mid-swing throws the bottle', !bottle.heldBy && (bottle.thrown || !bottle.alive), 'vel ' + bottle.body.by.base.v.length().toFixed(2));
     // ---- punching: spawn a punk right in front and swing at its chest
     TW.rig.position.set(0, 0, 0); TW.rig.rotation.y = 0; step(2);
     run(`clearEnemies(); game.state = 'fight'; game.queue = [];`);
-    const e = new TW.Enemy('boso'); e.pos.set(0, 0, -0.95); e.yaw = 0; e.state = 'approach'; e.cooldown = 99; e.cfg = Object.assign({}, e.cfg, { speed: 0 }); TW.enemies.push(e);
+    const e = new TW.Enemy('boso'); e.placeAt(0, -0.95, 0); e.state = 'approach'; e.cooldown = 99; e.cfg = Object.assign({}, e.cfg, { speed: 0 }); TW.enemies.push(e);
     step(2);
     const ease = (g, to, frames) => { const from = g.position.clone(); for (let i = 1; i <= frames; i++) { g.position.lerpVectors(from, to, i / frames); step(1); } };
     const swing = (speed) => {   // straight jab at the chest from 0.45 m away, at `speed` m/s
-      e.pos.set(0, 0, -0.95); e.yaw = 0; step(3);
+      e.placeAt(0, -0.95, 0); step(3);
       const chest = e.zone('chest').pos.clone();
       ease(R, new THREE.Vector3(chest.x, chest.y, chest.z + 0.65), 40);
       const startZ = chest.z + 0.65, n = Math.ceil(0.7 / (speed * DT));
@@ -93,7 +93,7 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     swing(6.0);  const l3 = run('lastHit'); check('6 m/s = HEAVY', l3 && l3.tier === 'heavy', l3 && l3.speed.toFixed(2));
     // wrist flick: fast but only 8 cm of travel
     e.state = 'approach'; e.poise = 999; e.hp = 99; run('lastHit = null');
-    e.pos.set(0, 0, -0.95); step(3);
+    e.placeAt(0, -0.95, 0); step(3);
     const chest = e.zone('chest').pos.clone();
     ease(R, new THREE.Vector3(chest.x, chest.y, chest.z + 0.14), 40); step(20);
     for (let i = 0; i < 3; i++) { setGrip(R, chest.x, chest.y, chest.z + 0.14 - 0.027 * (i + 1)); step(1); }
@@ -101,7 +101,7 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     check('wrist flick does no damage', e.hp === 99 && !run('lastHit'));
     // ---- block: forearms in front of face vs a boxer punch
     run(`clearEnemies(); player.hp = 100;`);
-    const b = new TW.Enemy('boxer'); b.pos.set(0, 0, -0.85); b.yaw = 0; b.state = 'approach'; b.cooldown = 0; TW.enemies.push(b);
+    const b = new TW.Enemy('boxer'); b.placeAt(0, -0.85, 0); b.state = 'approach'; b.cooldown = 0; TW.enemies.push(b);
     setGrip(R, 0.08, 1.62, -0.22); setGrip(L, -0.08, 1.62, -0.22);   // fists up at the face
     R.rotation.set(0, 0, 0); L.rotation.set(0, 0, 0);
     let hpBefore = TW.player.hp, sawStrike = false;
@@ -114,20 +114,20 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     check('guard down = you get hit', TW.player.hp < hpBefore, 'hp ' + TW.player.hp);
     // ---- grab a goon by the collar and throw him
     run(`clearEnemies(); player.hp = 100;`);
-    const g = new TW.Enemy('boso'); g.pos.set(0, 0, -0.9); g.yaw = 0; g.state = 'approach'; g.cooldown = 99; g.cfg = Object.assign({}, g.cfg, { speed: 0 }); TW.enemies.push(g); step(2);
+    const g = new TW.Enemy('boso'); g.placeAt(0, -0.9, 0); g.state = 'approach'; g.cooldown = 99; g.cfg = Object.assign({}, g.cfg, { speed: 0 }); TW.enemies.push(g); step(2);
     const neck = g.zone('chest').pos.clone();
     ease(R, new THREE.Vector3(neck.x, neck.y + 0.1, neck.z + 0.22), 60);
     pads[0].buttons[1].pressed = true; step(2);
     check('grip grabs a goon', TW.hands.right.held === g && g.state === 'held');
     for (let i = 0; i < 8; i++) { setGrip(R, neck.x + 0.06 * i, neck.y + 0.1, neck.z + 0.22 - 0.05 * i); step(1); }
     pads[0].buttons[1].pressed = false; step(1);
-    check('release mid-swing throws the goon', g.state === 'tumble' && g.body.thrown, g.state);
+    check('release mid-swing throws the goon (limp, flying)', g.state === 'ragdoll' && g.flying, g.state);
     step(Math.ceil(4 / DT));
     check('thrown goon gets back up', ['approach', 'circle', 'windup', 'strike', 'recover', 'getup'].includes(g.state), g.state);
     // ---- parry: hit the swinging arm during the windup's last moments
     run(`clearEnemies(); player.hp = 100;`);
     setGrip(L, -0.25, 1.0, -0.2);
-    const pb = new TW.Enemy('boso'); pb.pos.set(0, 0, -0.9); pb.yaw = 0; pb.state = 'approach'; pb.cooldown = 0; TW.enemies.push(pb);
+    const pb = new TW.Enemy('boso'); pb.placeAt(0, -0.9, 0); pb.state = 'approach'; pb.cooldown = 0; TW.enemies.push(pb);
     setGrip(R, 0.2, 1.3, -0.25);
     let guard = 0; while (!(pb.state === 'windup' && pb.timer > pb.windupTime - 0.13) && guard++ < 600) step(1);
     const arm = pb.zone('armR').pos.clone();
@@ -136,7 +136,7 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     setGrip(R, 0.2, 1.3, -0.25); step(20);
     // ---- wrestler clinch: get grabbed, punch his arms twice to break free
     run(`clearEnemies(); player.hp = 100;`);
-    const w = new TW.Enemy('wrestler'); w.pos.set(0, 0, -1.0); w.yaw = 0; w.state = 'approach'; w.cooldown = 0; TW.enemies.push(w);
+    const w = new TW.Enemy('wrestler'); w.placeAt(0, -1.0, 0); w.state = 'approach'; w.cooldown = 0; TW.enemies.push(w);
     guard = 0; while (w.state !== 'clinch' && guard++ < 600) step(1);
     check('wrestler clinches you', w.state === 'clinch' && TW.player.clinchedBy === w, w.state);
     for (let k = 0; k < 2; k++) {

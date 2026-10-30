@@ -5,6 +5,7 @@ class Vector3 {
   constructor(x = 0, y = 0, z = 0) { this.x = x; this.y = y; this.z = z; }
   set(x, y, z) { this.x = x; this.y = y; this.z = z; return this; }
   setY(y) { this.y = y; return this; }
+  setScalar(v) { this.x = this.y = this.z = v; return this; }
   copy(v) { this.x = v.x; this.y = v.y; this.z = v.z; return this; }
   clone() { return new Vector3(this.x, this.y, this.z); }
   add(v) { this.x += v.x; this.y += v.y; this.z += v.z; return this; }
@@ -62,6 +63,15 @@ class Quaternion {
     const th = Math.acos(cos), s = Math.sin(th), a = Math.sin((1 - t) * th) / s, b = Math.sin(t * th) / s;
     return this._set(x * a + bx * b, y * a + by * b, z * a + bz * b, w * a + bw * b);
   }
+  setFromRotationMatrix(m) {
+    const te = m.elements, m11 = te[0], m12 = te[4], m13 = te[8], m21 = te[1], m22 = te[5], m23 = te[9], m31 = te[2], m32 = te[6], m33 = te[10], tr = m11 + m22 + m33;
+    let x, y, z, w;
+    if (tr > 0) { const s = 0.5 / Math.sqrt(tr + 1); w = 0.25 / s; x = (m32 - m23) * s; y = (m13 - m31) * s; z = (m21 - m12) * s; }
+    else if (m11 > m22 && m11 > m33) { const s = 2 * Math.sqrt(1 + m11 - m22 - m33); w = (m32 - m23) / s; x = 0.25 * s; y = (m12 + m21) / s; z = (m13 + m31) / s; }
+    else if (m22 > m33) { const s = 2 * Math.sqrt(1 + m22 - m11 - m33); w = (m13 - m31) / s; x = (m12 + m21) / s; y = 0.25 * s; z = (m23 + m32) / s; }
+    else { const s = 2 * Math.sqrt(1 + m33 - m11 - m22); w = (m21 - m12) / s; x = (m13 + m31) / s; y = (m23 + m32) / s; z = 0.25 * s; }
+    return this._set(x, y, z, w);
+  }
   setFromEuler(e) {   // order YXZ or XYZ
     const c1 = Math.cos(e.x / 2), c2 = Math.cos(e.y / 2), c3 = Math.cos(e.z / 2), s1 = Math.sin(e.x / 2), s2 = Math.sin(e.y / 2), s3 = Math.sin(e.z / 2);
     let x, y, z, w;
@@ -89,6 +99,7 @@ class Matrix4 {
     te[8] = (xz + wy) * s.z; te[9] = (yz - wx) * s.z; te[10] = (1 - (xx + yy)) * s.z; te[11] = 0;
     te[12] = p.x; te[13] = p.y; te[14] = p.z; te[15] = 1; return this;
   }
+  makeBasis(x, y, z) { const e = this.elements; e[0] = x.x; e[1] = x.y; e[2] = x.z; e[3] = 0; e[4] = y.x; e[5] = y.y; e[6] = y.z; e[7] = 0; e[8] = z.x; e[9] = z.y; e[10] = z.z; e[11] = 0; e[12] = 0; e[13] = 0; e[14] = 0; e[15] = 1; return this; }
   multiplyMatrices(a, b) {
     const ae = a.elements, be = b.elements, te = new Array(16);
     for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { let s = 0; for (let k = 0; k < 4; k++) s += ae[k * 4 + i] * be[j * 4 + k]; te[j * 4 + i] = s; }
@@ -114,7 +125,7 @@ class Object3D {
     for (const c of this.children) c.updateMatrixWorld();
   }
   _chainWorld() {   // fresh world matrix regardless of update order
-    this.updateMatrix();
+    if (this.matrixAutoUpdate) this.updateMatrix();
     if (this.parent) { this.parent._chainWorld(); this.matrixWorld.multiplyMatrices(this.parent.matrixWorld, this.matrix); }
     else this.matrixWorld.copy(this.matrix);
   }
