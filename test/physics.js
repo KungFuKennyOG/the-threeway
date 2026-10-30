@@ -33,7 +33,7 @@ const freeze = (e) => { e.cooldown = 1e9; e.cfg = Object.assign({}, e.cfg, { spe
 try {
   // ---- scale + standing heights
   const H = {};
-  const ALL = ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'rocco', 'ivan'];
+  const ALL = ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'rocco', 'ivan', 'secguard', 'kicker'];
   for (const t of ALL) {
     const e = new TW.Enemy(t); freeze(e); e.placeAt(0, 2.5, Math.PI); e.state = 'circle'; TW.enemies.push(e);
     step(90);
@@ -127,9 +127,10 @@ try {
   const stools = TW.props.filter(q => q.type === 'stool');
   check('stools are one mesh each (vinyl + chrome atlas)', stools.length > 0 && stools.every(q => q.obj.isMesh !== false && q.obj.geometry && q.obj.children.length === 0 && q.obj.material.uniforms.map.value.src === run('TEX.stool')), stools.length + ' stools');
   // ---- the cook's lob lands on a still player's head
+  seed = 11;   // this check depends on the random lob; pin the sequence so adding goon types elsewhere can't shift it
   run(`clearEnemies(); game.state = 'fight'; game.queue = [];`);
   TW.rig.position.set(0, 0, 0); run('desk.yaw = Math.PI; desk.pitch = 0;'); step(3);
-  const cook = new TW.Enemy('cook'); cook.placeAt(0.6, 3.8, Math.PI); TW.enemies.push(cook); cook.setState('approach'); cook.throwCd = 0;
+  const cook = new TW.Enemy('cook'); cook.placeAt(0.6, 3.8, Math.PI); TW.enemies.push(cook); cook.setState('approach'); cook.throwCd = 0; cook.lobType = 'potato';
   let lobMin = 9, lobbed = null, hp0 = TW.player.hp;
   step(Math.ceil(3 / DT), () => { for (const q of TW.props) if (q.hostile) { lobbed = q; lobMin = Math.min(lobMin, run('(p) => closestOnSeg(player.head, p.prevPos, p.body.ps[0].x, new THREE.Vector3()).distanceTo(player.head)')(q)); } });
   check('the cook winds up and lobs at you', !!lobbed, cook.state);

@@ -134,7 +134,7 @@ const out = { mode: MODE, seed: SEED, simSeconds: +clock.toFixed(1), final: TW.g
   losses: stats.losses || 0, bossLog: stats.bossLog || [], catches: TW.game.catches, catchTries: stats.catchTries, throwBacks: stats.throwBacks, lobs: stats.lobs, disarms: TW.game.disarms, tags: stats.tags, enraged: stats.enraged, maxProps: stats.maxProps, perfLevel: TW.perf.level,
   hpNow: Math.round(TW.player.hp), tiers: stats.tiers, drinks: stats.drinks, grabs: stats.grabs, throws: stats.throws, blocks: stats.blocks,
   closestToHead: +(stats.closest ?? 9).toFixed(3), closestWhat: stats.closestWhat, clinchFrames: stats.clinchFrames || 0, lostFrames: stats.lost || 0, enemiesLeft: TW.enemies.length, props: TW.props.length,
-  roomTris: TW.roomTris(), enemyTris: ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'rocco', 'ivan'].map(t => { const e = new TW.Enemy(t); const n = e.tris; e.remove(); return t + ':' + n; }).join(' '),
+  roomTris: TW.roomTris(), enemyTris: ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'secguard', 'kicker', 'rocco', 'ivan'].map(t => { const e = new TW.Enemy(t); const n = e.tris; e.remove(); return t + ':' + n; }).join(' '),
   errors: stats.errors };
 if (VERBOSE) out.states = stats.states;
 console.log(JSON.stringify(out, null, 1));

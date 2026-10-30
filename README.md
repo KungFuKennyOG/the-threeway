@@ -44,8 +44,10 @@ Desktop: mouse look, WASD, left/right click (or J/K) punch, Shift heavy, hold X 
 - Bōsōzoku punk (fodder), Columbian boxer (fast jab combos, high guard: go to the body), Krasnovian wrestler (clinches you).
 - **Bat Boy** (Columbia, weapon goon): a long, telegraphed overhead bat swing. The bat is a real physics prop pinned to his wrist. Block it with your forearms, or swat the bat or his bat arm mid-swing to knock it loose. Then pick it up: it adds 10 damage and swings 1.3× faster than your fist.
 - **The cook** (Krasnovia, thrower): keeps 3–5 m away and lobs potatoes and pots on real ballistic arcs aimed at your head. Block them with a forearm, dodge, punch them away, or squeeze grip as one arrives to catch it and throw it back. Thrown props curve slightly toward a goon in front of you.
+- **Aoki Security** (Hinomoto, shield): a company guard in a black suit and a riot helmet with a mirrored visor, carrying a clear riot shield and a baton. The shield takes anything to his front (head, body, the shield arm) and punching it earns you a quick baton counter. Get around to his side, or break the shield: heavy hits and props chip it faster, and when it shatters he staggers. He strafes to keep it on you.
+- **The neon kicker** (Hinomoto, fast): a street kickboxer in a neon-piped bomber who dashes in, throws a two-kick combo, then darts back out of reach. High kicks are blocked by a normal guard. Low kicks (a LOW! sign over the chambered knee) go under it: drop a forearm to belly height or step back.
 - **Rocco & Ivan** (round 4 mini-boss): Rocco is a broad Columbian bouncer who fights like a faster boxer (four-punch combos, high guard). Ivan is a Krasnovian bouncer in a tracksuit who clinches harder and needs three arm hits to break. One fights while the other circles wide. Stagger, floor or grab the active one and his partner tags in. Drop one for good and the survivor enrages: faster and with shorter windups. Both have health bars over their heads.
-- Attack tokens (two attackers at once, the rest circle), four escalating rounds: punks → boxer + Bat Boy → cook + wrestler + punk + Bat Boy → Rocco & Ivan.
+- Attack tokens (two attackers at once, the rest circle), four escalating rounds: punk + kicker → Aoki Security + boxer + Bat Boy → cook + wrestler + kicker + Bat Boy + punk → Rocco & Ivan.
 
 ## Quest performance
 
@@ -63,8 +65,8 @@ Every number lives in `CFG` at the top of the game script in `index.html`: physi
 No headset needed. The tests run the real game script against a small stand-in for Three.js (math and scene graph only, no rendering):
 
 ```
-node test/vr.js        # 39 checks: tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, locomotion
-node test/physics.js   # 41 checks: heights for all 7 goons, skinned mesh vs skeleton, one mesh per goon/stool, shove + recover, launch, get-up, dominoes, the cook's lob accuracy, Rocco & Ivan tag + enrage
+node test/vr.js        # 50 checks: tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
+node test/physics.js   # 47 checks: heights for all 9 goons, skinned mesh vs skeleton, one mesh per goon/stool, shove + recover, launch, get-up, dominoes, the cook's lob accuracy, Rocco & Ivan tag + enrage
 node test/bot.js 1 400 --mode=aggro    # a bot plays all four rounds (catches pots, throws them back); prints hits, losses, catches, tags, per-round times, errors
 ```
 

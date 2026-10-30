@@ -212,6 +212,49 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     const fistDmg = lb ? TW.CFG.punch.tiers.find(t => t.name === lb.tier).dmg * (lb.zone === 'head' ? 1.5 : lb.zone.startsWith('arm') ? 0.5 : 1) : 0;
     check('a bat swing hits harder than the same swing with a fist', lb && lb.dmg >= fistDmg + 9, lb ? `${lb.tier} on ${lb.zone}: ${lb.dmg} dmg vs fist ${fistDmg}` : 'no hit');
     pads[0].buttons[1].pressed = false; step(2);
+    // ---- Aoki Security: the riot shield eats punches from the front and he answers with the baton
+    run(`clearEnemies(); player.hp = 100; game.state = 'fight'; game.queue = [];`);
+    TW.rig.position.set(0, 0, 0); TW.rig.rotation.y = 0; setGrip(L, -0.25, 1.0, -0.2); setGrip(R, 0.25, 1.0, -0.2); step(3);
+    const sg = new TW.Enemy('secguard'); sg.placeAt(0, -1.0, 0); sg.state = 'circle'; sg.cooldown = 99; sg.cfg = Object.assign({}, sg.cfg, { speed: 0 }); TW.enemies.push(sg); step(Math.ceil(1.5 / DT));
+    sg.setState('circle'); sg.hp = sg.maxHp; sg.poise = sg.cfg.poise; step(10);   // the bat from the last test may still be bouncing about
+    check('Aoki Security carries a riot shield', sg.shieldHp === TW.CFG.enemies.secguard.shield && sg.tags && sg.tags.shield && sg.tags.shield[1] > sg.tags.shield[0]);
+    const sgHp = sg.hp, c0 = sg.zone('chest').pos.clone(), cf = c0.clone().add(new THREE.Vector3(0, 0, 0.45));
+    ease(R, cf, 40); step(10);
+    for (let i = 0; i < 6; i++) { R.position.lerpVectors(cf, c0, (i + 1) / 6); step(1); }
+    setGrip(R, 0.25, 1.0, -0.2);
+    check('the shield eats a punch from the front', sg.hp === sgHp && sg.shieldHp < TW.CFG.enemies.secguard.shield, 'hp ' + sg.hp + ' shield ' + sg.shieldHp);
+    check('punching the shield earns a quick baton counter', sg.state === 'windup' && sg.windupTime === TW.CFG.enemies.secguard.counterWindup, sg.state);
+    run(`game.state = 'fight'; game.queue = [];`); step(Math.ceil(0.8 / DT));
+    check('the counter lands if you just stand there', TW.player.hp < 100, 'hp ' + TW.player.hp);
+    // from the side the shield is no use
+    sg.setState('circle'); sg.cooldown = 99; sg.yaw = Math.PI / 2; const flankHp = sg.hp;
+    run(`playerHit(enemies[0], 'chest', 4.0, 0.4, null, enemies[0].zone('chest').pos.clone(), null, new THREE.Vector3(0, 0, -1))`);
+    check('a hit from his flank gets past the shield', sg.hp < flankHp, 'hp ' + flankHp + ' -> ' + sg.hp);
+    // heavy shots break it: it vanishes from the mesh and he staggers
+    sg.setState('circle'); sg.yaw = 0; sg.hp = 75; sg.poise = 999;
+    for (let k = 0; k < 4 && sg.shieldHp > 0; k++) { sg.setState('circle'); sg.counterCd = 9; run(`playerHit(enemies[0], 'chest', 6.0, 0.5, null, enemies[0].zone('chest').pos.clone(), null, new THREE.Vector3(0, 0, -1))`); }
+    const [s0, s1] = sg.tags.shield; let gone = true; for (let i = s0 * 3; i < s1 * 3; i++) if (sg.baseP[i] !== 0) gone = false;
+    check('heavy hits shatter the shield', sg.shieldHp <= 0 && gone && sg.state === 'stagger' && run('game.shatters') >= 1, 'shield ' + sg.shieldHp + ' ' + sg.state);
+    sg.setState('circle'); const openHp = sg.hp;
+    run(`playerHit(enemies[0], 'chest', 4.0, 0.4, null, enemies[0].zone('chest').pos.clone(), null, new THREE.Vector3(0, 0, -1))`);
+    check('without it, front punches land', sg.hp < openHp, 'hp ' + openHp + ' -> ' + sg.hp);
+    // ---- neon kicker: high kicks are blocked by a raised guard, low kicks by a dropped forearm (or a step back)
+    run(`clearEnemies(); player.hp = 100;`);
+    const kk = new TW.Enemy('kicker'); kk.placeAt(0, -1.4, 0); kk.state = 'approach'; kk.cooldown = 0; kk.cfg = Object.assign({}, kk.cfg, { combo: 1 }); TW.enemies.push(kk);
+    const kick = (low, guardY) => {
+      setGrip(R, 0.08, guardY, -0.22); setGrip(L, -0.08, guardY, -0.22);
+      kk.setState('approach'); kk.cooldown = 0; kk.hasToken = false; run(`game.state = 'fight'; game.queue = [];`);
+      let n = 0; while (kk.state !== 'windup' && n++ < 900) step(1);
+      kk.kickLow = low; kk.side = low ? 'l' : 'r';
+      const h0 = TW.player.hp; n = 0; while (['windup', 'strike'].includes(kk.state) && n++ < 300) step(1);
+      return { dmg: h0 - TW.player.hp, state: kk.state };
+    };
+    let r1 = kick(false, 1.62); check('raised guard blocks a high kick', r1.dmg === 0, JSON.stringify(r1));
+    let r2 = kick(true, 1.62);  check('a high guard does not stop a low kick', r2.dmg > 0, JSON.stringify(r2));
+    let r3 = kick(true, 0.95);  check('a forearm dropped to the belly checks a low kick', r3.dmg === 0, JSON.stringify(r3));
+    let sawRetreat = false; step(Math.ceil(1.2 / DT), () => { if (kk.state === 'retreat') sawRetreat = true; });
+    check('after kicking he darts back out of reach', sawRetreat, kk.state);
+    setGrip(R, 0.2, 1.3, -0.25); setGrip(L, -0.25, 1.0, -0.2);
     // ---- snap turn + stick move
     const yaw0 = TW.rig.rotation.y; pads[0].axes[2] = 1; step(2); pads[0].axes[2] = 0; step(2);
     check('right stick snap-turns 30°', Math.abs(Math.abs(TW.rig.rotation.y - yaw0) - Math.PI / 6) < 1e-6);
