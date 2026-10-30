@@ -13,8 +13,7 @@ const ctx = { THREE, console, Math: Object.create(Math), document: { getElementB
   innerWidth: 1280, innerHeight: 720, performance: { now: () => clock * 1000 }, addEventListener() {}, setTimeout, Map, Set, Array, Object, Number, String, Float32Array, JSON };
 ctx.Math.random = rnd; ctx.window = ctx;
 vm.createContext(ctx);
-const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
-vm.runInContext([...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n'), ctx);
+require('./load.js')(ctx);
 const run = (c) => vm.runInContext(c, ctx);
 const TW = ctx.__tw;
 const log = [];

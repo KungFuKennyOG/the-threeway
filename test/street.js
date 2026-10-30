@@ -15,8 +15,7 @@ const ctx = { THREE, console, Math: Object.create(Math), document: { getElementB
   setTimeout, Map, Set, Array, Object, Number, String, Float32Array, Uint8Array, JSON };
 ctx.Math.random = rnd; ctx.window = ctx;
 vm.createContext(ctx);
-const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
-vm.runInContext([...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n'), ctx);
+require('./load.js')(ctx);
 const run = (c) => vm.runInContext(c, ctx);
 const key = (type, code) => { for (const f of listeners[type] || []) f({ code, repeat: false, shiftKey: false, preventDefault() {} }); };
 const TW = ctx.__tw;

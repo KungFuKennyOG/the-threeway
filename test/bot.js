@@ -1,4 +1,4 @@
-// Headless smoke test: loads the real game script against the Three stub and plays it with a simple bot.
+// Headless smoke test: loads the real game scripts (test/load.js) against the Three stub and plays it with a simple bot.
 'use strict';
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const THREE = require('./three_stub.js');
@@ -34,9 +34,7 @@ const ctx = {
 ctx.Math.random = rnd;
 ctx.window = ctx;
 vm.createContext(ctx);
-const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
-const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
-vm.runInContext(inline, ctx, { filename: 'index.html' });
+require('./load.js')(ctx);
 const run = (code) => vm.runInContext(code, ctx);
 const key = (type, code, extra = {}) => { for (const f of listeners[type] || []) f(Object.assign({ code, repeat: false, shiftKey: false, preventDefault() {} }, extra)); };
 

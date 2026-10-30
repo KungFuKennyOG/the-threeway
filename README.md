@@ -76,7 +76,7 @@ Clear the bar and the front door swings open onto **Tripoint Square** at night. 
 
 ## Tuning
 
-Every number lives in `CFG` at the top of the game script in `index.html` (level 2: `CFG.street`: the stretches, triggers, spawns and arenas, street props, gaslight, fog, sky glow): physics (`CFG.physics`: how hard goons follow their animation, hit shoves, personal space, domino and impact speeds), tier thresholds, damage and poise per tier, hitstop, knockback, magnetism, block and dodge distances, grab and throw, weapons and projectiles, per-enemy stats, the boss tag team (`CFG.boss`), waves, perf/auto quality (`CFG.perf`), render settings (desktop lines, VR framebuffer scale, snap/affine per mode), and `hands.modelPitchDeg` for how the fist model sits in the controller.
+Every number lives in `CFG` in `src/config.js` (level 2: `CFG.street`: the stretches, triggers, spawns and arenas, street props, gaslight, fog, sky glow): physics (`CFG.physics`: how hard goons follow their animation, hit shoves, personal space, domino and impact speeds), tier thresholds, damage and poise per tier, hitstop, knockback, magnetism, block and dodge distances, grab and throw, weapons and projectiles, per-enemy stats, the boss tag team (`CFG.boss`), waves, perf/auto quality (`CFG.perf`), render settings (desktop lines, VR framebuffer scale, snap/affine per mode), and `hands.modelPitchDeg` for how the fist model sits in the controller.
 
 ## Tests
 
@@ -94,4 +94,20 @@ They check game logic only. Rendering, shaders and real WebXR need a browser or 
 
 ## Stack
 
-Single file, Three.js r149 from jsDelivr, WebXR, synthesized placeholder audio. Textures are embedded as data URIs. No build step.
+Three.js r149 from jsDelivr, WebXR, synthesized placeholder audio. Plain script files, no build step: `index.html` loads them in order and they share one global scope, so it runs straight off GitHub Pages or any static server (not from `file://`: browsers won't load the textures there).
+
+| File | What's in it |
+| --- | --- |
+| `src/config.js` | `CFG`: every tunable number |
+| `src/textures.js`, `assets/tex/` | texture names → hand-pixeled PNGs |
+| `src/render.js` | renderer, scene, the PS1 shader (vertex snap, affine UVs, 6-bit dither, fog, baked light, atlases), lights |
+| `src/geometry.js` | mesh builders, static batching, light baking |
+| `src/bar.js`, `src/bar_atlas.js` | the bar room (one mesh on one atlas: `tools/bar_atlas.py`), walkable areas, the door |
+| `src/street/` | level 2: `paint.js` (painted street atlas), `build.js` (the square, the road, the checkpoint), `skylines.js` (the three sectors, the far city, the sky), `fight.js` (stretches, portals, signs) |
+| `src/characters.js` | goon bodies and poses, the player's hands |
+| `src/audio.js`, `src/fx.js` | placeholder sound, sprites and signs |
+| `src/player.js`, `src/locomotion.js` | the player, XR + desktop input, hand/head tracking, moving and turning |
+| `src/physics.js` | the particle ragdoll solver, walls, collisions |
+| `src/props.js` | bottles, stools, bats, kitchenware, crates, bins, signs; prop batches |
+| `src/enemies.js`, `src/combat.js`, `src/bosses.js` | goon AI, your hits, Rocco & Ivan |
+| `src/game.js`, `src/hud.js`, `src/main.js` | rounds, HUD + perf panel, the frame loop and boot |

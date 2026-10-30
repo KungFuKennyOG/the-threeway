@@ -23,9 +23,7 @@ const ctx = {
 };
 ctx.Math.random = rnd; ctx.window = ctx;
 vm.createContext(ctx);
-const html = fs.readFileSync(path.join(dir, 'index.html'), 'utf8');
-const inline = [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(m => m[1]).join('\n');
-vm.runInContext(inline, ctx, { filename: 'index.html' });
+require('./load.js')(ctx);
 const run = (c) => vm.runInContext(c, ctx);
 const TW = ctx.__tw;
 const log = [];
