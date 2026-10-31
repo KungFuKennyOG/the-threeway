@@ -107,7 +107,8 @@ function buildPalaceOutside(acc) {
     plSolid(x - 0.3, z - 0.95, x + 0.3, z + 0.95, 0, 0.9);
   }
   plPost(acc, L, bx0 + 0.3, 156, 1); plPost(acc, L, bx1 - 0.3, 161, -1); plPost(acc, L, bx0 + 0.3, 167, 1); plPost(acc, L, bx1 - 0.3, 172, -1);
-  plStatue(acc, -40, 164, 0);
+  plStatue(acc, -40, 164, Math.PI);   // facing you as you come up from the crossing, lit from below
+  for (const s of [-1, 1]) { sbox(acc, 'litWarm', -40 + s * 1.5, 0, 161.6, 0.3, 0.3, 0.2, 0, { u: 1, v: 1 }); plLight(L, -40 + s * 1.5, 2.6, 161.2, '#ffe8c0', 7, 1.4); }
   // the forecourt: granite, flagpoles, the Bear on the hoardings, the Palace's sign over the foyer
   ground(acc, 'paving', fx0 - 4, fz0, fx1 + 4, fz1, 0.006, 4, { cell: 4 });
   // asphalt round the drum, never under a floor you can see from inside (the two would fight at the doors)
