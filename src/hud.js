@@ -75,7 +75,7 @@ function updatePerf(dt, physMs) {
     const gp = hands.left.source && hands.left.source.gamepad;
     if (gp) {
       const x = !!(gp.buttons[4] && gp.buttons[4].pressed);
-      if (x && !perf.btnX) togglePerfPanel();
+      if (x && !perf.btnX && !menuOpen() && MENU.cool <= 0) togglePerfPanel();   // (X chooses in menus)
       perf.btnX = x;
       if (perfPanel.open && gp.axes.length >= 4) {
         const sx = gp.axes[2], sy = gp.axes[3];

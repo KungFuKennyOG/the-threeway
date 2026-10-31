@@ -29,8 +29,16 @@ This is the combat MVP. It answers one question: does hitting people in The Thre
 | Swat the bat (or the bat arm) mid-swing | Disarm Bat Boy; the bat drops and is yours |
 | Left X | Perf + tuning panel on your left wrist (left stick: up/down picks, left/right changes) |
 | A | Restart after clearing a level (or walk on: out the bar's open door, through the lifted boom) |
+| Left menu button (≡) or Y | Pause. Quest Browser keeps ≡ for its own menu; close that and the game's pause screen is waiting underneath |
+| In menus | Either stick up/down picks, left/right changes an option; A, X or trigger chooses; B or Y goes back |
 
 Desktop: mouse look, WASD, left/right click (or J/K) punch, Shift heavy, hold X light, Space block, C duck, G headbutt, E grab/drop/catch, Q throw, F drink, R restart, P perf panel (`[` `]` pick a setting, `-` `=` change it).
+
+## Menus
+
+- **Title (VR):** entering VR puts you in the empty bar facing an arcade-style title screen (attract loop: title, story, how to play). A inserts a coin, then START, STAGE SELECT (every stage, 1–7), OPTIONS (volume, snap turn 15–60°, move speed; saved in the browser), HOW TO PLAY, EXIT VR. START begins at the page's **Start at** pick.
+- **Pause:** RESUME, RESTART STAGE, STAGE SELECT, OPTIONS, HOW TO PLAY, QUIT TO TITLE. The world freezes (goons, physics, the clock) and dims behind a panel in front of you. Stage changes fade through black.
+- **Desktop:** Esc pauses (an overlay); arrows/WASD pick, Enter chooses, Esc goes back. Code: `src/menu.js`.
 
 ## What's in
 
@@ -145,7 +153,7 @@ node test/superblock.js  # 29 checks: past the boom with no cut, one baked mesh 
 node test/palace.js     # 34 checks: off the cradle through the fence gap (no cut), the crossing shut, the train out of the tunnel and past, the barriers up, Station Square (walls, the turn west onto the boulevard), the boulevard fight, the glass front as a wall, the gym fight (held in), Volkov (boss bar, the stands as walls, the shutter, lose + restart, enrage), out the north doors, rooms, physics cost
 node test/tower.js      # 51 checks: from the menu, the shell + floors + budgets, nothing from the skylines on its ground, the old distant tower gone and the beacon on the spire, its proportions and fog, Act 1 west (the frame round-trips, each place further west than the last, the Tower dead ahead down the boulevard, nothing from the far city on any level's ground, clear sightlines to the cog from the square, the gate, the wing roof, the crossing, the boulevard and Parade Square), every fight on one floor, the four fights in order (doors and lifts shut mid-fight), the three lifts (smooth: < 60 mm a frame), respawn on the right floor, Orlova's enrage, the Chairman signs (the hook too), rooms (inside, the city isn't drawn; out of his window it is), in from Parade Square with no cut, physics cost
 node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street; --level=superblock: the gate and the courtyard; --level=road: the street, through the boom, on into Superblock 14)
-node test/vr.js        # 56 checks: the laborer's pipe (disarm, pick up), the conscript, level 2 in VR (start outside, stick walking, held in by the stretch), tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
+node test/vr.js        # 71 checks: the title screen (coin, START), pause (Y, a passed-through menu button, a blurred session; freezes the world; stick picks; B resumes; restart; quit to title; stage select), the laborer's pipe (disarm, pick up), the conscript, level 2 in VR (start outside, stick walking, held in by the stretch), tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
 node test/physics.js   # 47 checks: heights for all 9 goons, skinned mesh vs skeleton, one mesh per goon/stool, shove + recover, launch, get-up, dominoes, the cook's lob accuracy, Rocco & Ivan tag + enrage
 node test/bot.js 1 400 --mode=aggro    # a bot plays all four rounds (catches pots, throws them back); prints hits, losses, catches, tags, per-round times, errors
 ```

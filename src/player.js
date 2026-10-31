@@ -110,7 +110,9 @@ function buzz(h, intensity, ms) {
 const keys = new Set();
 const desk = { yaw: Math.PI, pitch: -0.05, locked: false };
 addEventListener('keydown', (e) => {
+  if (menuOpen() && !xrMode) { menuKey(e); return; }       // desktop pause screen (src/menu.js)
   if (game.state === 'menu') return;
+  if (e.code === 'Escape') { openPause(); return; }
   keys.add(e.code);
   if (e.repeat) return;
   if (e.code === 'KeyE') deskGrab();
@@ -127,7 +129,7 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => keys.delete(e.code));
 canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 canvas.addEventListener('mousedown', (e) => {
-  if (xrMode || game.state === 'menu') return;
+  if (xrMode || game.state === 'menu' || menuOpen()) return;
   if (!desk.locked && canvas.requestPointerLock) { canvas.requestPointerLock(); }
   if (e.button === 0) deskPunch(hands.left, e.shiftKey);
   if (e.button === 2) deskPunch(hands.right, e.shiftKey);

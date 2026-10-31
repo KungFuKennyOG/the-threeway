@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="assets/icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=IBM+Plex+Mono:wght@400;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Press+Start+2P&family=IBM+Plex+Mono:wght@400;600&display=swap">
 <style>
 :root { --plum: #140b12; --card: #1e1119; --line: #3a2432; --ink: #f2ede4; --muted: #c9bcc3; --pink: #ff4f9a; --teal: #33e0d0; --sodium: #ff9a3c; --lantern: #e8352b; color-scheme: dark; }
 html, body { height: 100%; margin: 0; background: var(--plum); color: var(--ink); font-family: 'IBM Plex Mono', ui-monospace, monospace; overflow: hidden; }
@@ -35,6 +35,7 @@ summary { cursor: pointer; color: var(--ink); }
 #hpFill { height: 100%; width: 100%; background: var(--teal); }
 #info { color: var(--ink); text-shadow: 2px 2px 0 #000; }
 #perf { position: fixed; left: 8px; top: 8px; margin: 0; padding: 6px 8px; font-size: 12px; line-height: 1.35; color: var(--ink); background: rgba(20, 11, 18, 0.85); border: 2px solid #000; pointer-events: none; white-space: pre; }
+#menuCv { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(92vw, 120vh, 1024px); height: auto; image-rendering: pixelated; border: 3px solid #000; box-shadow: 6px 6px 0 #000; z-index: 5; }
 #cross { position: fixed; left: 50%; top: 50%; width: 6px; height: 6px; margin: -3px 0 0 -3px; background: var(--ink); box-shadow: 1px 1px 0 #000; pointer-events: none; }
 </style>
 </head>
@@ -98,6 +99,7 @@ summary { cursor: pointer; color: var(--ink); }
 <script src="src/bosses.js"></script>
 <script src="src/locomotion.js"></script>
 <script src="src/hud.js"></script>
+<script src="src/menu.js"></script>
 <script src="src/main.js"></script>
 </body>
 </html>

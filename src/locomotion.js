@@ -43,7 +43,7 @@ function moveRig(dt) {
       if (Math.abs(x) < 0.3) snapReady = true;
     }
     // restart after a win / loss
-    if (R && (game.state === 'won') && R.buttons[4] && R.buttons[4].pressed) { if (LEVELS[level.name]) LEVELS[level.name].start(false); else if (level.name === 'street') startStreet(false); else startGame(); }
+    if (R && (game.state === 'won') && MENU.cool <= 0 && R.buttons[4] && R.buttons[4].pressed) { if (LEVELS[level.name]) LEVELS[level.name].start(false); else if (level.name === 'street') startStreet(false); else startGame(); }
     // keep the head inside the room and out of the bar
     camera.getWorldPosition(_v1);
     _v2.copy(_v1); _v2.y = player.floorY; keepPlayerIn(_v2, 0.25);   // walk rects test your feet, not your head

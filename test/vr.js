@@ -52,6 +52,13 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     const DT = 1 / 72;
     const step = (n = 1, f) => { for (let i = 0; i < n; i++) { clock += DT; if (f) f(i); TW.renderer.loop(); } };
     step(10);
+    // ---- the title screen: entering VR opens it; A inserts a coin, A again starts in the bar
+    check('entering VR opens the title screen (nothing fighting yet)', TW.MENU.open === 'title' && TW.MENU.screen === 'attract' && TW.game.state === 'menu' && TW.MP.mesh.visible && TW.enemies.length === 0);
+    const tap = (pad, i) => { pad.buttons[i].pressed = true; step(2); pad.buttons[i].pressed = false; step(2); };
+    tap(pads[0], 4);
+    check('A inserts a coin: main menu, START picked', TW.MENU.screen === 'main' && TW.MENU.credits === 1 && TW.MENU.sel === 0);
+    tap(pads[0], 4); step(Math.ceil(0.8 / DT));
+    check('START: fades, closes the menu and starts round 1 in the bar', !TW.MENU.open && !TW.MP.mesh.visible && TW.level.name === 'bar' && TW.game.state !== 'menu' && !TW.MENU.fade);
     // ---- drink: grab the nearest bar bottle by walking the rig there
     TW.rig.position.set(-1.6, 0, -2.95); TW.rig.rotation.y = 0;   // facing -z, toward the bar
     step(2);
@@ -285,6 +292,38 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     run('level.encounter = -1; game.state = "walk"'); TW.rig.position.z = TW.CFG.street.encounters[0].trigger + 0.5; step(3);
     pads[1].axes[3] = -1; step(72 * 8); pads[1].axes[3] = 0;
     check('VR: the stretch you\'re fighting holds you in', TW.level.encounter === 0 && camW().z <= TW.CFG.street.encounters[0].arena[1] + 1e-6, 'z ' + camW().z.toFixed(2));
+    run('clearEnemies()');
+    // ---- pause: Y (or the left menu button) freezes the fight; B resumes; the stick picks rows
+    run(`clearEnemies(); player.hp = 100; game.state = 'fight'; game.queue = [];`); TW.rig.position.set(0, 0, 0); TW.rig.rotation.y = 0; step(3);
+    const pg = new TW.Enemy('boso'); pg.placeAt(0, -2.5, 0); pg.state = 'approach'; TW.enemies.push(pg); step(3);
+    tap(pads[1], 5);
+    check('Y pauses: panel up in front of you, world dimmed', TW.MENU.open === 'pause' && TW.MP.mesh.visible && TW.MP.dim.visible);
+    const gp0 = pg.body ? JSON.stringify(pg.zone('chest').pos) : '', now0 = run('NOW'), rp0 = TW.rig.position.clone();
+    pads[1].axes[3] = -1; step(30); pads[1].axes[3] = 0; step(2);
+    check('paused: goons, clock and walking all freeze', run('NOW') === now0 && JSON.stringify(pg.zone('chest').pos) === gp0 && TW.rig.position.distanceTo(rp0) < 1e-9);
+    TW.MENU.sel = 0; pads[0].axes[3] = 1; step(2); pads[0].axes[3] = 0; step(2);
+    check('stick down picks the next row', TW.MENU.sel === 1);
+    tap(pads[0], 5);
+    check('B resumes', !TW.MENU.open && !TW.MP.mesh.visible);
+    step(2); check('unpaused, the clock runs again', run('NOW') > now0);
+    const menuPad = Object.assign(mkPad(), {}); menuPad.buttons.push({ pressed: false }, { pressed: false }, { pressed: false });
+    TW.hands.left.source.gamepad = menuPad; step(Math.ceil(0.5 / DT));
+    tap(menuPad, 8);
+    check('a passed-through left menu button pauses too', TW.MENU.open === 'pause');
+    tap(menuPad, 8);
+    check('and pressing it again resumes', !TW.MENU.open);
+    TW.hands.left.source.gamepad = pads[1]; step(Math.ceil(0.5 / DT));
+    session.visibilityState = 'visible-blurred'; for (const f of session._l.visibilitychange || []) f(); session.visibilityState = 'visible';
+    check('the browser\'s own menu (session blurred) pauses the game under it', TW.MENU.open === 'pause');
+    const lv = TW.level.name; TW.player.hp = 40; TW.MENU.sel = 1; tap(pads[0], 4); step(Math.ceil(0.8 / DT));
+    check('RESTART STAGE restarts the stage you were on', !TW.MENU.open && TW.level.name === lv && TW.player.hp === 100, lv + ' ' + TW.game.state);
+    tap(pads[1], 5); TW.MENU.sel = 5; tap(pads[0], 4); step(Math.ceil(0.8 / DT));
+    check('QUIT TO TITLE: back in the empty bar on the title screen', TW.MENU.open === 'title' && TW.MENU.screen === 'attract' && TW.game.state === 'menu' && TW.enemies.length === 0);
+    tap(pads[0], 0); TW.MENU.sel = 1; tap(pads[0], 0);
+    pads[0].axes[3] = 1; step(2); pads[0].axes[3] = 0; step(2); pads[0].axes[3] = 1; step(2); pads[0].axes[3] = 0; step(2);
+    check('trigger works as A; STAGE SELECT lists every stage', TW.MENU.screen === 'stages' && run('stageList().length') >= 7 && TW.MENU.sel === 2);
+    tap(pads[0], 4); step(Math.ceil(0.8 / DT));
+    check('picking stage 3 starts it', TW.level.name === 'superblock' && !TW.MENU.open);
     run('clearEnemies()');
     // ---- session end returns to the menu
     for (const f of session._l.end || []) f();

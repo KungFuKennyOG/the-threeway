@@ -21,9 +21,12 @@ addEventListener('resize', () => { if (!xrMode) resize(); });
 let lastT = performance.now(), neonT = 0, neonDim = true;
 function frame() {
   const t = performance.now();
-  const dt = Math.min(0.05, (t - lastT) / 1000); lastT = t; NOW += dt;
+  const rdt = Math.min(0.05, (t - lastT) / 1000); lastT = t;
+  updateMenus(rdt);                          // title / pause screens (src/menu.js)
+  const frozen = menuFreezes(), dt = frozen ? 0 : rdt;   // paused: the world holds still
+  NOW += dt;
   let physMs = 0;
-  if (game.state !== 'menu') {
+  if (game.state !== 'menu' && !frozen) {
     if (!xrMode) updateDesktopHands(dt);
     updateLocomotion(dt);
     if (xrMode && renderer.xr.isPresenting && renderer.xr.updateCamera) renderer.xr.updateCamera(camera);
@@ -47,10 +50,10 @@ function frame() {
   updateBossBars();
   updateFx(dt);
   updateHud(dt);
-  updatePerf(dt, physMs);
+  updatePerf(rdt, physMs);
   // neon: one letter flickers
   neonT -= dt;
-  if (neonT <= 0) { neonDim = !neonDim; neonT = neonDim ? rand(0.05, 0.2) : rand(0.6, 3.5); neonMat.uniforms.map.value = tex(neonDim ? 'neon_tw' : 'neon_tw_on'); }
+  if (neonT <= 0 && !frozen) { neonDim = !neonDim; neonT = neonDim ? rand(0.05, 0.2) : rand(0.6, 3.5); neonMat.uniforms.map.value = tex(neonDim ? 'neon_tw' : 'neon_tw_on'); }
   renderer.render(scene, camera);
 }
 
@@ -82,7 +85,7 @@ function boot() {
   loadTune();
   renderer.setAnimationLoop(frame);
   window.__tw = { CFG, game, player, enemies, props, bodies, hands, scene, camera, rig, renderer, playerHit, startGame, Enemy, Prop, updatePhysics,
-    perf, perfPanel, TUNE, bossBars, roomTris: () => roomTris, level, startStreet, STREET, ST, WALK, DOOR, keepInWalk, pushOutXZ, WORLD_BOXES, BLOCKERS, desk, SB, SBX, startSuperblock, PZ, LIFTS, CRADLE, LOCKED, startPodezd, LEVELS, ROOMS, roomState, updateRooms };
+    perf, perfPanel, TUNE, bossBars, roomTris: () => roomTris, level, startStreet, STREET, ST, WALK, DOOR, keepInWalk, pushOutXZ, WORLD_BOXES, BLOCKERS, desk, SB, SBX, startSuperblock, PZ, LIFTS, CRADLE, LOCKED, startPodezd, LEVELS, ROOMS, roomState, updateRooms, MENU, MP, openTitle, openPause, closeMenu, startStage, menuChoose, menuMove, OPTS };
 }
 
 const levelSel = document.getElementById('levelSel');
@@ -90,7 +93,7 @@ if (levelSel && document.createElement) {   // the registered levels join the me
   for (const D of levelList()) if (D.menu) { const o = document.createElement('option'); o.value = D.name; o.textContent = D.menu; levelSel.appendChild(o); }
 }
 { const m = /[?&]level=([a-z0-9]+)/.exec((window.location && window.location.search) || ''); if (levelSel && m) levelSel.value = m[1]; }
-const begin = () => { const v = levelSel ? levelSel.value : 'bar'; if (v === 'street') startStreet(false); else if (LEVELS[v]) LEVELS[v].start(false); else startGame(); };
+const begin = () => startStage(levelSel ? levelSel.value : 'bar');
 const menu = document.getElementById('menu'), vrBtn = document.getElementById('vrBtn'), deskBtn = document.getElementById('deskBtn'), vrNote = document.getElementById('vrNote');
 deskBtn.addEventListener('click', () => {
   AU.init(); menu.hidden = true; hudEl.hidden = false; xrMode = false;
@@ -116,8 +119,10 @@ vrBtn.addEventListener('click', async () => {
     for (const h of handList) { h.anchor.position.set(0, 0, 0); attachHandVR(h); }
     camera.position.set(0, 0, 0); camera.rotation.set(0, 0, 0);
     rig.position.set(0, 0, -1.4); rig.rotation.set(0, Math.PI, 0);
-    begin();
+    openTitle();          // the in-VR title screen; START (or a stage) from there
+    watchSession(session);
     session.addEventListener('end', () => {
+      if (MENU.open) closeMenu(); MENU.fade = null; if (MP.fadeMesh) MP.fadeMesh.visible = false;
       xrMode = false; menu.hidden = false; hudEl.hidden = true; game.state = 'menu';
       clearEnemies(); for (const h of handList) { if (h.held) releaseHeld(h); h.anchor.rotation.set(DH.guard.rx * DEG, 0, 0); h.anchor.position.set(...DH.guard[h.side]); }
       attachHandsDesktop(); setRenderMode(false); resize();
