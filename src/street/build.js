@@ -374,8 +374,8 @@ function checkpoint(acc, nd, z) {
   const bx = 2.9, bz = z + 0.4;
   sbox(acc, 'booth', bx, 0, bz, 2.0, 2.2, 2.7, 0, { u: 2.0, v: 2.7, top: 'concrete', faceKey: { b: 'booth', l: 'booth' } });
   sbox(acc, 'concrete', bx, 2.7, bz, 2.4, 2.6, 0.2, 0, { u: 2, v: 1 });
-  for (const s of [-1, 1]) sbox(nd, 'iron', bx + s * 0.9, 2.9, bz - 0.9, 0.06, 0.06, 0.5, 0, { u: 1, v: 1 });
-  plate(acc, 'militiaSign', bx, 3.62, bz - 0.9, 2.3, 0.58, Math.PI, 0.01, [0, 0, 1, 1], true);   // the board on the roof
+  for (const s of [-1, 1]) sbox(nd, 'iron', bx + 0.35 + s * 0.7, 2.9, bz - 0.9, 0.06, 0.06, 0.5, 0, { u: 1, v: 1 });
+  plate(acc, 'militiaSign', bx + 0.35, 3.6, bz - 0.9, 1.8, 0.46, Math.PI, 0.01, [0, 0, 1, 1], true);   // the board on the roof (clear of the gantry's post)
   plate(nd, 'stBoothSign', bx, 2.32, bz - 1.1, 1.0, 0.42, Math.PI, 0.02);
   sbox(acc, 'flood', bx - 0.8, 2.92, bz - 1.05, 0.3, 0.26, 0.24, 0.35, { u: 0.3, v: 0.24 });
   // the sign over the road: YOU ARE LEAVING THE OLD QUARTER (and, on the far side, the militia's own)
@@ -387,13 +387,13 @@ function checkpoint(acc, nd, z) {
   // the boom's counterweight post
   sbox(acc, 'iron', 1.7, 0, z, 0.3, 0.3, 1.1, 0, { u: 1, v: 1 });
   // FIREARMS ARE BANNED: a board on two posts on the left pavement, turned to the approach
-  { const cx = -3.55, cz = z - 4.5, phi = Math.PI - 0.38, [ax, az] = LP(cx, cz, phi, -0.95, 0), [ex, ez] = LP(cx, cz, phi, 0.95, 0);
-    plate(acc, 'stCheckR', cx, 2.42, cz, 2.0, 0.6, phi, 0.03);
-    plate(acc, 'concrete', cx, 2.42, cz, 2.0, 0.6, phi + Math.PI, 0.0);
+  { const cx = -3.7, cz = z - 4.5, phi = Math.PI - 0.3, [ax, az] = LP(cx, cz, phi, -0.75, 0), [ex, ez] = LP(cx, cz, phi, 0.75, 0);   // (its posts stay on the pavement)
+    plate(acc, 'stCheckR', cx, 2.42, cz, 1.6, 0.48, phi, 0.03);
+    plate(acc, 'concrete', cx, 2.42, cz, 1.6, 0.48, phi + Math.PI, 0.0);
     for (const [px, pz] of [[ax, az], [ex, ez]]) { sbox(acc, 'iron', px, 0, pz, 0.08, 0.08, 2.76, 0, { u: 1, v: 1 }); BLOCKERS.push({ x0: px - 0.08, x1: px + 0.08, z0: pz - 0.08, z1: pz + 0.08 }); WORLD_BOXES.push([px - 0.06, 0, pz - 0.06, px + 0.06, 2.76, pz + 0.06]); }
     ST.lamps.push(lightFromHex([cx + 0.6, 1.2, cz - 1.4], CFG.street.light.flood, 3.4, 0.7)); }
   // sandbags: round the booth's corner and either side of the road
-  sbox(acc, 'sandbag', bx + 1.35, 0, bz - 0.2, 0.7, 2.4, 0.95, 0, { u: 1.2, v: 0.6, top: 'sandbag', tu: 1.2 }); WORLD_BOXES.push([bx + 1.0, 0, bz - 1.4, bx + 1.7, 0.95, bz + 1.0]);
+  sbox(acc, 'sandbag', bx + 1.35, 0, bz - 0.2, 0.7, 2.4, 0.95, 0, { u: 1.2, v: 0.6, top: 'sandbag', tu: 1.2 }); WORLD_BOXES.push([bx + 1.0, 0, bz - 1.3, bx + 1.7, 0.95, bz + 1.0]);
   sbox(acc, 'sandbag', -4.0, 0, z + 1.2, 1.2, 1.2, 1.0, 0, { u: 1.2, v: 0.6, top: 'sandbag', tu: 1.2 });
   sbox(acc, 'sandbag', -6.2, 0, z + 2.6, 3.2, 0.9, 0.9, 0.35, { u: 1.2, v: 0.6, top: 'sandbag', tu: 1.2 });
   // the flags on the gantry over the sign: the Free City's plum and brass flying highest in the middle, the three
@@ -412,7 +412,7 @@ function checkpoint(acc, nd, z) {
   ST.lamps.push(lightFromHex([bx - 1.1, 2.0, bz], '#cfe6ff', 4.5, 0.8));
   ST.lamps.push(lightFromHex([bx, 3.9, bz - 1.6], CFG.street.light.flood, 3.2, 0.8));   // the roof board's own lamp
   WORLD_BOXES.push([bx - 1.0, 0, bz - 1.1, bx + 1.0, 2.7, bz + 1.1], [-4.4, 0.85, z - 0.07, 1.7, 1.06, z + 0.07]);
-  BLOCKERS.push({ x0: bx - 1.0, x1: bx + 1.7, z0: bz - 1.4, z1: bz + 1.1 });
+  BLOCKERS.push({ x0: bx - 1.0, x1: bx + 1.0, z0: bz - 1.1, z1: bz + 1.1 }, { x0: bx + 1.0, x1: bx + 1.7, z0: bz - 1.3, z1: bz + 1.0 });
   // the Accords wall's first watchtower, on the Columbian corner of the Ring Road: a concrete shaft, a lit cab, a searchlight
   { const tx = 7.2, tz = z + 13.5;
     sbox(acc, 'concrete', tx, 0, tz, 1.3, 1.3, 7.4, 0, { u: 2, v: 2 });

@@ -47,6 +47,20 @@ try {
     check('the outdoor levels are a few meshes (street, skylines, sky, beacons, and at most two per level after the street)', streetMeshes.length <= 5 + 2 * nL, streetMeshes.length + ' static meshes for ' + nL + ' levels'); }
   const litTris = run('ST.lit.tris'), skyTris = run('ST.sky.tris');
   check('street + skylines under the triangle budget', litTris + skyTris < 80000, `${litTris} street + ${skyTris} skyline tris`);
+  // ---- the polish: the close detail (cornices, balconies, signs, the tram) is its own mesh, drawn only near the street
+  { const NM = TW.ST.nearMesh, nt = run('ST.nearTris'), nd = S.nearDraw;
+    const at = (x, z) => run(`(() => { const h = player.head.clone(); player.head.set(${x}, 1.7, ${z}); const ok = nearOk(ST.nearMesh); player.head.copy(h); return ok; })()`);
+    check('the street\'s close detail is one baked mesh drawn only near the street (the square, the road, the gate), never from Act 1\'s far views',
+      NM && NM.geometry.attributes.bake && TW.ROOMS.get('outside').meshes.has(NM) && NM.userData.near === nd && nt < 4000 && litTris + nt < 26000
+      && at(0, 7) && at(0, 50) && at(-3, 64) && !at(-40, 140) && !at(-36, 129) && !at(-160, 198),
+      `${nt} near tris + ${litTris} street (was 23038 street alone)`); }
+  // the square's landmarks are solid, and the fight lanes down the square and the road stay clear
+  { const solid = (x, z, r) => { const q = V(x, 0, z); TW.pushOutXZ(q, 0.3); return Math.hypot(q.x - x, q.z - z) > r; };
+    const [cx, cz] = TW.STREET.clock, [sx, sz] = TW.STREET.station;
+    check('the Brass Clock, Tripoint Station\'s pavilion and the poster column are solid', solid(cx, cz, 0.5) && solid(sx, sz, 1.0) && solid(sx + 1.3, sz - 1.9, 0.05) && solid(11.4, 17.4, 0.5));
+    let blocked = []; for (let z = 23; z <= 55.2; z += 0.4) for (const x of [-2.4, -1.2, 0, 1.2, 2.4]) { const q = V(x, 0, z); TW.pushOutXZ(q, 0.3); if (Math.hypot(q.x - x, q.z - z) > 1e-6) blocked.push(`${x},${z.toFixed(1)}`); }
+    for (let z = 6.5; z <= 21; z += 0.5) for (const x of [-4, -2, 0, 2, 4]) { const q = V(x, 0, z); TW.pushOutXZ(q, 0.3); if (Math.hypot(q.x - x, q.z - z) > 1e-6) blocked.push(`${x},${z.toFixed(1)}`); }
+    check('the fight lanes stay clear: nothing new stands in the square\'s middle or the road\'s cobbles', !blocked.length, blocked.slice(0, 4).join(' ') || 'clear'); }
   // ---- the skylines: the scale ladder, the moving lights, the Halcyon, all inside the camera's reach
   { const SKY = run('SKY'), H = SKY.heights, towerTop = run('typeof TWR !== "undefined" ? TWR.spire : 252'), far = TW.CFG.render.camFar;
     check('the skylines\' own share stays lean (big texture repeats, not geometry)', TW.ST.skylineTris < 16000, TW.ST.skylineTris + ' tris (was 16744 before the pass)');

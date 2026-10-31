@@ -60,6 +60,33 @@ The street's own mesh (23k) can't be hidden this way. A sweep found it visible, 
 - **A sweep:** eyes on a 12 m grid over every outdoor walk rect, a cube of 6 views from each, with everything else drawn there (and the insides you could see into) as a black occluder. A hidden mesh never showed past its edge.
 - **Stills:** the 20 still viewpoints above plus 13 placed right at the rules' edges, before and after, compared pixel for pixel. 26 match exactly. The other 7 (the bar, the gym, the typing pool, the archive, the crossing, Station Square, one edge) differ by 9 to 276 pixels, in small spots that change from run to run anyway: shooting the unchanged build twice differs by up to 498 pixels in the same views. The causes are things the frozen clock doesn't stop: the bar's jukebox, the Palace's shutter mid-roll, the train, a prop settling.
 
+## Tripoint Square's polish pass (re-measured)
+
+Same method (one Quest-shaped eye, headless Chromium), my own viewpoints, so the "before" here is `main` at the start of the pass, not the table above. The clock isn't frozen in this run, so the moving lights shift a far-city tile now and then (a few hundred triangles either way).
+
+- **The street's one baked mesh** went from 23,038 to 20,608 triangles: the new set pieces (the clock, the station pavilion, the cathedral, the barricades, the checkpoint) cost ~1.3k, and the open road surfaces (the Ring Road, the side roads past the barricades, the brass lines) are lit in coarser cells, which saved ~3.7k. It is drawn on every outdoor level, so every far view got cheaper.
+- **The close detail is a second baked mesh**, 2,910 triangles (cornices and friezes, balconies, dormers, the oriel's helmet, shop signs and awnings, blade signs, posters, the knife rests and wire, the tram and its rails), drawn only with your eye within 62 m of (0, 30) (`CFG.street.nearDraw`, a `userData.near` rule): the square, the road, the Ring Road and the gate. One more draw call there.
+- The street atlas grew from 512 x 1024 to 512 x 2048 (about 50 new paintings).
+
+| View | Draws / eye | Tris / eye | Both eyes: tris |
+| --- | ---: | ---: | ---: |
+| The bar's door, looking out | 45 → 47 | 87,084 → 87,900 | 174,168 → 175,800 |
+| Tripoint Square, down the road | 39 → 40 | 85,808 → 86,314 | 171,616 → 172,628 |
+| Tripoint Square, west | 38 → 39 | 86,166 → 86,672 | 172,332 → 173,344 |
+| Tripoint Square, east | 39 → 40 | 85,604 → 86,110 | 171,208 → 172,220 |
+| Tripoint Square, back to the Threeway | 50 → 51 | 87,280 → 87,786 | 174,560 → 175,572 |
+| The road | 37 → 38 | 77,380 → 77,886 | 154,760 → 155,772 |
+| The checkpoint | 37 → 39 | 77,380 → 78,196 | 154,760 → 156,392 |
+| The gate, forward | 41 → 41 | 80,760 → 80,956 | 161,520 → 161,912 |
+| The gate, back to the boom | 45 → 46 | 86,568 → 87,074 | 173,136 → 174,148 |
+| The crossing, stepping off | 46 → 46 | 98,526 → 96,122 | 197,052 → 192,244 |
+| Podezd 3's wing roof (toward the Tower) | 41 → 40 | 103,080 → 100,366 | 206,160 → 200,732 |
+| Parade Square, toward the Tower | 42 → 41 | 91,630 → 88,916 | 183,260 → 177,832 |
+| Parade Square, back toward the Palace | 48 → 48 | 111,150 → 108,746 | 222,300 → 217,492 |
+| The tribune, looking at the city | 45 → 45 | 101,098 → 98,694 | 202,196 → 197,388 |
+
+The glass lift wasn't re-measured live (the script can't ride it), but it draws the same street mesh and not the near one, so it should drop by the same ~2.4k per eye as the tribune: about 222k → 217k across both eyes. The street's views rise by 0.5–1.6k per eye, to 156–176k across both eyes. The tightest views are still Parade Square back toward the Palace and the glass lift, now ~217k.
+
 ## JS per frame (Node, the tests' Three.js stand-in, no rendering)
 
 | Scenario | Before | After |
