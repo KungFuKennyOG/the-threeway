@@ -37,8 +37,9 @@ const MUSIC = {
     menu: 'threeway', bar: 'threeway', street: 'threeway', superblock: 'krasnovia',
     podezd: 'podezd',
     palace: { song: 'palace',                                                         // the crossing, the boulevard, the gym
-      at: () => MUSIC.fighting('volkov') && 'volkov',                                 // the Bear, from his sign until he's down
-      ahead: () => MUSIC.reached('gym') && !MUSIC.reached('volkov') && 'volkov' },
+      at: () => (MUSIC.fighting('volkov') && 'volkov')                                // the Bear, from his sign until he's down
+        || (MUSIC.northDoors() && 'parade'),                                          // the shutter going up: Parade Square's, early
+      ahead: () => (MUSIC.reached('gym') && !MUSIC.reached('volkov') && 'volkov') || (MUSIC.northDoors(0) && 'parade') },
     parade: 'parade',
     tower: { song: 'tower',                                                           // the lobby and the typing pool
       at: () => (MUSIC.glassOpen() && 'tribune')                                      // the glass lift opens after Orlova: up, and the Chairman
@@ -108,6 +109,11 @@ const MUSIC = {
   },
   reached(name) { const i = this.encounters().findIndex(E => E.name === name); return i >= 0 && level.encounter >= i; },   // started it (or one after)
   glassOpen() { return level.name === 'tower' && typeof TLIFTS !== 'undefined' && TLIFTS.some(L => L.glass && L.phase && L.phase !== 'shut'); },
+  // the Palace's north shutter is going up (at least `from` of the way: CFG.palace.shutter.music), the Bear down
+  northDoors(from) {
+    if (level.name !== 'palace' || typeof PL === 'undefined' || !PL.shut || !palaceVolkovDown()) return false;
+    return from === 0 ? true : PL.shut.t >= (from != null ? from : CFG.palace.shutter.music);
+  },
   follow() {   // the song for where you are: keep it, crossfade to it, or load it first
     const want = this.songFor();
     if (want === this.want) return;

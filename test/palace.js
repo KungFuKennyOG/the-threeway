@@ -215,7 +215,25 @@ try {
   until(() => TW.game.state === 'fight' && !TW.game.queue.length, 900);
   { const b = TW.enemies[0]; b.hp = b.maxHp * 0.4; step(3); check('he loses it at half health', b.enraged === true); }
   clearAll();
-  check('down: the shutter goes up', !PL.shutter.visible);
+  // the north doors: after the KO's beat the shutter rolls up over a few seconds (not at once), the light from the square
+  // spilling in under it as it goes; you can't get under it until it's most of the way up; your view never moves
+  { const S = PL.shut, SC = P.shutter, ts = [], k = [], lamp = [];
+    const shut0 = PL.shutter.material.visible && S.t === 0 && !PL.spill.material.visible;
+    let blocked = null, jump0 = maxJump; maxJump = 0;
+    for (let i = 0; i < Math.ceil((SC.time + 0.6) / DT); i++) {
+      frame(); ts.push(S.t); k.push(PL.spill.material.uniforms.uTint.value.x); lamp.push(PL.spillLamp[1].slice());
+      if (blocked === null && S.t > 0.3 && S.t < SC.walk - 0.1) { const [x, z] = AW.toWorld(-40, PL.bowl[3] + 1.5), p = V(x, 0, z); TW.keepInWalk(p, 0.3); blocked = L(p).z < PL.bowl[3]; }
+    }
+    const first = ts.findIndex(t => t > 0), full = ts.findIndex(t => t >= 1), secs = (full - first) * DT, mono = ts.every((t, i) => !i || t >= ts[i - 1]);
+    check('down: after the KO the shutter rolls up slowly (a few seconds, never jumping), then it\'s gone',
+      shut0 && first >= 0 && full > first && secs > 3 && secs < 6 && mono && ts.every((t, i) => !i || t - ts[i - 1] < 0.02) && S.phase === 'up' && !PL.shutter.material.visible,
+      `${secs.toFixed(2)} s from first lift to the top`);
+    const mid = ts.findIndex(t => t >= 0.5), warm = lamp[mid];
+    check('...the square\'s warm light spills in under it as it goes (the tunnel, the floor, a live lamp for goons and hands), growing with it',
+      PL.spill.material.visible && k[first] < 0.1 && k[mid] > 0.5 && k[k.length - 1] > 0.99 && warm[0] > warm[2] && warm[0] > 0.3 && TW.ST.lamps.includes(PL.spillLamp),
+      `strength ${k[first].toFixed(2)} -> ${k[mid].toFixed(2)} -> ${k[k.length - 1].toFixed(2)}`);
+    check('...and you can\'t walk under it till it\'s most of the way up; your view stays put the whole time', blocked === true && maxJump < 1e-9, `blocked ${blocked}`);
+    maxJump = Math.max(maxJump, jump0); }
   walkL(-40, 241); walkL(-40, 251.6); step(3);
   check('out the north doors: the Palace is done', TW.game.state === 'won', TW.game.state);
   walkL(-40, 253.6);

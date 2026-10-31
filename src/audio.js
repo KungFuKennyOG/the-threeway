@@ -35,6 +35,7 @@ const AU = {
   grunt() { this.tone('sawtooth', 150, 92, 0.3, 0.22, 0, 700); },
   glass() { this.noise(0.3, 0.45, 3800, 'highpass'); for (let i = 0; i < 4; i++) this.tone('square', rand(2400, 5200), rand(1800, 4200), 0.05, 0.06, i * 0.03); },
   bell() { this.tone('sine', 880, 870, 1.4, 0.4); this.tone('sine', 1320, 1310, 0.9, 0.2); },
+  chime() { for (const [f, d] of [[392, 0], [587, 0.18], [784, 0.36], [988, 0.54]]) this.tone('sine', f, f * 0.995, 2.2 - d, 0.2, d); this.tone('sine', 196, 194, 2.6, 0.18); },   // a reveal: a slow rising bell chord over a low one
   gulp() { this.tone('sine', 280, 180, 0.12, 0.3); this.tone('sine', 260, 170, 0.12, 0.3, 0.18); },
   hurt() { this.tone('sawtooth', 95, 58, 0.22, 0.4, 0, 500); },
   parry() { this.tone('square', 600, 1700, 0.14, 0.22); },
