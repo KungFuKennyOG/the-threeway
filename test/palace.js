@@ -93,9 +93,9 @@ try {
     const doors = [-40, 1.4, PL.annex[2] - 0.2];
     check('nothing stands on the boulevard\'s axis: the doors are in view from its start and all the way up', [152.4, 158, 164, 170, 176].every(z => !blocked([-40, 1.7, z], doors)));
     const crossing = AW.toLocal(-40, 145), tierTop = (k) => run('TWR').tiers[k][5], up = [];
-    for (let y = (tierTop(2) + tierTop(3)) / 2; y <= 252; y += 4) for (const x of [-46, -40, -34]) up.push([x, y, 330]);
+    for (let y = (tierTop(2) + tierTop(3)) / 2; y <= 252; y += 3) for (const x of y > tierTop(4) ? [-52, -46, -40, -34, -28] : [-46, -40, -34]) up.push([x, y, 330]);   // (over the tiers, the sky round the crown and spire too)
     const hid = (o) => up.filter(t => blocked(o, t)).length;
-    check('from the boulevard\'s start and from the crossing the Tower of Labor rises clear over it: the upper half of its fourth tier and all above (the fifth tier, crown, cog and spire)',
+    check('from the boulevard\'s start and from the crossing the Tower of Labor rises clear over it: the upper half of its fourth tier and all above (the fifth tier, crown, cog and spire, and the sky round them: nothing frames the spire)',
       hid([-40, 1.7, 152.4]) === 0 && hid([-40, 1.7, 153.4]) === 0 && hid([crossing[0], 1.7, crossing[1]]) === 0, `${hid([-40, 1.7, 152.4])} / ${hid([-40, 1.7, 153.4])} / ${hid([crossing[0], 1.7, crossing[1]])} of ${up.length} points hidden`); }
   { const solid = (lx, lz) => { const [x, z] = AW.toWorld(lx, lz); return TW.BLOCKERS.some(b => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1); }, lane = [];
     for (let z = PL.gym[2] + 0.5; z < PL.gym[3]; z += 0.5) lane.push([-40, z], [-37.5, z]);

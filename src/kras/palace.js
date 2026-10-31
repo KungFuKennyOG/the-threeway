@@ -53,7 +53,7 @@ PL.northZ = PL.drum[1] + PL.drum[2] * Math.cos(Math.PI / 24);                   
 // aimed at the floor: [foot x, foot z, head x, head z, height, aim x, aim z]. The far pair stand taller, so their banks
 // clear the rim seen from the boulevard. Placed off the Tower of Labor's sightlines from the boulevard and the crossing
 // (the crossing looks up the oval's west flank at it: the north-west bank keeps below and left of its upper tiers).
-PL.masts = [[-72.5, 186, 50], [-7.5, 186, 50], [-73, 248, 56], [-7, 248, 56]].map(([x, z, h]) => {
+PL.masts = [[-72.5, 181, 50], [-7.5, 181, 50], [-73, 248, 56], [-7, 248, 56]].map(([x, z, h]) => {
   const cx = -40, cz = 215.5, dx = cx - x, dz = cz - z, d = Math.hypot(dx, dz);
   return [x, z, x + dx / d * 4, z + dz / d * 4, h, cx - dx * 0.3, cz - dz * 0.3];
 });
@@ -139,7 +139,7 @@ function plMast(acc, L, bx, bz, tx, tz, h, ax, az) {
   aq(acc, 'plFloodBack', Q(-1, 1), Q(1, 1), Q(1, -1), Q(-1, -1), [0, 0, 2, 1.5], [-ux * ca, sa, -uz * ca], 99);
   // the front pair's bloom, a little behind the bank (both faces); the far pair has none: from the crossing they stand
   // beside the Tower of Labor, and it stays the brightest thing there
-  if (bz < PL.shell.c[1]) { const k = 1.5, o = 0.5, H2 = (s, r) => { const q = Q(s * k, r * k); return [q[0] - ux * ca * o, q[1] + sa * o, q[2] - uz * ca * o]; };
+  if (bz < PL.shell.c[1]) { const k = 1.35, o = 0.5, H2 = (s, r) => { const q = Q(s * k, r * k); return [q[0] - ux * ca * o, q[1] + sa * o, q[2] - uz * ca * o]; };
     aq(acc, 'plHalo', H2(1, 1), H2(-1, 1), H2(-1, -1), H2(1, -1), [0, 0, 1, 1], null, 99); aq(acc, 'plHalo', H2(-1, 1), H2(1, 1), H2(1, -1), H2(-1, -1), [0, 0, 1, 1], null, 99); }
   for (const s of [-1, 1]) { const [px, py, pz] = Q(s * 0.9, -1); sbox(acc, 'iron', px, h, pz, 0.25, 0.25, py - h, 0, { u: 1, v: 1, top: false, cell: 99 }); }
   sbox(acc, 'litRed', tx, h + 6.4, tz, 0.4, 0.4, 0.4, 0, { u: 1, v: 1, cell: 99 });
