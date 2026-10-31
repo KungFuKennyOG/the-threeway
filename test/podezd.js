@@ -45,6 +45,33 @@ try {
   // ---- the build
   check('podezd 3 is one baked inside mesh + one baked outside mesh, plus two lift cars and the cradle', PZ.inMesh.geometry.attributes.bake && PZ.outMesh.geometry.attributes.bake && LIFTS.every(L => L.group && L.leaves.length === 2) && CR.mesh);
   check('their triangles stay within budget', PZ.inTris + PZ.outTris < 16000, `${PZ.inTris} inside + ${PZ.outTris} outside`);
+  check('what\'s drawn from everywhere outside (the railway bank) stays lean: < 4600 (the whole outside was 6764); the roof < 1600, the insides < 7000',
+    PZ.parts.bank < 4600 && PZ.parts.roof < 1600 && PZ.parts.lobby + PZ.parts.up < 7000, JSON.stringify(PZ.parts));
+  check('the 7th and the wing are the lobby\'s child, the roof the bank\'s (culled by three, hidden past the fog)', PZ.upMesh.parent === PZ.inMesh && PZ.roofMesh.parent === PZ.outMesh && PZ.roofMesh.frustumCulled && !PZ.outMesh.frustumCulled
+    && !run('sbSeen(PZ.roofMesh, { x: -190, y: 1.7, z: 198 })') && run('sbSeen(PZ.roofMesh, { x: -30, y: 1.7, z: 140 })'));
+  { const AW = run('ACT1_WEST'), n = PZ.outMesh.userData.near, near = (x, y, z) => y > n[3] || Math.hypot(x - n[0], z - n[1]) < n[2];
+    const must = [[0, 1.7, 10], [-3, 1.7, 62], [-20, 1.7, 105], [-30, 35.2, 121], [-35, 1.7, 136], [-40, 1.7, 145], [-56, 1.7, 198]], far = [AW.toWorld(0, 250), AW.toWorld(-40, 305)];
+    check('the railway bank and the roof are drawn from the street, the yard, the roof, the crossing and the boulevard, not from Parade Square or the Tower (src/rooms.js)',
+      !!n && must.every(p => near(...p)) && far.every(([x, z]) => !near(x, 1.7, z)), JSON.stringify(n)); }
+  const solidAt = (x, z, y, r = 0.25) => TW.BLOCKERS.some(b => (b.y1 === undefined ? y < 0.5 : y >= (b.y0 || 0) - 0.1 && y < b.y1 - 0.1) && x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r);
+  { const [f0, f1, fz0, fz1] = PZ.flat, bad = [];
+    for (const E of C.encounters) for (const [t, x, z, y] of E.spawn) if (solidAt(x, z, y)) bad.push(`${E.name}:${t}@${x},${z}`);
+    for (const [t, x, z, y] of C.props) if (solidAt(x, z, y || 0, 0.12)) bad.push(`prop ${t}@${x},${z}`);
+    check('flat 1 (the kitchen you see from the yard) fills the lobby\'s corner, solid; every crew and prop starts clear of the furniture on its floor',
+      solidAt((f0 + f1) / 2, (fz0 + fz1) / 2, 0, 0) && !bad.length, bad.join(' ')); }
+  check('the communal kitchen\'s stoves, table and sink are solid, the pram and the plant on the landing too', solidAt(PZ.kitchen[0] + 0.3, 120, PZ.seventh, 0) && solidAt(-29.5, 120.4, PZ.seventh, 0) && solidAt(PZ.kitchen[1] - 0.3, 119.4, PZ.seventh, 0) && solidAt(-7.3, 121, PZ.seventh, 0) && solidAt(-19.2, 119, PZ.seventh, 0));
+  { const S2 = PZ.seventh, north = (x) => ((-20 - x - 1.5) / 3) % 1;
+    check('inside matches outside: the kitchen\'s windows are the north wing\'s bays that show it lit from the yard', PZ.kitWin.every(x => Math.abs(north(x)) < 1e-9 && x > PZ.kitchen[0] + 0.5 && x < PZ.kitchen[1] - 0.5)); }
+  // the cog's sightline from the wing roof against the roof's aerials and the estate's children (the Tower's own check
+  // in test/tower.js tests the meshes drawn everywhere)
+  { const AW = run('ACT1_WEST'), TWR = run('TWR'), [cx, cz] = AW.toWorld(-40, 330), o = V(-36, PZ.wingRoof + 1.7, 129), t = V(cx, TWR.cogY, cz);
+    let hit = 0; for (const m of [PZ.roofMesh, TW.SBX.shell, TW.SBX.gate, TW.SBX.yard]) { const a = m.geometry.attributes.position.array;
+      for (let i = 0; i < a.length; i += 9) { const e1 = [a[i + 3] - a[i], a[i + 4] - a[i + 1], a[i + 5] - a[i + 2]], e2 = [a[i + 6] - a[i], a[i + 7] - a[i + 1], a[i + 8] - a[i + 2]], d = [t.x - o.x, t.y - o.y, t.z - o.z];
+        const p = [d[1] * e2[2] - d[2] * e2[1], d[2] * e2[0] - d[0] * e2[2], d[0] * e2[1] - d[1] * e2[0]], det = e1[0] * p[0] + e1[1] * p[1] + e1[2] * p[2]; if (Math.abs(det) < 1e-9) continue;
+        const sv = [o.x - a[i], o.y - a[i + 1], o.z - a[i + 2]], u = (sv[0] * p[0] + sv[1] * p[1] + sv[2] * p[2]) / det; if (u < 0 || u > 1) continue;
+        const q = [sv[1] * e1[2] - sv[2] * e1[1], sv[2] * e1[0] - sv[0] * e1[2], sv[0] * e1[1] - sv[1] * e1[0]], v = (d[0] * q[0] + d[1] * q[1] + d[2] * q[2]) / det; if (v < 0 || u + v > 1) continue;
+        const tt = (e2[0] * q[0] + e2[1] * q[1] + e2[2] * q[2]) / det; if (tt > 1e-4 && tt < 0.999) hit++; } }
+    check('the roof\'s aerial forest keeps the Tower\'s cog in clear view from the wing roof', hit === 0, hit + ' triangles in the way'); }
   check('every goon in every fight here is Krasnovian, on the floor it\'s fought on', C.encounters.every(E => E.spawn.every(s => KRAS.has(s[0]) && s[3] >= E.at[4] && s[3] <= E.at[5])), C.encounters.map(E => E.name).join(', '));
   { const P = TW.ST.skylineMesh.geometry.attributes.position.array, R = PZ.rail; let n = 0;
     for (let i = 0; i < P.length; i += 3) if (P[i + 1] > 0.5 && P[i] > R[0] && P[i] < R[1] && P[i + 2] > R[2] && P[i + 2] < R[3]) n++;
@@ -76,6 +103,8 @@ try {
   check('the ride is smooth (no jump in your view)', maxJump < C.liftSpeed * 1.7 / 72 + 1e-3, (maxJump * 1000).toFixed(1) + ' mm in a frame');
   frame(200);
   check('a broken lift stays broken', A.phase === 'broken' && A.y === PZ.seventh, A.phase);
+  { const T = A.mat.uniforms.uTint.value, D = C.deadLight;
+    check('its light stuttered and died to a dim red', Math.abs(T.x - D[0]) < 1e-6 && Math.abs(T.y - D[1]) < 1e-6 && Math.abs(T.z - D[2]) < 1e-6 && B.mat.uniforms.uTint.value.x === 1, `${T.x.toFixed(2)} ${T.y.toFixed(2)} ${T.z.toFixed(2)}`); }
 
   // ---- the 7th: the landing, then through into the north wing, its corridor and kitchen
   walkTo((A.car[0] + A.car[1]) / 2, 123.5);
@@ -119,6 +148,11 @@ try {
   // ---- rooms: in the lobby the city isn't drawn
   run('startPodezd(false); level.encounter = 99'); TW.rig.position.set(-13, 0, 123); face(Math.PI); step(3);
   check('in the lobby facing in: only the inside is drawn', TW.roomState.cur === 'podezd' && PZ.inMesh.visible && !TW.SBX.mesh.visible && !TW.ST.skylineMesh.visible, TW.roomState.cur);
+  PZ.inMesh.onBeforeRender(); const upLobby = PZ.upMesh.visible;
+  TW.rig.position.set(-10, PZ.seventh, 124); run('resetPodezdRides("broken")'); step(3); PZ.inMesh.onBeforeRender();
+  check('the 7th and the wing aren\'t drawn from the lobby (nor through the door from the yard); up on the 7th they are', !upLobby && PZ.upMesh.visible && TW.roomState.cur === 'podezd');
+  run('resetPodezdRides("roof"); level.encounter = 99'); TW.rig.position.set(-30, PZ.wingRoof, 121); face(Math.PI / 2); step(3); PZ.inMesh.onBeforeRender();
+  check('from the wing roof the street door isn\'t looked through: the insides cost nothing up there', TW.roomState.cur === 'outside' && !TW.roomState.seen.has('podezd') && !PZ.upMesh.visible, [...TW.roomState.seen].join(','));
 
   // ---- physics cost in the corridor (four goons on the 7th)
   run('clearEnemies(); resetPodezdRides("broken"); level.encounter = 99'); TW.rig.position.set(-30, PZ.seventh, 124); step(3);

@@ -34,11 +34,32 @@ step(3);
 try {
   // ---- the build: one baked mesh on the street atlas, nothing from the far city or skylines on top of it
   check('Superblock 14 is one mesh on the street atlas, light baked in', SBX.mesh && SBX.mesh.geometry.attributes.bake && SBX.mesh.material.uniforms.uBaked.value === 1);
-  check('its triangles stay within budget', SBX.acc.tris < 16000, SBX.acc.tris + ' tris');
+  check('its triangles stay within budget', SBX.tris.point + SBX.tris.base + SBX.tris.gate + SBX.tris.yard < 16000, JSON.stringify(SBX.tris));
+  check('what\'s drawn from everywhere outside is just the point block (< 1200: the whole estate was 7270); the rest of the shell < 2400', SBX.tris.point < 1200 && SBX.tris.base < 2400 && SBX.tris.gate < 4000 && SBX.tris.yard < 4000, JSON.stringify(SBX.tris));
+  { const AW = run('ACT1_WEST'), W = (x, z) => AW.toWorld(x, z), near = (x, y, z) => run(`sbNear(CFG.superblock.drawNear, { x: ${x}, y: ${y}, z: ${z} })`);
+    const must = { 'Tripoint Square': [0, 1.7, 10], 'the Ring Road': [-3, 1.7, 62], 'the gate': [-4.6, 1.7, 75], 'the courtyard': [-20, 1.7, 105], 'the wing roof': [-30, 35.2, 121],
+      'the crossing': [-40, 1.7, 145], 'the boulevard\'s start': [-56, 1.7, 198], 'the cradle\'s foot': [-35, 1.7, 136] };
+    const must2 = { 'Parade Square': W(0, 250), 'Parade Square, back to the Palace': W(-40, 254.8), 'the Tower\'s apron': W(-40, 305) };
+    const miss = Object.entries(must).filter(([, p]) => !near(...p)).map(([k]) => k), seen = Object.entries(must2).filter(([, [x, z]]) => near(x, 1.7, z)).map(([k]) => k);
+    check('the estate\'s shell (all but the point block) is drawn from the street, the gate, the yard, the wing roof, the crossing and the boulevard, not from Parade Square or the Tower (stills match pixel for pixel)',
+      SBX.shell.parent === SBX.mesh && !miss.length && !seen.length, `missing ${miss.join(', ')} | seen from ${seen.join(', ')}`); }
+  { const far = (x, y, z) => run(`sbSeen(SBX.yard, { x: ${x}, y: ${y}, z: ${z} }) || sbSeen(SBX.gate, { x: ${x}, y: ${y}, z: ${z} })`), near = (k, x, y, z) => run(`sbSeen(SBX.${k}, { x: ${x}, y: ${y}, z: ${z} })`);
+    check('the gate and the yard are the shell\'s children, culled by three when out of view, and hidden past the fog (Parade Square, the Tower) but drawn from the street, the gate, the yard and the wing roof',
+      SBX.gate.parent === SBX.mesh && SBX.yard.parent === SBX.mesh && SBX.gate.frustumCulled && SBX.yard.frustumCulled && !SBX.mesh.frustumCulled
+      && !far(-190, 1.7, 198) && !far(-234, 115, 190) && near('gate', 0, 1.7, 20) && near('gate', -3, 1.7, 62) && near('yard', -20, 1.7, 100) && near('yard', -30, 35.2, 121) && near('gate', -30, 35.2, 121)); }
   check('its lamps are baked (gate, forecourt, arch, courtyard, the door)', SBX.lamps.length >= 9, SBX.lamps.length + ' lights');
   { const P = TW.ST.skylineMesh.geometry.attributes.position.array, R = S.rect; let n = 0;
     for (let i = 0; i < P.length; i += 3) if (P[i + 1] > 0.5 && P[i] > R[0] && P[i] < R[1] && P[i + 2] > R[2] && P[i + 2] < R[3]) n++;
     check('no skyline slab or far-city block sits on the superblock', n === 0, n + ' vertices'); }
+  { const AW = run('ACT1_WEST'), TWR = run('TWR'), [cx, cz] = AW.toWorld(-40, 330), t = V(cx, TWR.cogY, cz), meshes = [SBX.mesh, SBX.shell, SBX.gate, SBX.yard];
+    const blocked = (o) => { let hit = 0; for (const m of meshes) { const a = m.geometry.attributes.position.array;
+      for (let i = 0; i < a.length; i += 9) { const e1 = [a[i + 3] - a[i], a[i + 4] - a[i + 1], a[i + 5] - a[i + 2]], e2 = [a[i + 6] - a[i], a[i + 7] - a[i + 1], a[i + 8] - a[i + 2]], d = [t.x - o.x, t.y - o.y, t.z - o.z];
+        const p = [d[1] * e2[2] - d[2] * e2[1], d[2] * e2[0] - d[0] * e2[2], d[0] * e2[1] - d[1] * e2[0]], det = e1[0] * p[0] + e1[1] * p[1] + e1[2] * p[2]; if (Math.abs(det) < 1e-9) continue;
+        const sv = [o.x - a[i], o.y - a[i + 1], o.z - a[i + 2]], u = (sv[0] * p[0] + sv[1] * p[1] + sv[2] * p[2]) / det; if (u < 0 || u > 1) continue;
+        const q = [sv[1] * e1[2] - sv[2] * e1[1], sv[2] * e1[0] - sv[0] * e1[2], sv[0] * e1[1] - sv[1] * e1[0]], v = (d[0] * q[0] + d[1] * q[1] + d[2] * q[2]) / det; if (v < 0 || u + v > 1) continue;
+        const tt = (e2[0] * q[0] + e2[1] * q[1] + e2[2] * q[2]) / det; if (tt > 1e-4 && tt < 0.999) hit++; } } return hit; };
+    const h = [blocked(V(2, 1.7, 7)), blocked(V(-3, 1.7, 62))];
+    check('the estate (the rooftop slogan and aerials too) keeps the Tower\'s cog in clear view from Tripoint Square and the gate', !h[0] && !h[1], h.join(' / ') + ' triangles in the way'); }
   check('every goon in every fight here is Krasnovian', C.encounters.every(E => E.spawn.every(s => KRAS.has(s[0]))), C.encounters.map(E => E.spawn.map(s => s[0]).join('+')).join(' | '));
 
   // ---- from the street, no cut: clear the street, walk through the boom, keep walking
@@ -69,6 +90,26 @@ try {
   [x, z] = walk(-6, 105);
   check('the garages wall the courtyard\'s east side', x < S.garages[0], `x ${x.toFixed(2)}`);
   { const p = V(-27, 0, 104); TW.pushOutXZ(p, 0.3); check('the rocket is solid', Math.hypot(p.x + 27, p.z - 104) > 0.9, `${p.x.toFixed(2)}, ${p.z.toFixed(2)}`); }
+  const solidAt = (x, z, r = 0.3) => TW.BLOCKERS.some(b => b.y1 === undefined && x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r);
+  { const P = S.portal, mx = (P.w[0] + P.w[1]) / 2, ex = (P.e[0] + P.e[1]) / 2, pz = (P.z[0] + P.z[1]) / 2, [b0, b1, c0, c1] = S.booth;
+    check('the border post is solid where it stands: both pylons, the sentry box, the boom\'s post, the floodlight mast',
+      solidAt(mx, pz, 0) && solidAt(ex, pz, 0) && solidAt((b0 + b1) / 2, (c0 + c1) / 2, 0) && solidAt(S.mast[0], S.mast[1], 0));
+    const line = []; for (let xx = P.w[1] + 0.35; xx <= P.e[0] - 0.35; xx += 0.25) for (let zz = 62; zz <= S.gateZ + 8; zz += 0.2) if (solidAt(xx, zz)) line.push(`${xx.toFixed(1)},${zz.toFixed(1)}`);
+    check('but the lane through it stays clear, wall to wall between the pylons from the Ring Road to the forecourt (goons walk straight: nothing in this choke point to jam them on)', !line.length, line.slice(0, 4).join(' ')); }
+  check('the yard\'s pieces are solid: the saloon, the carpet\'s rail, the rocket\'s lamp post, the bench by the door, the pigeon loft\'s garages',
+    solidAt(S.car[0], S.car[1], 0) && solidAt(S.carpet[0], S.carpet[1], 0) && solidAt(S.mercury[0], S.mercury[1], 0) && solidAt(-16.4, 117.5, 0) && solidAt(-6, 113.5, 0));
+  { const bad = [];
+    for (const E of C.encounters) for (const [t, x, z] of E.spawn) if (solidAt(x, z, 0.25)) bad.push(`${E.name}:${t}@${x},${z}`);
+    for (const [t, x, z] of C.props) if (t !== 'bottle' && solidAt(x, z, 0.15)) bad.push(`prop ${t}@${x},${z}`);   // (the bottles stand on the benches)
+    check('every goon and every prop out here starts clear of the furniture', !bad.length, bad.join(' ')); }
+  { const [ax0, ax1] = S.arch, snag = []; for (let xx = -30; xx <= -1; xx += 0.25) for (let zz = 84.6; zz <= 85.7; zz += 0.25) if (solidAt(xx, zz, 0) && Math.abs(xx + 6.2) > 0.4) snag.push(`${xx},${zz}`);
+    for (let xx = ax0 + 0.2; xx <= ax1 - 0.2; xx += 0.2) for (let zz = 85; zz <= 93; zz += 0.25) if (solidAt(xx, zz, 0.1)) snag.push(`${xx.toFixed(1)},${zz}`);
+    check('the forecourt\'s edge along the slab and the arch\'s mouth stay clear (nothing to catch on where the forecourt turns into the arch)', !snag.length, snag.slice(0, 4).join(' ')); }
+  { const blocked = []; for (let zz = 92.6; zz <= 115.5; zz += 0.25) if (solidAt(-19.8, zz)) blocked.push(zz); for (let xx = -19.8; xx <= -13; xx += 0.25) if (solidAt(xx, 115.8)) blocked.push('x' + xx);
+    check('the way from the arch to podezd 3\'s door stays clear (up the path, along the front)', !blocked.length, blocked.slice(0, 4).join(', ')); }
+  { const north = (x) => ((-20 - x - 1.5) / 3) % 1, point = (x) => ((-6 - x - 1.5) / 3) % 1;
+    check('inside matches outside: podezd 3\'s kitchen windows on the 7th sit on the north wing\'s window bays (lit from the yard), the landing\'s on the point block\'s',
+      TW.PZ.kitWin.every(x => Math.abs(north(x)) < 1e-9) && [-16.5, -13.5, -10.5].every(x => Math.abs(point(x)) < 1e-9)); }
 
   // ---- the fights, in order
   run('clearEnemies(); startSuperblock(false)'); step(2);
