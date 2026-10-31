@@ -11,6 +11,8 @@ const TEX = {
  "banner": "assets/tex/banner.png",
  "cola": "assets/tex/cola.png",
  "window": "assets/tex/window.png",
+ "zep_strip": "assets/tex/zep_strip.png",
+ "menuboard": "assets/tex/menuboard.png",
  "neon_tw": "assets/tex/neon_tw.png",
  "neon_tw_on": "assets/tex/neon_tw_on.png",
  "neon_open": "assets/tex/neon_open.png",

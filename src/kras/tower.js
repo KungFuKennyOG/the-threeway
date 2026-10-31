@@ -70,6 +70,8 @@ const TWR = {
   tribune: [-50, -30, 315.6, 325],                                     // his tribune, hanging off the stage's south face (floor: top.y)
   odoor: [-43, -37, 3.8],                                              // the doors from his office onto the tribune: x0, x1, height
   ddesk: [-46.6, 319.2],                                               // the signing table on the tribune
+  vitrine: { z0: 327.2, z1: 330.2, y0: 0.7, y1: 2.9, depth: 0.8, zMull: 328.75, plaqueZ: 331.25 },   // the glass case in the lobby's east wall
+  globe: [-39.25, 330.95],                                             // the snow globe on the Chairman's desk
   desks: [-59.5, -56.5, -53.5, -50.5].flatMap(x => [x, -80 - x]),      // the typing pool's desk columns (x), both sides of the aisle
   deskRows: [315.2, 317.6, 320.0, 322.4, 324.8, 327.2],
   shelves: [[-56, -55.4], [-53.05, -52.15], [-49.75, -48.85], [-31.15, -30.25], [-27.85, -26.95], [-24.6, -24]],   // the archive's canyon walls [x0, x1]
@@ -180,7 +182,8 @@ function twFaceS(acc, key, a, b, z, y0, y1, holes, um, vm, cell) {
 // ---- the lobby: double height, marble, six columns, a red carpet, the giant worker mosaic, the bronze hero
 function towerLobby(acc, lamps) {
   const F = TWR.lobby, [x0, x1, z0, z1] = F.r, H = F.h, [d0, d1, dh] = TWR.door;
-  twWalls(acc, 'marbleWall', F.r, 0, H, { s: [[d0, d1, dh]], n: twLiftGaps(F) }, 3, H, '', 5);
+  const V = TWR.vitrine;
+  twWalls(acc, 'marbleWall', F.r, 0, H, { s: [[d0, d1, dh]], n: twLiftGaps(F), e: [[V.z0, V.z1, H]] }, 3, H, '', 5);
   twFloor(acc, 'marble', F.r, 0.004, 2); twCeil(acc, 'coffer', F.r, H, 2.4);
   for (const [a, b, c, d] of [[x0, x1, z0, z0 + 0.5], [x0, x1, z1 - 0.5, z1], [x0, x0 + 0.5, z0, z1], [x1 - 0.5, x1, z0, z1]]) sbox(acc, 'gilt', (a + b) / 2, H - 0.45, (c + d) / 2, b - a, d - c, 0.45, 0, twO({ top: false }));   // a gilt cornice
   aq(acc, 'carpetRed', [-41.3, 0.014, 328.2], [-38.7, 0.014, 328.2], [-38.7, 0.014, z0], [-41.3, 0.014, z0], [0, 0, 1, (328.2 - z0) / 2.6], [0, 1, 0], 2.6);
@@ -214,6 +217,53 @@ function towerLobby(acc, lamps) {
   twLight(lamps, -40, 3, z0 + 1, '#9ab8ff', 6, 0.5);
   for (const x of [-49, -31]) { sbox(acc, 'litWarm', x, 3.2, z0 + 0.06, 0.4, 0.12, 0.5, 0, twO({})); twLight(lamps, x, 3.0, z0 + 0.6, '#ffd8a0', 6, 1.0); }   // sconces
   twLiftSigns(acc, F); twShaft(acc, TLIFTS[0]);
+  twVitrine(acc, lamps);
+}
+// ---- the glass case let into the lobby's east wall by lift 1 (so nobody walks into it): the Palace of the Union, Krasnograd,
+// at 1:250 beside the Tower of Labor at the same scale, twice its height under the original gilded cog; the plaque says so
+function twVitrine(acc, lamps) {
+  const V = TWR.vitrine, x1 = TWR.lobby.r[1], H = TWR.lobby.h, xb = x1 + V.depth, zm = (V.z0 + V.z1) / 2, o = { cell: 5 }, y0 = V.y0, y1 = V.y1;
+  wall(acc, 'marbleWall', x1, V.z0, x1, V.z1, 0, y0, 3, H, Object.assign({ v0: (H - y0) / H }, o));   // the wall under it and over it
+  wall(acc, 'marbleWall', x1, V.z0, x1, V.z1, y1, H, 3, H, o);
+  wall(acc, 'vitrineBack', xb, V.z0, xb, V.z1, y0, y1, 1, y1 - y0, { cell: 99 });                    // red velvet inside
+  wall(acc, 'vitrineBack', x1, V.z0, xb, V.z0, y0, y1, 1, y1 - y0, { cell: 99 }); wall(acc, 'vitrineBack', xb, V.z1, x1, V.z1, y0, y1, 1, y1 - y0, { cell: 99 });
+  aq(acc, 'vitrineBack', [x1, y0, V.z0], [xb, y0, V.z0], [xb, y0, V.z1], [x1, y0, V.z1], [0, 0, 1, 3], [0, 1, 0], 99);
+  aq(acc, 'vitrineBack', [x1, y1, V.z1], [xb, y1, V.z1], [xb, y1, V.z0], [x1, y1, V.z0], [0, 0, 1, 3], [0, -1, 0], 99);
+  sbox(acc, 'litWarm', x1 + 0.2, y1 - 0.04, zm, 0.12, V.z1 - V.z0 - 0.4, 0.04, 0, twO({}));          // the strip light along its top
+  twLight(lamps, x1 + 0.1, y1 - 0.25, zm, '#ffe8c0', 3.2, 1.7);
+  // the models (scale s), each on a low gilt base
+  const s = 1 / 250, ux = x1 + V.depth / 2, uz = V.z0 + 0.85, lz = V.z1 - 0.75, mo = (w, h) => twO({ u: w, v: h, top: 'twTrim', tu: 99 });
+  sbox(acc, 'gilt', ux, y0, uz, 0.66, 1.06, 0.03, 0, twO({})); sbox(acc, 'gilt', ux, y0, lz, 0.24, 0.5, 0.03, 0, twO({}));
+  let y = y0 + 0.03;
+  // the Palace of the Union (invented): a stylobate, a colonnaded hall, five stepped drums, a gilt lantern and spire, the cog
+  sbox(acc, 'twTrim', ux, y, uz, 160 * s, 260 * s, 20 * s, 0, twO({})); y += 20 * s;
+  sbox(acc, 'unionModel', ux, y, uz, 130 * s, 220 * s, 40 * s, 0, mo(0.4, 40 * s)); y += 40 * s;
+  for (const [r, h] of [[55, 90], [42, 80], [32, 70], [23, 60]]) { cyl(acc, 'unionModel', ux, y, uz, r * s, r * s, h * s, 8, { u: 2 * Math.PI * r * s / 8, v: h * s, cell: 99 }); twCap(acc, 'twTrim', ux, y + h * s, uz, r * s, 8); y += h * s; }
+  cyl(acc, 'twGold', ux, y, uz, 15 * s, 13 * s, 40 * s, 8, { u: 1, v: 1, cell: 99 }); y += 40 * s;
+  cyl(acc, 'twGold', ux, y, uz, 5 * s, 0.6 * s, 40 * s, 4, { u: 1, v: 1, cell: 99 }); y += 30 * s;
+  for (const ph of [-Math.PI / 2, 0]) plate(acc, 'twCog', ux, y + 25 * s, uz, 50 * s, 50 * s, ph, 0, [0, 0, 1, 1], true);
+  for (const [dx, dz] of [[-1, -1], [-1, 1], [1, -1], [1, 1]]) twPin(acc, ux + dx * 70 * s, y0 + 0.03 + 20 * s, uz + dz * 120 * s, 0.02, 0.07);   // gilt pinnacles on the stylobate
+  // the Tower of Labor at the same scale: five stepped tiers, the stage, the spire to its cog; the inner wing towers
+  y = y0 + 0.03;
+  for (const [w, d, ya, yb] of [[36, 48, 0, 30], [28, 38, 30, 54], [20, 28, 54, 74], [16, 24, 74, 116], [12, 16, 116, 146], [10, 12, 146, 200]])
+    sbox(acc, 'unionModel', ux, y + ya * s, lz, w * s, d * s, (yb - ya) * s, 0, mo(0.1, (yb - ya) * s));
+  cyl(acc, 'twGold', ux, y + 200 * s, lz, 2.5 * s, 0.4 * s, 52 * s, 4, { u: 1, v: 1, cell: 99 });
+  for (const ph of [-Math.PI / 2, 0]) plate(acc, 'twCog', ux, y + 226 * s, lz, 32 * s, 32 * s, ph, 0, [0, 0, 1, 1], true);
+  for (const dz of [-40, 40]) { sbox(acc, 'unionModel', ux, y, lz + dz * s, 16 * s, 16 * s, 56 * s, 0, mo(0.06, 56 * s)); cyl(acc, 'twGold', ux, y + 56 * s, lz + dz * s, 1.5 * s, 0.3 * s, 48 * s, 4, { u: 1, v: 1, cell: 99 }); }
+  // the glass, a gilt frame and a mullion between the two models
+  for (const [z, y, n] of [[V.z0 + 0.25, y1 - 0.3, 6], [V.z0 + 0.45, y1 - 0.25, 3], [V.z1 - 0.6, y0 + 0.75, 4]])   // the glass: clear, a few glints
+    aq(acc, 'white', [x1 - 0.012, y, z], [x1 - 0.012, y, z + 0.03], [x1 - 0.012, y - 0.07 * n, z + 0.03 + 0.045 * n], [x1 - 0.012, y - 0.07 * n, z + 0.045 * n], [0, 0, 1, 1], [-1, 0, 0], 99);
+  for (const [yy, h] of [[y0 - 0.08, 0.08], [y1, 0.08]]) sbox(acc, 'gilt', x1 - 0.03, yy, zm, 0.1, V.z1 - V.z0 + 0.16, h, 0, twO({}));
+  for (const z of [V.z0 - 0.04, V.z1 + 0.04]) sbox(acc, 'gilt', x1 - 0.03, y0 - 0.08, z, 0.1, 0.08, y1 - y0 + 0.16, 0, twO({}));
+  sbox(acc, 'gilt', x1 - 0.02, y0, V.zMull, 0.06, 0.04, y1 - y0, 0, twO({}));
+  // the plaque beside it at eye height, under a picture light
+  plate(acc, 'unionPlaque', x1, 1.55, V.plaqueZ, 1.4, 0.56, -Math.PI / 2, 0.02);
+  sbox(acc, 'gilt', x1 - 0.06, 1.95, V.plaqueZ, 0.12, 0.9, 0.05, 0, twO({})); sbox(acc, 'litWarm', x1 - 0.07, 1.93, V.plaqueZ, 0.1, 0.8, 0.02, 0, twO({}));
+}
+// a flat n-gon cap (a drum's step) facing up, as a fan of quads
+function twCap(acc, key, cx, y, cz, r, n) {
+  const P = (k) => [cx + Math.cos(k / n * Math.PI * 2) * r, y, cz + Math.sin(k / n * Math.PI * 2) * r];
+  for (let k = 0; k < n; k += 2) aq(acc, key, [cx, y, cz], P(k + 2), P(k + 1), P(k), [0, 0, 1, 1], [0, 1, 0], 99);
 }
 // ---- the Ministry's typing pool: ranks of desks under the Chairman's eight-metre portrait, the plan board, brass
 // pneumatic tubes overhead, a green lamp on every desk; the clear aisle down the middle is where the fight is
@@ -306,6 +356,9 @@ function towerTop(acc, lamps, live) {
   sbox(acc, 'darkwood', -40, y, 332.5, 0.8, 0.7, 0.48, 0, twO({ top: 'rugRed', tu: 1 })); sbox(acc, 'darkwood', -40, y + 0.48, 332.85, 0.8, 0.12, 1.2, 0, twO({}));
   sbox(acc, 'litWarm', -41.2, y + 0.82, 331.4, 0.3, 0.3, 0.32, 0, twO({})); sbox(acc, 'phone', -38.7, y + 0.82, 331.4, 0.28, 0.22, 0.12, 0, twO({ top: 'phone', tu: 0.28 }));
   plate(acc, 'gilt', -40, y + 0.9, 330.54, 0.5, 0.12, Math.PI, 0.01);
+  // a snow globe of the Palace of the Union, Krasnograd, by his hand: a gilt-topped base, the globe as two crossed pictures
+  { const [gx, gz] = TWR.globe; sbox(acc, 'darkwood', gx, y + 0.82, gz, 0.15, 0.15, 0.06, 0, twO({ top: 'gilt' }));
+    for (const ph of [Math.PI * 0.75, Math.PI * 1.25]) plate(acc, 'snowGlobe', gx, y + 0.98, gz, 0.22, 0.22, ph, 0, [0, 0, 1, 1], true); }   // (crossed at 45°: seen from the front they coincide)
   // his portrait and the cog behind the desk, flags, the decanter cabinet (west), a bookcase (east)
   plate(acc, 'portraitChair', -40, y + 3.0, z1, 2.0, 2.6, Math.PI, 0.03);
   for (const x of [-43.4, -36.6]) plate(acc, 'cog', x, y + 3.2, z1, 1.6, 1.6, Math.PI, 0.03);

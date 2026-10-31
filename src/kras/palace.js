@@ -308,6 +308,8 @@ function buildStationSquare(acc, L) {
   sbox(acc, 'litWarm', sx0 - 3.2, 4.12, sm, 1.6, ez1 - ez0, 0.08, 0, { u: 1, v: 1 });
   for (const z of [sm - 9.5, sm + 9.5]) { sbox(acc, 'iron', sx0 - 4.6, 0, z, 0.2, 0.2, 4.2, 0, { u: 1, v: 1 }); plSolid(sx0 - 4.75, z - 0.15, sx0 - 4.45, z + 0.15, 0, 4.2); }
   for (const z of [sz0 + 6, sz1 - 6]) plate(acc, 'banner', sx0, 6.5, z, 3, 8, -Math.PI / 2, 0.05);
+  // the departures board on the hall's front, south of the entrance and over the canopy's line: KRASNOGRAD · 31 HRS
+  plate(acc, 'decoGold', sx0, 6.5, 169, 5.7, 2.5, -Math.PI / 2, 0.05); plate(acc, 'departures', sx0, 6.5, 169, 5.4, 2.25, -Math.PI / 2, 0.08);
   plLight(L, sx0 - 3.2, 3.6, sm, '#ffd8a0', 12, 1.5); plLight(L, ex0 - 2, 12, sm, '#ffe2b4', 14, 1.0);   // the entrance, the name and the clock
   plSolid(ex0, sz0, sx1, sz1, 0, 19);
   // the square: sodium posts round the edge, poplars along the north side, a monument to the railwaymen in the middle
@@ -420,6 +422,8 @@ function buildPalaceInside(acc) {
     for (const z of [192.4, 195.4, 198.2]) plate(acc, 'windowNight', x0, 4.4, z, 1.6, 1.6, Math.PI / 2, 0.02);
     plLight(L, x0 + 1, 4.6, 195.2, '#7a96d8', 6, 0.7);   // moonlight through them
     plate(acc, 'coachWin', x1, 3.9, 196.6, 2.6, 1.6, -Math.PI / 2, 0.03); plLight(L, x1 - 0.8, 3.9, 196.6, '#ffcf86', 5, 0.9);
+    // the Bear's old club over the east wall bars, the home league's pennants under the coach's window
+    plate(acc, 'gymVolkov', x1, 3.85, 192.8, 4, 1.5, -Math.PI / 2, 0.03); plate(acc, 'gymPennants', x1, 2.05, 197.35, 4, 1, -Math.PI / 2, 0.03);
     // the champions' banners, hung between the beams (a face each way so both doors read them)
     [-48.2, -45.4, -34.6, -31.8].forEach((x, k) => { for (const phi of [Math.PI, 0]) plate(acc, 'gymChamps', x, 4.95, 193.6 + (phi ? -0.01 : 0.01), 1.0, 1.5, phi, 0, [k / 4, 0, (k + 1) / 4, 1]); sbox(acc, 'iron', x, 5.7, 193.6, 1.2, 0.05, 0.05, 0, { u: 1, v: 1, cell: 99 }); });
     // floor: mats, the vault's runway (the running line), the chalk patch

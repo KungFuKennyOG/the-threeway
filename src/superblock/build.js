@@ -10,7 +10,7 @@ const SB = {
   south: [-46, -4, 86, 92, 25.2], arch: [-21.8, -17.8, 4.2],          // [x0, x1, z0, z1, h]; the arch: [x0, x1, h]
   west: [-46, -34, 92, 118, 33.6], north: [-46, -20, 118, 130, 33.6], point: [-20, -6, 118, 132, 61.6],
   court: [-34, -8, 92, 118], garages: [-8, -4, 92, 118, 2.6],
-  door: [-13, 118],
+  door: [-13, 118], kitchen: [-16.5, 1.66], tvCut: 4, tvZoom: [0.25, 0, 0.75, 0.5],   // the kitchen window by the door: [x, y]; every tvCut s the TV cuts between the wide shot and a zoom (that part of it)
   rect: [-50, -1, 72, 136],   // (the railway bank behind it: PZ.rail in src/kras/podezd.js)                                              // keep the skylines and far city off it
 };
 const SBX = { acc: null, mesh: null, lamps: [] };
@@ -82,6 +82,14 @@ function superblock14(acc) {
   sbox(acc, 'litWarm', dx, 2.47, dz - 0.8, 0.4, 0.4, 0.08, 0, { u: 1, v: 1 });
   sbLight(dx, 2.3, dz - 1.0, '#ffd8a0', 6, 1.3);
   plate(acc, 'blockSign', dx + 2.0, 2.1, dz, 0.9, 0.45, Math.PI, 0.03);
+  // a ground-floor kitchen west of the door, over the slab's window in that bay: its big set shows Krasnograd's May Day
+  // parade (Central Television, cutting between the wide shot and a zoom every few seconds: SBX.tv swaps the screen's UVs)
+  { const [kx, ky] = SB.kitchen;
+    plate(acc, 'kitchenTV', kx, ky, dz, 1.6, 1.35, Math.PI, 0.03);
+    SBX.tv = { i0: acc.p.length / 3, n: 0, f: 0, a: null, b: null };
+    plate(acc, 'tvParade', kx - 0.25, ky + 0.017, dz, 0.68, 0.51, Math.PI, 0.036);
+    SBX.tv.n = acc.p.length / 3 - SBX.tv.i0;
+    sbox(acc, 'concrete', kx, ky - 0.75, dz - 0.06, 1.8, 0.14, 0.07, 0, { u: 1, v: 1 }); }
   // lock-up garages along the courtyard's east side; the Accords wall and its watchtower stand behind them
   const [gx0, gx1, gz0, gz1, gh] = SB.garages;
   sbox(acc, 'concrete', (gx0 + gx1) / 2, 0, (gz0 + gz1) / 2, gx1 - gx0, gz1 - gz0, gh, 0, { u: 6, v: gh, top: 'roofDark', tu: 4, faceKey: { l: 'garage' } });
@@ -120,6 +128,7 @@ function buildSuperblock() {
   m.matrixAutoUpdate = false; m.updateMatrix(); m.frustumCulled = false;
   m.material.uniforms.uFogNear = { value: F.near }; m.material.uniforms.uFogFar = { value: F.far };
   scene.add(m); SBX.mesh = m;
+  sbTvSetup(m);
   for (const l of SBX.lamps) ST.lamps.push(l);
   // where you can walk once you're past the boom: the Ring Road, the gate, the forecourt, the arch, the courtyard
   const on = () => level.name === 'superblock';
@@ -131,6 +140,19 @@ function buildSuperblock() {
     { x0: cx0 + 0.4, x1: SB.garages[0] - 0.3, z0: cz0 + 0.4, z1: cz1 - 0.3, area: 'courtyard', on },
   ].forEach(addWalk);
   return m;
+}
+// the kitchen TV: the screen's two shots as UV sets (the whole picture, the zoom); while the mesh is drawn, the cut swaps
+// them (a 12-float upload every few seconds, nothing in the frame loop)
+function sbTvSetup(m) {
+  const T = SBX.tv, A = ST.atlas.rect.tvParade, Z = SB.tvZoom, uv = m.geometry.attributes.uv;
+  T.a = uv.array.slice(T.i0 * 2, (T.i0 + T.n) * 2); T.b = T.a.slice();
+  for (let i = 0; i < T.b.length; i += 2) for (const j of [0, 1]) { const t = (T.a[i + j] - A[j]) / (A[j + 2] - A[j]); T.b[i + j] = A[j] + (Z[j] + t * (Z[j + 2] - Z[j])) * (A[j + 2] - A[j]); }
+  m.onBeforeRender = () => {
+    const f = Math.floor(performance.now() / 1000 / SB.tvCut) % 2; if (f === T.f) return;
+    T.f = f; uv.array.set(f ? T.b : T.a, T.i0 * 2);
+    if (uv.updateRange) { uv.updateRange.offset = T.i0 * 2; uv.updateRange.count = T.n * 2; }
+    uv.needsUpdate = true;
+  };
 }
 defineLevel('superblock', {
   menu: '3 · The gate & Superblock 14', cfg: () => CFG.superblock, build: buildSuperblock, outside: () => [SBX.mesh], rects: [SB.rect],

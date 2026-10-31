@@ -66,6 +66,48 @@ Object.assign(PAINT, {
     while (x < 46) { const w = 3 + Math.floor(prng() * 6), h = 5 + Math.floor(prng() * 7), c = cols[Math.floor(prng() * cols.length)]; p.rect(x, 0, Math.min(w, 47 - x), h, c); p.rect(x, h - 1, Math.min(w, 47 - x), 1, '#8a8478'); x += w + 1 + Math.floor(prng() * 2); }
     p.rect(0, 0, 48, 1, '#9a968e'); return p;
   },
+  // ---- a ground-floor kitchen beside podezd 3's door (1.6 m x 1.35 m): fridge, net curtains, oilcloth, a teapot, and
+  // the family's big console set; its screen is a plate of its own (tvParade, cut by SBX.tv in build.js)
+  kitchenTV() {
+    const p = new Pix(48, 40); p.fill('#c8bf98', EM);
+    for (let y = 22; y < 40; y += 3) p.rect(0, y, 48, 1, '#a8a882', EM);                                 // tiles below the dado
+    for (let x = 1; x < 48; x += 4) p.rect(x, 22, 1, 18, '#a8a882', EM);
+    p.rect(0, 21, 48, 1, '#8a7a5a', EM);
+    p.rect(27, 0, 1, 3, '#3a3026', EM); p.rect(24, 3, 7, 2, '#e8803a', EM); p.rect(26, 5, 3, 1, '#fff0c0', EM);   // the lamp
+    p.rect(3, 9, 10, 31, '#e8e4dc', EM); p.rect(3, 9, 10, 1, '#fff8ee', EM); p.rect(3, 20, 10, 1, '#a8a49c', EM);   // the fridge
+    p.rect(11, 12, 1, 5, '#8a867e', EM); p.rect(11, 23, 1, 6, '#8a867e', EM); p.set(6, 14, '#c8302a', EM); p.set(8, 25, '#3a6aaa', EM);
+    p.rect(19, 10, 28, 20, '#5a3620', EM); p.rect(19, 10, 28, 1, '#8a5a34', EM); p.rect(20, 29, 2, 3, '#3a2214', EM); p.rect(44, 29, 2, 3, '#3a2214', EM);   // the set
+    p.rect(21, 11, 21, 17, '#1a1a20', EM);                                                               // the bezel (the screen is a plate over it)
+    for (const y of [14, 18, 22]) { p.set(44, y, '#c9a04a', EM); p.set(44, y + 1, '#8a6a2a', EM); }       // knobs
+    for (let x = 16; x < 48; x++) for (let y = 32; y < 40; y++) p.set(x, y, ((x >> 1) + (y >> 1)) % 2 ? '#c8302a' : '#f0e8dc', EM);   // oilcloth
+    p.rect(22, 29, 5, 3, '#3a6aaa', EM); p.rect(23, 28, 3, 1, '#3a6aaa', EM); p.set(27, 30, '#3a6aaa', EM); p.set(23, 30, '#f0e8dc', EM);   // the teapot
+    for (let y = 0; y < 40; y++) for (const x of [1, 2, 45, 46]) if ((x + y) % 2) p.set(x, y, '#f4f0e8', EM);   // net curtains
+    p.rect(0, 0, 48, 1, '#d8d4c8'); p.rect(0, 39, 48, 1, '#d8d4c8'); p.rect(0, 0, 1, 40, '#d8d4c8'); p.rect(47, 0, 1, 40, '#d8d4c8');   // the frame
+    p.rect(15, 0, 2, 40, '#d8d4c8'); p.rect(1, 12, 14, 1, '#d8d4c8');                                    // the mullion, the vent's transom
+    return p;
+  },
+  // the Krasnograd May Day parade on Central Television (64 x 48): the wide shot, the vast square, ranks to the horizon, the
+  // Palace of the Union under the original gilded cog, a caption along the foot. The TV cuts to a zoom on the Palace and
+  // its cog (the top middle quarter of this picture: SB.tvZoom) and back
+  tvParade() {
+    const p = new Pix(64, 48);
+    for (let y = 0; y < 26; y++) for (let x = 0; x < 64; x++) p.set(x, y, y < 9 ? '#4a5a7a' : y < 18 ? ((x + y) % 2 ? '#5a6a88' : '#4a5a7a') : '#6a7890', EM);   // the sky
+    for (const [x0, w, top] of [[0, 12, 13], [52, 12, 12], [10, 8, 17], [46, 8, 16]]) {                 // the square's walls of ministries
+      p.rect(x0, top, w, 27 - top, '#9a9488', EM); for (let y = top + 2; y < 26; y += 3) for (let x = x0 + 1; x < x0 + w - 1; x += 2) p.set(x, y, '#ffe0a0', EM);
+    }
+    p.rect(12, 21, 40, 6, '#d8d0bc', EM);                                                                // the Palace of the Union: a vast stepped base
+    for (let x = 13; x < 52; x += 3) p.rect(x, 22, 1, 5, '#a8a08c', EM);                                 // its colonnade
+    for (const [w, y0, y1] of [[22, 16, 21], [16, 13, 16], [11, 11, 13], [7, 9, 11]]) { p.rect(32 - w / 2, y0, w, y1 - y0, '#e8e0cc', EM); p.rect(32 - w / 2, y0, w, 1, '#f2c14e', EM); p.rect(32 - w / 2 + 1, y0 + 2, 1, y1 - y0 - 2, '#b8b09c', EM); }
+    for (const x of [20, 26, 37, 43]) p.rect(x, 16, 2, 5, '#c8302a', EM);                               // banners down its front
+    plpCog(p, 32, 5.5, 4.6, '#f2c14e', '#c8902a', EM); p.set(32, 5, '#fff2b0', EM); p.set(31, 6, '#fff2b0', EM);   // the cog, over all of it
+    for (let y = 27; y < 40; y++) for (let x = 0; x < 64; x++) {                                          // the square: ranks to the horizon
+      const d = y - 24, u = (x - 31.5) / d, rank = Math.floor(18 / d * 3) % 2, file = Math.floor(u * 2.2 + 100) % 2;
+      p.set(x, y, rank && file ? ((x + y) % 3 ? '#c8302a' : '#e8d8b8') : '#6a6a70', EM);
+    }
+    p.rect(0, 40, 64, 8, '#101018', EM); p.text('KRASNOGRAD', 3, 41, '#f4ead0', EM);
+    for (const [x, y] of [[0, 0], [1, 0], [0, 1], [63, 0], [62, 0], [63, 1], [0, 47], [63, 47]]) p.set(x, y, '#101018', EM);   // the tube's round corners
+    return p;
+  },
   mosaicK() {   // a worker mosaic on the slab beside the arch: a steelworker under a gold cog and a red sun
     const p = new Pix(24, 40); p.fill('#2a5a6a');
     p.checker = p.checker || null;

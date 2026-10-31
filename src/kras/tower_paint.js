@@ -253,3 +253,36 @@ Object.assign(PAINT, {
   twBulb() { const p = new Pix(4, 4); p.fill('#fff4c8', EM); p.set(1, 1, '#ffffff', EM); return p; },
   phone() { const p = new Pix(8, 8); p.fill('#1a1a1e'); p.rect(1, 1, 6, 2, '#2e2e34'); p.rect(2, 4, 4, 3, '#c8c4b8'); p.set(3, 5, '#1a1a1e'); p.set(5, 5, '#1a1a1e'); return p; },
 });
+// ---- Krasnograd, at home: the lobby's scale models of the Palace of the Union and the Tower of Labor side by side in a
+// glass case, the plaque that compares them, and the Palace in a snow globe on the Chairman's desk
+Object.assign(PAINT, {
+  unionModel() {   // the models' pale stone: a gilt band, pilasters, tiny lit windows (one repeat = one face of a tier)
+    const p = new Pix(16, 16); p.fill('#e2d8c0'); p.rect(0, 0, 16, 1, '#f2c14e');
+    for (let x = 1; x < 16; x += 4) { p.rect(x, 1, 1, 15, '#f4ecd8'); p.rect(x + 1, 1, 1, 15, '#b8ae98'); }
+    for (let y = 3; y < 16; y += 4) for (let x = 3; x < 16; x += 4) p.set(x, y, '#ffd890', EM);
+    return p;
+  },
+  vitrineBack() { const p = new Pix(16, 16); p.fill('#5a1418'); for (let x = 0; x < 16; x += 4) { p.rect(x, 0, 1, 16, '#6e1c20'); p.rect(x + 2, 0, 1, 16, '#44100f'); } return p; },   // red velvet
+  unionPlaque() {   // brass, lit by its picture light (1.4 m x 0.56 m)
+    const p = new Pix(120, 48); p.fill('#c09840', EM);
+    p.rect(0, 0, 120, 1, '#f0d070', EM); p.rect(0, 47, 120, 1, '#7a5a1c', EM); p.rect(0, 0, 1, 48, '#f0d070', EM); p.rect(119, 0, 1, 48, '#7a5a1c', EM);
+    const line = (s, y, c) => p.text(s, Math.round((120 - textW(s)) / 2), y, c, EM);
+    line('PALACE OF THE UNION', 2, '#2a1808'); line('KRASNOGRAD · 480 M', 10, '#7a1410');
+    p.rect(20, 18, 80, 1, '#8a6a28', EM);
+    line('TOWER OF LABOR', 20, '#2a1808'); line('VOSTBURG · 252 M', 28, '#7a1410');
+    p.rect(20, 37, 80, 1, '#8a6a28', EM); line('SCALE 1 TO 250', 39, '#5a4018');
+    return p;
+  },
+  snowGlobe() {   // the Palace of the Union under glass, in the snow, catching the desk lamp (cut out round the globe)
+    const p = new Pix(24, 24), c = 11.5;
+    for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) {
+      const d = Math.hypot(x - c, y - c); if (d > 11.6) continue;
+      p.set(x, y, d > 10.5 ? '#8aa2bc' : y > 16 ? '#e8eef4' : y > 14 ? '#c8d4e2' : '#4a5a8a', EM);
+    }
+    for (const [w, y0, y1] of [[12, 14, 17], [8, 11, 14], [6, 8, 11], [4, 6, 8]]) { p.rect(12 - w / 2, y0, w, y1 - y0, '#e2d8c0', EM); p.rect(12 - w / 2, y0, w, 1, '#f2c14e', EM); }
+    p.rect(11, 4, 2, 2, '#f2c14e', EM); for (const [x, y] of [[10, 2], [11, 1], [12, 1], [13, 2], [10, 3], [13, 3], [11, 2], [12, 3]]) p.set(x, y, '#f2c14e', EM);   // the cog on top
+    for (const [x, y] of [[5, 5], [17, 4], [7, 10], [19, 9], [4, 13], [16, 6], [9, 3], [20, 13], [14, 10]]) p.set(x, y, '#ffffff', EM);   // snow
+    for (let a = -2.6; a < -1.5; a += 0.12) p.set(Math.round(c + Math.cos(a) * 9), Math.round(c + Math.sin(a) * 9), '#f0f8ff', EM);   // the glass's glint
+    return p;
+  },
+});

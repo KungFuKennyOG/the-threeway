@@ -262,4 +262,51 @@ Object.assign(PAINT, {
 // ---- East Station, on Station Square north of the level crossing (src/kras/palace.js)
 Object.assign(PAINT, {
   stationSign() { const p = new Pix(84, 13); p.fill('#1e3a6a', EM); p.rect(0, 0, 84, 1, '#f2c14e', EM); p.rect(0, 12, 84, 1, '#f2c14e', EM); p.text('EAST STATION', 6, 3, '#f2ede4', EM); return p; },
+  // the departures board on the hall's front (5.4 m x 2.25 m): split flaps, the home capital a day and a half away
+  departures() {
+    const p = new Pix(120, 50); p.fill('#0c0c10', EM);
+    p.rect(0, 0, 120, 1, '#3a3a44', EM); p.rect(0, 49, 120, 1, '#3a3a44', EM); p.rect(0, 0, 1, 50, '#3a3a44', EM); p.rect(119, 0, 1, 50, '#3a3a44', EM);
+    p.text('DEPARTURES', Math.round((120 - textW('DEPARTURES')) / 2), 2, '#ffb040', EM); p.rect(3, 10, 114, 1, '#2a2a32', EM);
+    [['KRASNOGRAD', 31], ['NOVOSTAL', 9], ['PORT ZORYA', 14], ['BOGATYR', 6]].forEach(([to, h], k) => {
+      const line = to.padEnd(10) + ' · ' + String(h).padStart(2) + ' HRS', y = 13 + k * 9, x0 = 3;
+      for (let i = 0; i < line.length; i++) { p.rect(x0 + i * 6, y - 1, 5, 9, '#1c1c24', EM); p.rect(x0 + i * 6, y + 3, 5, 1, '#060608', EM); }   // the flaps
+      p.text(line, x0, y, k ? '#ffc860' : '#fff4c8', EM);
+    });
+    return p;
+  },
+});
+// ---- the Palace of Sport's gym: the Bear's old club, and the home league's pennants
+Object.assign(PAINT, {
+  gymVolkov() {   // over the east wall bars (4 m x 1.5 m): the club that made him, a gold fringe (cut out between tassels)
+    const p = new Pix(96, 36); p.fill('#b8231e');
+    p.rect(0, 0, 96, 1, '#f2c14e'); p.rect(0, 32, 96, 1, '#f2c14e'); p.rect(0, 0, 1, 33, '#f2c14e'); p.rect(95, 0, 1, 33, '#f2c14e');
+    p.rect(2, 2, 92, 1, '#9a1c18'); p.rect(2, 30, 92, 1, '#9a1c18');
+    p.text('BOGDAN VOLKOV', Math.round((96 - textW('BOGDAN VOLKOV')) / 2), 4, '#f4ead0');
+    p.text('TRAINED AT', Math.round((96 - textW('TRAINED AT')) / 2), 13, '#f2c14e');
+    p.text('ZUBR KRASNOGRAD', Math.round((96 - textW('ZUBR KRASNOGRAD')) / 2), 22, '#f4ead0');
+    for (let x = 0; x < 96; x++) for (let y = 33; y < 36; y++) p.set(x, y, x % 3 === 1 ? '#c9a04a' : '#000000', x % 3 === 1 ? 255 : 0);
+    return p;
+  },
+  gymPennants() {   // four home-league clubs' pennants in a row (4 m x 1 m): name, colours, a badge, a gold-fringed point
+    const p = new Pix(128, 32); p.fill('#000000', 0);
+    const clubs = [['ZUBR', '#b8231e', '#f2c14e', 'cog'], ['MOLOT', '#2a4a8a', '#e8e2d2', 'hammer'], ['ZORYA', '#3a8ac8', '#f2c14e', 'dawn'], ['ISKRA', '#2a7a4a', '#e8e2d2', 'bolt']];
+    clubs.forEach(([name, a, b, badge], k) => {
+      const x0 = k * 32;
+      p.rect(x0 + 1, 0, 30, 1, '#c9a04a'); p.set(x0 + 15, 0, '#6a5020'); p.set(x0 + 16, 0, '#6a5020');   // the rod and its cord
+      for (let y = 1; y < 32; y++) {
+        const half = y < 19 ? 15 : 15 * (32 - y) / 13;
+        for (let x = 0; x < 32; x++) {
+          const d = Math.abs(x - 15.5); if (d > half) continue;
+          p.set(x0 + x, y, d > half - 1 && y >= 19 ? '#f2c14e' : y >= 11 && y < 13 ? b : a);
+        }
+      }
+      p.text(name, x0 + Math.round((32 - textW(name)) / 2), 2, b);
+      const cx = x0 + 15.5, cy = 18;
+      if (badge === 'cog') plpCog(p, cx, cy, 3.6, '#f2c14e', '#c8902a');
+      else if (badge === 'hammer') { p.rect(x0 + 15, 15, 2, 7, b); p.rect(x0 + 12, 14, 8, 3, b); }
+      else if (badge === 'dawn') { for (let y = 14; y < 20; y++) for (let x = 0; x < 32; x++) if (Math.hypot(x - 15.5, y - 20) < 5) p.set(x0 + x, y, b); p.rect(x0 + 10, 20, 12, 1, b); }
+      else { plpLine(p, cx + 2, 14, cx - 1, 18, b, 2); plpLine(p, cx - 1, 18, cx + 2, 19, b, 2); plpLine(p, cx + 2, 19, cx - 1, 24, b, 2); }
+    });
+    return p;
+  },
 });

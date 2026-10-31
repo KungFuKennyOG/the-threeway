@@ -167,6 +167,8 @@ function buildRoom() {
     box('lantern', [x - 0.17, 2.45, -3.55], [x + 0.17, 2.95, -3.21], { uvs: { '*': [0, 0, 1, 1], t: [0, 0, 1, 0.08], d: [0, 0.95, 1, 1] }, emissive: true });
     box('black', [x - 0.01, 2.95, -3.39], [x + 0.01, Y, -3.37], { faces: 'fblr' });
   }
+  // the lit board between the shelves and the neon: what's on ice from home (tools/bar_home.py paints it and the bottles)
+  sacc('menuboard', { emissive: true, tint: [0.92, 0.88, 0.9] }).quad([[2.88, 2.57, -4.96], [3.88, 2.57, -4.96], [3.88, 1.26, -4.96], [2.88, 1.26, -4.96]], [[0, 0], [1, 0], [1, 1], [0, 1]], [0, 0, 1]);
   for (const x of [-4.2, 4.2])   // Akira-style vertical neon boards in brush lettering, either end of the back wall
     sacc('neon_hino', { emissive: true }).quad([[x - 0.26, 2.62, -4.92], [x + 0.26, 2.62, -4.92], [x + 0.26, 0.55, -4.92], [x - 0.26, 0.55, -4.92]], [[0, 0], [1, 0], [1, 1], [0, 1]], [0, 0, 1]);
   // ---- Krasnovia (left wall)
@@ -177,7 +179,10 @@ function buildRoom() {
   box('jukebox', [-4.95, 0, 1.0], [-4.35, 1.62, 1.95], { uvs: { r: [0, 0, 1, 1] }, faces: 'r', emissive: true });
   // ---- Columbia (right wall): art deco, gold trim, the ridge in the window, amber diner neon
   box('brass', [X - 0.06, 2.68, -Z], [X, 2.78, Z], { faces: 'ltd' });
-  sacc('window', { emissive: true, tint: [0.9, 0.9, 1.0] }).quad([[4.97, 2.6, -2.6], [4.97, 2.6, -0.6], [4.97, 1.0, -0.6], [4.97, 1.0, -2.6]], [[0, 0], [2, 0], [2, 0.8], [0, 0.8]], [-1, 0, 0], 2);
+  sacc('window', { emissive: true, tint: [0.9, 0.9, 1.0] }).quad([[4.97, 2.6, -2.6], [4.97, 2.6, -0.6], [4.97, 1.0, -0.6], [4.97, 1.0, -2.6]], [[0, 0], [1, 0], [1, 1], [0, 1]], [-1, 0, 0], 2);
+  // the Halcyon drifting over the crowns: a clear strip over each upper pane (the mullion between them stays in front)
+  for (const [z0, z1] of BAR_ZEP.panes) sacc('zep_strip', { emissive: true, tint: [0.9, 0.9, 1.0] }).quad([[4.965, BAR_ZEP.y1, z0], [4.965, BAR_ZEP.y1, z1], [4.965, BAR_ZEP.y0, z1], [4.965, BAR_ZEP.y0, z0]],
+    [[BAR_ZEP.u(z0), 0], [BAR_ZEP.u(z1), 0], [BAR_ZEP.u(z1), 1], [BAR_ZEP.u(z0), 1]], [-1, 0, 0]);
   box('darkwood', [4.9, 0.94, -2.7], [5.0, 1.0, -0.5]);
   sacc('neon_open', { emissive: true }).quad([[4.95, 3.05, -2.75], [4.95, 3.05, -0.45], [4.95, 2.7, -0.45], [4.95, 2.7, -2.75]], [[0.02, 0.15], [0.98, 0.15], [0.98, 0.85], [0.02, 0.85]], [-1, 0, 0]);
   sacc('cola').quad([[4.96, 2.3, 0.8], [4.96, 2.3, 1.5], [4.96, 1.25, 1.5], [4.96, 1.25, 0.8]], [[0, 0], [1, 0], [1, 1], [0, 1]], [-1, 0, 0]);
@@ -199,6 +204,7 @@ function buildRoom() {
     box('chrome', [t.x - 0.05, 0, t.z - 0.05], [t.x + 0.05, 0.74, t.z + 0.05], { faces: 'fblr' });
   }
   roomTris = flushStaticsAtlas(BAR_LIGHT);
+  findBarZeppelin();
   buildDoor();
 
   // dynamic signs: flickering neon + round sign
@@ -236,7 +242,28 @@ function buildDoor() {
   scene.add(doorPivot);
 }
 function updateDoor(dt) {
+  driftBarZeppelin();
   if (!doorPivot) return;
   DOOR.open += clamp(DOOR.target - DOOR.open, -dt * CFG.street.doorSpeed, dt * CFG.street.doorSpeed);
   doorPivot.rotation.y = DOOR.open * CFG.street.doorOpenDeg * DEG;
+}
+// The Halcyon in the Columbia window (window.png keeps the upper panes' top rows clear for it): its strip (zep_strip.png,
+// 128 px, 64 of them across the window) scrolls one texel at a time, a lap every ~3.4 minutes like the real one's. Its UVs
+// sit in the bar's one mesh, so it costs no draw call: a 24-float upload when it moves a texel.
+const BAR_ZEP = { y0: 2.6 - 9 / 32.5, y1: 2.6 - 1 / 32.5, panes: [[-2.6 + 1 / 32, -2.6 + 31 / 32], [-2.6 + 33 / 32, -2.6 + 63 / 32]],
+  u: (z) => (z + 2.6) / 4, pxPerS: 1 / 1.6, i0: -1, n: 0, base: null, k: -1 };
+function findBarZeppelin() {
+  const g = ST.barMesh && ST.barMesh.geometry, R = BAR_ATLAS.zep_strip; if (!g || !R) return;
+  const ar = g.attributes.arect.array;
+  for (let i = 0; i < ar.length / 4; i++) if (ar[i * 4] === Math.fround(R[0]) && ar[i * 4 + 1] === Math.fround(R[1])) { if (BAR_ZEP.i0 < 0) BAR_ZEP.i0 = i; BAR_ZEP.n = i - BAR_ZEP.i0 + 1; }
+  if (BAR_ZEP.i0 >= 0) BAR_ZEP.base = g.attributes.uv.array.slice(BAR_ZEP.i0 * 2, (BAR_ZEP.i0 + BAR_ZEP.n) * 2);
+}
+function driftBarZeppelin() {
+  const Z = BAR_ZEP; if (!Z.base || !ST.barMesh.visible) return;
+  const k = Math.floor(performance.now() / 1000 * Z.pxPerS) % 128; if (k === Z.k) return;
+  Z.k = k;
+  const uv = ST.barMesh.geometry.attributes.uv, a = uv.array, off = -k / 128;   // content moves toward +z (right, seen from inside): nose first
+  for (let i = 0; i < Z.n; i++) a[(Z.i0 + i) * 2] = Z.base[i * 2] + off;
+  if (uv.updateRange) { uv.updateRange.offset = Z.i0 * 2; uv.updateRange.count = Z.n * 2; }
+  uv.needsUpdate = true;
 }
