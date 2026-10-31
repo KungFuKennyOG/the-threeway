@@ -137,7 +137,9 @@ function plMast(acc, L, bx, bz, tx, tz, h, ax, az) {
   const Q = (s, r) => [c[0] + u[0] * s + v[0] * r, c[1] + u[1] * s + v[1] * r, c[2] + u[2] * s + v[2] * r];
   aq(acc, 'plFloodBank', Q(1, 1), Q(-1, 1), Q(-1, -1), Q(1, -1), [0, 0, 2, 1.5], [ux * ca, -sa, uz * ca], 99);
   aq(acc, 'plFloodBack', Q(-1, 1), Q(1, 1), Q(1, -1), Q(-1, -1), [0, 0, 2, 1.5], [-ux * ca, sa, -uz * ca], 99);
-  { const k = 1.5, o = 0.5, H2 = (s, r) => { const q = Q(s * k, r * k); return [q[0] - ux * ca * o, q[1] + sa * o, q[2] - uz * ca * o]; };   // its bloom, a little behind it (both faces)
+  // the front pair's bloom, a little behind the bank (both faces); the far pair has none: from the crossing they stand
+  // beside the Tower of Labor, and it stays the brightest thing there
+  if (bz < PL.shell.c[1]) { const k = 1.5, o = 0.5, H2 = (s, r) => { const q = Q(s * k, r * k); return [q[0] - ux * ca * o, q[1] + sa * o, q[2] - uz * ca * o]; };
     aq(acc, 'plHalo', H2(1, 1), H2(-1, 1), H2(-1, -1), H2(1, -1), [0, 0, 1, 1], null, 99); aq(acc, 'plHalo', H2(-1, 1), H2(1, 1), H2(1, -1), H2(-1, -1), [0, 0, 1, 1], null, 99); }
   for (const s of [-1, 1]) { const [px, py, pz] = Q(s * 0.9, -1); sbox(acc, 'iron', px, h, pz, 0.25, 0.25, py - h, 0, { u: 1, v: 1, top: false, cell: 99 }); }
   sbox(acc, 'litRed', tx, h + 6.4, tz, 0.4, 0.4, 0.4, 0, { u: 1, v: 1, cell: 99 });
