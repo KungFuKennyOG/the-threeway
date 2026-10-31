@@ -241,7 +241,7 @@ Object.assign(PAINT, {
     const p = new Pix(16, 32); p.fill('#2a2620');
     for (let s = 0; s < 8; s++) {
       const y = s * 4; p.rect(0, y + 3, 16, 1, '#7a7a72');
-      for (let x = 0; x < 15; x += 2) { if (prng() < 0.1) continue; const c = ['#b89a6a', '#a88a5a', '#c4a676', '#5a6a8a', '#7a5a3a', '#8a3a2a'][Math.floor(prng() * 6)]; p.rect(x, y, 2, 3, c); p.set(x, y + 1, '#ece4cc'); }
+      for (let x = 0; x < 15; x += 2) { if (prng() < 0.1) continue; const c = ['#d0b080', '#c0a070', '#dcbe8a', '#6a7aa0', '#8e6a44', '#a84a36'][Math.floor(prng() * 6)]; p.rect(x, y, 2, 3, c); p.set(x, y + 1, '#fff4dc'); }
     }
     p.rect(15, 0, 1, 32, '#6a6a62'); return p;
   },

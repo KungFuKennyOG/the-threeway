@@ -50,7 +50,7 @@ CFG.tower = {
           ['stool', -47.6, 320.2, 12], ['stool', -32.4, 323.8, 12], ['stool', -47.4, 327.6, 12], ['bin', -33, 316.6, 12], ['bottle', -32.6, 330.8, 12],
           ['crate', -44.4, 331.2, 40], ['crate', -44.6, 332.0, 40], ['crate', -35.4, 331.4, 40], ['bottle', -36.6, 325.4, 40],
           ['bottle', -45.0, 329.6, 191.05], ['bottle', -45.0, 330.2, 191.05]],
-  light: { inAmbient: [0.11, 0.095, 0.1], officeAmbient: [0.17, 0.165, 0.14], archiveAmbient: [0.085, 0.1, 0.09], topAmbient: [0.08, 0.075, 0.1] },
+  light: { inAmbient: [0.11, 0.095, 0.1], officeAmbient: [0.17, 0.165, 0.14], archiveAmbient: [0.12, 0.135, 0.12], topAmbient: [0.08, 0.075, 0.1] },
 };
 const TWR = {
   foot: [-64, -16, 312, 348],                                          // the central tower's base tier (the podium)
@@ -277,7 +277,7 @@ function towerArchive(acc, lamps, live) {
   for (const [dx, h] of [[0.15, 0.2], [0.55, 0.12]]) sbox(acc, 'archiveShelf', -40 + dx, y + 0.76, 327.4, 0.36, 0.28, h, 0, twO({ top: 'ceilTile', tu: 99 }));
   sbox(acc, 'darkwood', -40, y, 328.6, 0.6, 0.55, 0.5, 0, twO({})); sbox(acc, 'darkwood', -40, y + 0.5, 328.85, 0.6, 0.08, 0.7, 0, twO({}));   // her chair
   sbox(acc, 'darkwood', -40, y, 325.9, 0.46, 0.46, 0.46, 0, twO({})); sbox(acc, 'darkwood', -40, y + 0.46, 325.7, 0.46, 0.06, 0.5, 0, twO({}));   // the other chair
-  live.push(twHung(acc, lamps, -40, y + H, y + 2.4, 327.2, '#ffe2b0', 8.5, 2.6, true));   // the one bulb
+  live.push(twHung(acc, lamps, -40, y + H, y + 2.4, 327.2, '#ffe2b0', 10, 3.4, true));   // the one bulb
   // the glass lift's door: a gilt frame, and over it a lit sign
   for (const x of [g0 - 0.15, g1 + 0.15]) sbox(acc, 'twGold', x, y, z0 + 0.06, 0.3, 0.12, 2.7, 0, twO({}));
   sbox(acc, 'twGold', (g0 + g1) / 2, y + 2.4, z0 + 0.06, g1 - g0 + 0.6, 0.12, 0.3, 0, twO({}));
@@ -285,7 +285,7 @@ function towerArchive(acc, lamps, live) {
   for (const s of [-1, 1]) plate(acc, 'portraits', -40 + s * 4.2, y + 3.4, z0, 1.4, 1.75, 0, 0.03, [s < 0 ? 0.75 : 0.5, 0, s < 0 ? 1 : 0.75, 1]);
   plate(acc, 'flag_kras', -40, y + 5.2, z0, 2.4, 1.6, 0, 0.04);
   // light: green lamps hung down the canyons, the bulb over her desk (above), the night at the glass door
-  for (const x of [-54.2, -50.95, -29.05, -25.8]) for (const z of [320.2, 325.2, 330.2]) twHung(acc, lamps, x, y + H, y + 3.4, z, '#d8ffc0', 5.5, 1.4);
+  for (const x of [-54.2, -50.95, -29.05, -25.8]) for (const z of [320.2, 325.2, 330.2]) twHung(acc, lamps, x, y + H, y + 3.4, z, '#d8ffc0', 6.5, 2.0);
   for (const z of [320.5, 326]) live.push(twHung(acc, lamps, -45.5, y + H, y + 3.9, z, '#d8ffc0', 6, 0.9), twHung(acc, lamps, -34.5, y + H, y + 3.9, z, '#d8ffc0', 6, 0.9));
   live.push(twLight(lamps, -40, y + 1.6, z0 + 0.8, '#7a9ad8', 6.5, 0.9));
   for (const x of [-42, -35]) twLight(lamps, x, y + 0.5, z1 - 1.8, '#ffc070', 7, 1.2);   // the card wall, from below
