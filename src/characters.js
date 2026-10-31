@@ -151,10 +151,14 @@ const BODIES = {
     for (const nm of ['l', 'r']) r['farm' + nm][3].push((a) => tbox(a, null, -0.2, -0.27, 0.15, 0.15, 0.15, 0.15, { '*': [32, 48, 48, 58] }, { faces: 'fblr' }));   // sleeves past the wrist
     return r;
   },
-  laborer() {     // Krasnovian laborer: quilted work jacket, red scarf, knit cap, heavy boots; a steel pipe in the right fist
-    const r = humanoid({ torso: TA, legs: TD_L, arms: [32, 48, 48, 59], hands: [32, 60, 48, 64], feet: TD_R, shoulder: 0.66, chestD: 0.38, waist: 0.5, thighW: 0.2 });
-    r.hips[3].push((a) => tbox(a, null, -0.02, 0.16, 0.48, 0.32, 0.48, 0.32, { '*': TB }, { faces: 'fblr' }));   // jacket hem below the waist
-    r.head[3].push((a) => tbox(a, null, 0.23, 0.33, 0.25, 0.28, 0.21, 0.24, { '*': HAIR }, { z: -0.01, faces: 'fblrt' }));   // knit cap
+  laborer() {     // SIGNATURE: a big puffy rust-orange quilted jacket (and the steel pipe). A red scarf flying, a knit cap, a unibrow, a cigarette
+    const r = goon({ shoulder: 0.66, chestD: 0.4, waist: 0.5, thighW: 0.2, neckW: 0.15, armK: 1.25, farmK: 1.2, handK: 1.1, legK: 1.05 });
+    bx(r, 'torso', 0.02, 0.5, 0.62, 0.48, 0.78, 0.48, chest(TA), { z: 0.01, faces: 'fblr' });   // the quilted jacket, padded out
+    bx(r, 'hips', -0.04, 0.16, 0.62, 0.48, 0.62, 0.48, { '*': X1 }, { faces: 'fblr' });   // its hem below the waist
+    bx(r, 'torso', 0.44, 0.58, 0.42, 0.36, 0.38, 0.32, { '*': X2 }, { z: 0.01, faces: 'fblrt' });   // the scarf, wound round
+    bx(r, 'torso', 0.5, 0.16, 0.08, 0.03, 0.1, 0.03, { '*': X2 }, { x: -0.12, z: 0.25, x1: -0.06, faces: 'fblr' });   // its tail
+    bx(r, 'head', 0.21, 0.38, 0.27, 0.29, 0.25, 0.27, { '*': X3, t: SW(0) }, { z: -0.005, faces: 'fblrt' });   // the knit cap
+    bx(r, 'head', 0.06, 0.08, 0.1, 0.02, 0.1, 0.02, { '*': SW(1) }, { x: 0.09, z: 0.17 });   // a cigarette on his lip
     return r;
   },
   rocco() {    // Columbian bouncer: a boxer without headgear, broader
@@ -367,7 +371,7 @@ const POSES = {
 POSES.rocco = POSES.boxer; POSES.ivan = POSES.wrestler; POSES.volkov = POSES.wrestler;
 POSES.conscript = { torso: [12, 4, 0], head: [16, -10, 8], uarml: [2, 0, -8], farml: [-18, 0, 0], uarmr: [2, 0, 8], farmr: [-22, 0, 0],   // slouched, head lolling
   thighl: [-4, 0, -4], thighr: [4, 0, 4], hips: [0, 6, 0] };
-POSES.laborer = { torso: [8, -6, 0], head: [-2, 6, 0], uarml: [-14, 0, -12], farml: [-36, 0, 0], uarmr: [-30, 0, 28], farmr: [-90, 0, 0],
+POSES.laborer = { torso: [10, -8, 0], head: [-6, 8, 0], uarml: [-34, 0, -26], farml: [-70, 0, 0], uarmr: [-30, 0, 28], farmr: [-90, 0, 0],   // a fist up, the pipe ready
   thighl: [-8, 0, -8], shinl: [10, 0, 0], thighr: [6, 0, 8], hips: [0, 10, 0] };
 Object.assign(POSES, {
   secguard: { torso: [8, 0, 0], head: [-4, 0, 0], uarml: [-15, 0, 16], farml: [-55, 0, 0], uarmr: [10, 0, 14], farmr: [-30, 0, 0],
@@ -397,7 +401,7 @@ Object.assign(POSES, {   // the newer goons' idle poses: every one has attitude 
     thighl: [-20, 0, -6], shinl: [24, 0, 0], thighr: [16, 0, 6], shinr: [12, 0, 0], hips: [0, 20, 0], handl: [10, 0, 0], handr: [14, 0, 0] },
   militia: { torso: [18, 0, 0], head: [-12, 0, 0], uarml: [-34, 0, -58], farml: [-58, 0, 0], uarmr: [-34, 0, 58], farmr: [-58, 0, 0],   // arms wide to grab
     thighl: [-16, 0, -24], shinl: [28, 0, 4], thighr: [-16, 0, 24], shinr: [28, 0, -4], footl: [-12, -14, 0], footr: [-12, 14, 0] },
-  inspector: { hips: [0, -6, 0], torso: [-8, 0, 0], head: [-18, -12, 4], uarml: [-34, 0, -8], farml: [-104, 0, 0], uarmr: [-26, 0, 12], farmr: [-80, 0, 0],   // nose up, clipboard up
+  inspector: { hips: [0, -6, 0], torso: [-8, 0, 0], head: [-18, -12, 4], uarml: [-44, 0, 18], farml: [-96, 0, 0], uarmr: [-26, 0, 12], farmr: [-80, 0, 0],   // nose up, clipboard up
     thighl: [-2, 0, -3], thighr: [2, 0, 3] },
   clerk: { torso: [24, 0, 0], head: [-14, 0, 0], uarml: [-16, 0, -14], farml: [-84, 0, 32], uarmr: [-150, 0, 16], farmr: [-34, 0, 0],   // hunched, the stamp up
     thighl: [-8, 0, 5], shinl: [14, 0, -3], thighr: [-8, 0, -5], shinr: [14, 0, 3] },

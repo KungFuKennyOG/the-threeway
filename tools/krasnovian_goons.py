@@ -1,7 +1,7 @@
 """Paints the Krasnovian conscript and laborer sheets (64x128, same layout as every goon sheet; see
 characters.js) and the laborer's pipe (8x32, same layout as the bat). Faces start from existing sheets and
-are recoloured: the conscript from Bat Boy's (cap -> fur ushanka with flaps, half-shut eyes), the laborer
-from the wrestler's (buzz cut -> knit cap). Run from the repo root: python3 tools/krasnovian_goons.py"""
+are recoloured: the conscript from Bat Boy's (cap -> fur ushanka with flaps, half-shut eyes). The laborer is painted from
+scratch with tools/goonkit.py (the flair pass). Run from the repo root: python3 tools/krasnovian_goons.py"""
 from PIL import Image
 
 def H(h): return (int(h[1:3], 16), int(h[3:5], 16), int(h[5:7], 16), 255)
@@ -45,22 +45,66 @@ BK.rect(3, 11, 10, 2, l); BK.px(4, 11, b); BK.px(11, 11, b)            # half-be
 SD = P(im, 16, 64); SD.rect(0, 0, 16, 16, o); SD.rect(0, 11, 16, 2, l); SD.rect(0, 0, 1, 16, d); SD.rect(15, 0, 1, 16, d)
 im.save('assets/tex/sheet_conscript.png')
 
-# ---------------- the laborer: quilted work jacket, red scarf, knit cap, work trousers, boots
-q, w, z, c2, t2, k2, cap, capD = '#3a4250', '#2a3038', '#b8231e', '#5a6270', '#4a4440', '#1e1a18', '#4a5a6a', '#34404c'
-def laborer_face(p, i):
-    p.rect(3, 4, 26, 1, capD)                  # the cap's turned-up edge
-im = faces('assets/tex/sheet_wrestler.png', {'#b78976': cap, '#866456': capD}, laborer_face)
-def quilt(p, x0=0):
-    p.rect(0, 0, 16, 16, q)
-    for x in range(1, 16, 3): p.rect(x, 0, 1, 16, w)
-A = P(im, 32, 32); quilt(A); A.rect(7, 0, 2, 16, c2); A.rect(3, 0, 10, 3, z); A.rect(7, 3, 2, 2, z)   # placket, scarf
-for y in (5, 9, 13): A.px(7, y, w)
-B = P(im, 48, 32); quilt(B); B.rect(0, 13, 16, 3, w)
-C = P(im, 32, 48); quilt(C); C.rect(0, 10, 16, 2, w); C.rect(0, 12, 16, 4, '#e0a890')
-D = P(im, 48, 48); D.rect(0, 0, 8, 16, t2); D.rect(1, 6, 6, 3, '#3a3430'); D.rect(8, 0, 8, 16, k2); D.rect(8, 14, 8, 2, '#3a3430')
-BK = P(im, 0, 64); quilt(BK); BK.rect(0, 0, 16, 2, z)
-SD = P(im, 16, 64); quilt(SD)
-im.save('assets/tex/sheet_laborer.png')
+# ---------------- the laborer (the flair pass, goon()'s panel layout; see tools/goons_palace.py)
+# SIGNATURE: a big puffy rust-orange quilted jacket (and the pipe). TA the jacket (and its padding), X1 its hem, X2 the red scarf,
+# X3 + SW(0) the knit cap, SW(1) the cigarette
+from goonkit import Sheet, swatch, cog, faces3, eye, mouth_hurt, mouth_ko, remap
+from goons_palace import limb, skin_face, bare_hand, shoe
+def laborer():
+    S = Sheet()
+    sk, sh, dk, hi, hr, stb = '#d8a27e', '#b07a5a', '#6a3e2c', '#f0c49c', '#1a1412', '#8a6a56'
+    Q, Qd, Qh, R, Rd, Rh = '#c4622a', '#7a3616', '#ec8e4c', '#b8231e', '#7a1612', '#e04a3a'
+    C, Cd, Ch, T, Td, Th = '#2a3a5a', '#18243a', '#44587e', '#4a5a6a', '#2e3a46', '#6a7a8a'
+    Gl, Gld, W, K, G, Gd = '#a8804a', '#7a5a30', '#f4f1ea', '#141014', '#f2c14e', '#b88a2a'
+    def fc(P, v):
+        skin_face(P, sk, sh)
+        P.rect(0, 0, 32, 6, C); P.hl(0, 6, 32, Cd); P.rect(0, 7, 3, 9, hr); P.rect(29, 7, 3, 9, hr)
+        l = -1 if v == 1 else 0
+        P.rect(5, 9 + l, 22, 3, hr); P.hl(5, 12 + l, 22, sh)   # one long unibrow
+        if v == 0:
+            for x0 in (8, 19): P.hl(x0, 13, 5, dk); P.rect(x0, 14, 5, 2, W); P.rect(x0 + 2, 14, 2, 2, K)
+        else: eye(P, v, 8, 13, 5, W, K, dk); eye(P, v, 19, 13, 5, W, K, dk)
+        P.rect(13, 16, 6, 5, sh); P.hl(12, 20, 8, dk); P.px(15, 17, hi)   # a flattened nose
+        P.grain(sk, stb, 0.4, 2, 3, 21, 26, 9)   # three days of stubble
+        if v == 0: P.hl(10, 25, 12, dk); P.px(13, 25, W); P.px(17, 25, '#d8c070')   # a gap-toothed scowl (and the cigarette, a box)
+        elif v == 1: mouth_hurt(P, 10, 24, 12, dk, W)
+        else: mouth_ko(P, 11, 24, 10, dk, '#c84858')
+    faces3(S, fc)
+    hd = S.at('HEADS'); hd.fill(sk); hd.rect(0, 0, 16, 7, C); hd.hl(0, 7, 16, Cd); hd.rect(0, 8, 16, 4, hr); hd.rect(0, 13, 16, 3, sh)
+    cp = S.at('X3'); cp.fill(C)   # the knit cap: ribbed, a rolled brim
+    for x in range(0, 16, 2): cp.vl(x, 0, 10, Cd)
+    cp.rect(0, 10, 16, 6, Ch); cp.hl(0, 10, 16, Cd); cp.hl(0, 13, 16, Cd)
+    swatch(S, 0, C); swatch(S, 1, W); S.rect(52, 112, 1, 4, '#ff7a3a')
+    def quilt(P, k):   # quilted: diamond stitching, puffed highlights
+        P.fill(Q)
+        for y in range(16):
+            for x in range(16):
+                if (x + y) % 5 == 0 or (x - y) % 5 == 0: P.px(x, y, Qd)
+                elif (x + y) % 5 == 2 and (x - y) % 5 == 2: P.px(x, y, Qh)
+        P.grain(Q, Qh, 0.06, k)
+    t = S.at('TA'); quilt(t, 3)   # the jacket's front: a placket, a sewn patch, a gold labour badge
+    t.vl(7, 0, 16, Qd); t.vl(8, 0, 16, Qh)
+    for y in (3, 7, 11): t.px(7, y, K); t.px(8, y, K)
+    t.rect(10, 9, 5, 5, T); t.outline(10, 9, 5, 5, Td); t.px(11, 10, W); t.px(13, 12, W)   # a patch, sewn on crooked
+    t.disc(3, 4, 2.2, R); cog(t, 3, 4, 1.6, G, Gd)
+    b = S.at('TA_B'); quilt(b, 4); b.vl(7, 0, 16, Qd); b.rect(3, 4, 10, 6, Td); b.outline(3, 4, 10, 6, K); b.hl(4, 6, 8, Th); b.hl(4, 8, 6, Th)   # a stencilled work number
+    s_ = S.at('TA_S'); quilt(s_, 5)
+    hm = S.at('X1'); quilt(hm, 6); hm.rect(0, 12, 16, 4, Qd); hm.vl(7, 0, 12, Qd)
+    sc = S.at('X2'); sc.fill(R)   # the scarf: knitted, a fringe
+    for y in range(0, 16, 2): sc.hl(0, y, 16, Rd)
+    for x in range(1, 16, 4): sc.vl(x, 0, 16, Rh)
+    sc.hl(0, 14, 16, W); sc.checker(0, 15, 16, 1, Rd)
+    tb = S.at('TB'); tb.fill(T); tb.rect(0, 0, 16, 3, K); tb.rect(6, 0, 4, 3, '#9a9aa6')
+    u = S.at('X6'); quilt(u, 7); u.vl(15, 0, 16, Qd)
+    f = S.at('X7'); quilt(f, 8); f.rect(0, 11, 16, 5, Gl); f.hl(0, 11, 16, Gld)   # leather work gloves' cuffs
+    hn = S.at('X8'); bare_hand(hn, Gl, Gld, '#4a3418', '#c8a06a')
+    th = S.at('X9'); limb(th, T, Th, Td); th.rect(4, 10, 7, 5, Td); th.outline(4, 10, 7, 5, Th)   # canvas trousers, a knee patch
+    sn = S.at('X10'); limb(sn, T, Th, Td); sn.rect(0, 8, 16, 8, K); sn.hl(0, 8, 16, '#3a3a44'); sn.vl(3, 9, 6, '#4a4a58')   # rubber boots
+    fo = S.at('X11'); shoe(fo, K, '#4a4a58', '#000000', '#3a2a1a')
+    swatch(S, 15, sk)
+    remap(S, {'#000000': '#141014', '#1a1412': '#141014', '#3a2a1a': '#4a3418', '#3a3a44': '#2e3a46', '#d8c070': '#f2c14e', '#ff7a3a': '#ec8e4c'})
+    return S.save('assets/tex/sheet_laborer.png', 32)
+laborer()
 
 # ---------------- the pipe: steel barrel with a red valve fitting (rows 0-21), black tape grip (rows 22-31)
 pp = Image.new('RGBA', (8, 32)); X = P(pp, 0, 0)
