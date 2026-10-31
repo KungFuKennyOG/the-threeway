@@ -71,10 +71,10 @@ try {
     check('the stadium\'s oval takes in the whole inside (foyer, gym, bowl); its flat front is the foyer\'s, its north wall the north doors\'',
       out === 0 && Math.abs(fz0 - PL.annex[2]) < 1e-6 && Math.abs(fz1 - PL.annex[2]) < 1e-6 && Math.abs(fx0 - PL.annex[1]) < 1e-6 && Math.abs(fx1 - PL.annex[0]) < 1e-6
       && Math.abs(S.c[1] + S.b * Math.cos(S.D / 2) - PL.northZ) < 1e-6, `${out} inside vertices outside it; north wall z ${(S.c[1] + S.b * Math.cos(S.D / 2)).toFixed(3)} vs ${PL.northZ.toFixed(3)}`);
-    check('it is a big low oval: ~64 m across, ~73 m long, its roof rising to 18.5 m (open over the middle, the floodlit stands and floor in it)',
-      S.a * 2 > 60 && S.b * 2 > 70 && S.lipY >= 16 && S.lipY <= 20 && PL.hazeSides.length > S.n / 2);
-    check('its lid sits over the inside\'s saucer, so from up high the inside never shows through the open top', S.pitchY > PL.roofY + 0.5 && S.standY > S.pitchY);
-    check('four lattice masts, near three times its height, outside it, leaning in', PL.masts.length === 4 && PL.masts.every(([bx, bz, tx, tz, h]) => h > 2.5 * S.lipY && !inShell(bx, bz, -2) && Math.hypot(tx - S.c[0], tz - S.c[1]) < Math.hypot(bx - S.c[0], bz - S.c[1])));
+    check('it is a big oval: ~64 m across, ~73 m long, its stands low over the ends and rising to ~23 m along the sides, open over the middle (the floodlit stands and floor in it), a glow over the rim',
+      S.a * 2 > 60 && S.b * 2 > 70 && S.endY >= 16 && S.endY <= 18 && S.sideY > S.endY + 4 && PL.hazeSides.length > S.n / 2);
+    check('its lid sits over the inside\'s saucer, so from up high the inside never shows through the open top', S.pitchY > PL.roofY + 0.5 && S.endY > S.pitchY);
+    check('four lattice masts, over twice its height, outside it, leaning in', PL.masts.length === 4 && PL.masts.every(([bx, bz, tx, tz, h]) => h > 2 * S.sideY && !inShell(bx, bz, -2) && Math.hypot(tx - S.c[0], tz - S.c[1]) < Math.hypot(bx - S.c[0], bz - S.c[1])));
     // sightlines against the outside mesh (local): the doors from the boulevard; the Tower of Labor's upper tiers, crown,
     // cog and spire from the boulevard's start and from the crossing
     const Op = PL.outMesh.geometry.attributes.position.array;

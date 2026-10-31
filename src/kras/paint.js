@@ -233,15 +233,20 @@ Object.assign(PAINT, {
     for (let y = 0; y < 16; y++) for (let x = 0; x < 8; x++) { const d = Math.pow((y + 1) / 16, 1.6) * 0.9; if (B[(x & 3) + (y & 3) * 4] / 16 < d) p.set(x, y, y > 11 ? '#ffe8b8' : '#ffd890', EM); }
     return p;
   },
-  plShaft() {   // a floodlight's beam: dense at the bank (top), thinning down into the bowl
-    const p = new Pix(8, 32), B = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
-    for (let y = 0; y < 32; y++) for (let x = 0; x < 8; x++) { const e = Math.abs(x - 3.5) / 4, d = (0.62 - y / 32 * 0.5) * (1 - e * e * 0.7); if (B[(x & 3) + (y & 3) * 4] / 16 < d) p.set(x, y, '#fff2d4', EM); }
+  plHalo() {   // the bloom round a floodlight bank: dense in the middle, thinning to nothing at the edge (ordered dither)
+    const p = new Pix(16, 16), B = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const r = Math.hypot((x - 7.5) / 8, (y - 7.5) / 8), d = Math.max(0, 1 - r) * 0.75; if (B[(x & 3) + (y & 3) * 4] / 16 < d) p.set(x, y, r < 0.45 ? '#fff4dc' : '#ffe0a8', EM); }
     return p;
   },
   plPitchTop() { const p = new Pix(16, 16); p.fill('#e8cc98', EM); p.speck('#f4dcb0', 30, EM); p.speck('#d8b880', 14, EM); return p; },   // the floor under the floods, from far above
-  plStandsTop() {   // the stands from far above, full and floodlit: rows of coats and faces, a few scarves
-    const p = new Pix(16, 8); p.fill('#7a5a46');
-    for (let y = 0; y < 8; y += 2) { p.rect(0, y, 16, 1, '#a07a5a'); for (let x = (y >> 1) & 1; x < 16; x += 2) p.set(x, y + 1, ['#5a4a4a', '#4a5260', '#c8402e', '#e0b08c', '#6a5a44'][Math.floor(prng() * 5)]); }
+  plStandsBack() {   // the stands' concrete backs: rakers, and a row of lit stairwell windows (one repeat = one bay)
+    const p = new Pix(16, 16); p.fill('#8e897e'); p.speck('#7e7a70', 10); for (let x = 0; x < 16; x += 8) p.rect(x, 0, 2, 16, '#6a665e');
+    for (let x = 3; x < 16; x += 4) if (x % 8 !== 0 && x % 8 !== 1) p.rect(x, 9, 2, 3, '#ffcf86', EM);
+    p.rect(0, 0, 16, 1, '#b0aa9c'); return p;
+  },
+  plStandsTop() {   // the stands from far above, full and floodlit (self-lit: the floods are on): rows of coats and faces, scarves
+    const p = new Pix(16, 8); p.fill('#9a785c', EM);
+    for (let y = 0; y < 8; y += 2) { p.rect(0, y, 16, 1, '#d0ac84', EM); for (let x = (y >> 1) & 1; x < 16; x += 2) p.set(x, y + 1, ['#6a5450', '#5a6070', '#d8483a', '#f0c098', '#8a7454'][Math.floor(prng() * 5)], EM); }
     return p;
   },
   plMarquee() {   // two boards (top and bottom half): red, gilt-edged, lit lettering

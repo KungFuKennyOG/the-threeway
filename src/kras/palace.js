@@ -53,7 +53,7 @@ PL.northZ = PL.drum[1] + PL.drum[2] * Math.cos(Math.PI / 24);                   
 // aimed at the floor: [foot x, foot z, head x, head z, height, aim x, aim z]. The far pair stand taller, so their banks
 // clear the rim seen from the boulevard. Placed off the Tower of Labor's sightlines from the boulevard and the crossing
 // (the crossing looks up the oval's west flank at it: the north-west bank keeps below and left of its upper tiers).
-PL.masts = [[-72.5, 192, 50], [-7.5, 192, 50], [-73, 248, 56], [-7, 248, 56]].map(([x, z, h]) => {
+PL.masts = [[-72.5, 186, 50], [-7.5, 186, 50], [-73, 248, 56], [-7, 248, 56]].map(([x, z, h]) => {
   const cx = -40, cz = 215.5, dx = cx - x, dz = cz - z, d = Math.hypot(dx, dz);
   return [x, z, x + dx / d * 4, z + dz / d * 4, h, cx - dx * 0.3, cz - dz * 0.3];
 });
@@ -102,19 +102,24 @@ PL.shell = (() => {
   const a = 32, n = 29, tau = Math.asin((PL.annex[1] - PL.annex[0]) / 2 / a), D = (2 * Math.PI - 2 * tau) / n;
   const b = (PL.northZ - PL.annex[2]) / (Math.cos(tau) + Math.cos(D / 2)), cz = PL.annex[2] + b * Math.cos(tau);
   return { c: [PL.bowlC[0], cz], a, b, n, t0: -Math.PI / 2 + tau, D,
-    H: 12.8, gateH: 5.4, brim: 2.6, eave: 14.2, lip: 9, lipY: 18.5, standY: 17.6, pitchIn: 15, pitchY: 16.4, haze: 3.2 };
+    H: 12.8, gateH: 5.4, brim: 2.6, eave: 14.2, crest: 5, endY: 17.4, sideY: 23, pitchIn: 15, pitchY: 16.4, haze: 3.2 };
 })();
 // a point on the shell ring: corner k (0 = the east end of the front, n = its west end; n + 1 wraps to 0), s metres in
 const plShellPt = (k, s = 0) => { const S = PL.shell, t = S.t0 + (k % (S.n + 1)) * S.D; return [S.c[0] + (S.a - s) * Math.cos(t), S.c[1] + (S.b - s) * Math.sin(t)]; };
 // the outward normal (x, z) of side k (side n is the flat front), and of corner k (the two sides' average)
 function plShellOut(k) { const [x0, z0] = plShellPt(k + 1), [x1, z1] = plShellPt(k), l = Math.hypot(x1 - x0, z1 - z0); return [-(z1 - z0) / l, (x1 - x0) / l]; }
 function plShellCornerOut(k) { const [a, b] = plShellOut(k), [c, d] = plShellOut((k + PL.shell.n) % (PL.shell.n + 1)), l = Math.hypot(a + c, b + d); return [(a + c) / l, (b + d) / l]; }
-// one side of a ring band from (s0 in, y0) to (s1 in, y1), facing out (flip: facing in)
+// the stands' crest at corner k: low over the two ends (the boulevard looks over the south one at the Tower of Labor),
+// sweeping up to the long sides
+const plCrestY = (k) => { const S = PL.shell, c = Math.cos(S.t0 + (k % (S.n + 1)) * S.D); return S.endY + (S.sideY - S.endY) * c * c; };
+// one side of a ring band from (s0 in, y0) to (s1 in, y1), facing out (flip: facing in); a height may be a function of
+// the corner (plCrestY)
 function plRing(acc, key, k, s0, y0, s1, y1, uv, flip) {
   let [ka, kb] = flip ? [k, k + 1] : [k + 1, k];
+  const Y = (y, kk) => typeof y === 'function' ? y(kk) : y, ya0 = Y(y0, ka), yb0 = Y(y0, kb), ya1 = Y(y1, ka), yb1 = Y(y1, kb);
   const [xa, za] = plShellPt(ka, s0), [xb, zb] = plShellPt(kb, s0), [xc, zc] = plShellPt(kb, s1), [xd, zd] = plShellPt(ka, s1), [ox, oz] = plShellOut(k), f = flip ? -1 : 1;
-  const nr = y1 - y0, ny = s1 - s0;   // (a flat band faces up, or down when flipped)
-  aq(acc, key, [xd, y1, zd], [xc, y1, zc], [xb, y0, zb], [xa, y0, za], uv || [0, 0, 1, 1], nr === 0 ? [0, f, 0] : [f * nr * ox, f * ny, f * nr * oz], 99);
+  const nr = (ya1 + yb1 - ya0 - yb0) / 2, ny = s1 - s0;   // (a flat band faces up, or down when flipped)
+  aq(acc, key, [xd, ya1, zd], [xc, yb1, zc], [xb, yb0, zb], [xa, ya0, za], uv || [0, 0, 1, 1], Math.abs(nr) < 1e-9 ? [0, f, 0] : [f * nr * ox, f * ny, f * nr * oz], 99);
 }
 const plSideLen = (k) => { const [x0, z0] = plShellPt(k), [x1, z1] = plShellPt(k + 1); return Math.hypot(x1 - x0, z1 - z0); };
 // a lattice mast from its foot (bx, bz) leaning to its head (tx, tz) at height h, a light bank turned down at (ax, az)
@@ -132,6 +137,8 @@ function plMast(acc, L, bx, bz, tx, tz, h, ax, az) {
   const Q = (s, r) => [c[0] + u[0] * s + v[0] * r, c[1] + u[1] * s + v[1] * r, c[2] + u[2] * s + v[2] * r];
   aq(acc, 'plFloodBank', Q(1, 1), Q(-1, 1), Q(-1, -1), Q(1, -1), [0, 0, 2, 1.5], [ux * ca, -sa, uz * ca], 99);
   aq(acc, 'plFloodBack', Q(-1, 1), Q(1, 1), Q(1, -1), Q(-1, -1), [0, 0, 2, 1.5], [-ux * ca, sa, -uz * ca], 99);
+  { const k = 1.5, o = 0.5, H2 = (s, r) => { const q = Q(s * k, r * k); return [q[0] - ux * ca * o, q[1] + sa * o, q[2] - uz * ca * o]; };   // its bloom, a little behind it (both faces)
+    aq(acc, 'plHalo', H2(1, 1), H2(-1, 1), H2(-1, -1), H2(1, -1), [0, 0, 1, 1], null, 99); aq(acc, 'plHalo', H2(-1, 1), H2(1, 1), H2(1, -1), H2(-1, -1), [0, 0, 1, 1], null, 99); }
   for (const s of [-1, 1]) { const [px, py, pz] = Q(s * 0.9, -1); sbox(acc, 'iron', px, h, pz, 0.25, 0.25, py - h, 0, { u: 1, v: 1, top: false, cell: 99 }); }
   sbox(acc, 'litRed', tx, h + 6.4, tz, 0.4, 0.4, 0.4, 0, { u: 1, v: 1, cell: 99 });
   plSolid(bx - w0 / 2, bz - w0 / 2, bx + w0 / 2, bz + w0 / 2, 0, 8);
@@ -198,10 +205,10 @@ function buildPalaceOutside(acc) {
     sbox(acc, 'plPilaster', x, 1, z, 0.8, 0.5, H - 1, Math.atan2(ox, oz), { u: 0.8, v: H - 1, top: false, skip: 'b', cell: 99 });
     if (!mid) { const lx = x + ox * 0.75, lz = z + oz * 0.75; aq(acc, 'litWarm', [lx - 0.15, 0.03, lz + 0.15], [lx + 0.15, 0.03, lz + 0.15], [lx + 0.15, 0.03, lz - 0.15], [lx - 0.15, 0.03, lz - 0.15], [0, 0, 1, 1], [0, 1, 0], 99); plLight(L, lx, 0.35, lz, UP, 9, 1.8); if (k % 2 === 0) plLight(L, x + ox * 2.4, H + 0.2, z + oz * 2.4, '#ffe8c0', 7, 0.9); }
   }
-  // ---- the roof: the cornice and a low attic all round, then a raked ring of roof rising in over the stands to a lip,
-  // open over the middle; flags round the eaves. In the opening (seen only from up high: podezd 3's roof, the Tower),
-  // the stands and the floor in floodlight; over the lip, the floods' glow; this is the outside's own lid: the inside's
-  // saucer (PL.roofY) is under it, so it never shows through
+  // ---- over the facade: the cornice, a canopy brim lit underneath, a low attic; then the backs of the stands rising to
+  // their crest (low at the ends, high along the sides: the bowl's sweep), flags along it, and inside it the open bowl:
+  // the stands and the floor in floodlight (seen from up high: podezd 3's roof, the Tower). This is the outside's own
+  // lid: the inside's saucer (PL.roofY) is under it, so it never shows through
   for (let k = 0; k <= n; k++) {
     const len = plSideLen(k), front = k === n;
     const reps = Math.max(1, Math.round(len / 3.4)), B = -1 - S.brim;
@@ -211,31 +218,30 @@ function buildPalaceOutside(acc) {
     plRing(acc, 'plCornice', k, B, H + 0.6, B, H + 0.85, [0, 0, reps, 0.3]);               // its edge,
     plRing(acc, 'plRoofM', k, B, H + 0.85, -1, H + 0.95, [0, 0, 2, 1]);                    // its top
     plRing(acc, 'plAttic', k, -1, H + 0.95, -1, S.eave, [0, 0, reps, 0.5]);                // a low attic
-    plRing(acc, 'plRoofM', k, -1, S.eave, S.lip, S.lipY, [0, 0, front ? 4 : 2, 2]);         // the raked roof
-    plRing(acc, 'plCornice', k, S.lip, S.standY, S.lip, S.lipY, [0, 0, 1, 0.6], true); // its lip, facing the bowl
-    plRing(acc, 'plStandsTop', k, S.lip, S.standY, S.pitchIn, S.pitchY, [0, 0, 2, 1.5]);  // the stands, seen from above
+    plRing(acc, 'plStandsBack', k, -1, S.eave, S.crest, plCrestY, [0, 0, reps, 1]);        // the backs of the stands
+    plRing(acc, 'plStandsTop', k, S.crest, plCrestY, S.pitchIn, S.pitchY, [0, 0, 2, 2]);   // the stands, seen from above
     { const [xa, za] = plShellPt(k + 1, S.pitchIn), [xb, zb] = plShellPt(k, S.pitchIn), c = [S.c[0], S.pitchY, S.c[1]];
       aq(acc, 'plPitchTop', [xa, S.pitchY, za], [xb, S.pitchY, zb], c, c, [0, 0, 1, 1], [0, 1, 0], 99); }
-    // a flag on the eaves at every corner
-    { const [ox, oz] = k === 0 || k === n ? plShellOut(k === 0 ? 0 : n - 1) : plShellCornerOut(k), [px, pz] = plShellPt(k, 0.2), phi = Math.atan2(ox, oz) + Math.PI / 2, [fx, fz] = LP(px, pz, phi, 0.95, 0);
-      sbox(acc, 'iron', px, S.eave, pz, 0.09, 0.09, 4.4, 0, { u: 1, v: 1, top: false, skip: 'lr', cell: 99 }); plate(acc, 'flag_kras', fx, S.eave + 3.7, fz, 1.8, 1.2, phi, 0, [0, 0, 1, 1], true); }
+    // a flag on the crest at every corner
+    { const [ox, oz] = k === 0 || k === n ? plShellOut(k === 0 ? 0 : n - 1) : plShellCornerOut(k), [px, pz] = plShellPt(k, S.crest), y = plCrestY(k), phi = Math.atan2(ox, oz) + Math.PI / 2, [fx, fz] = LP(px, pz, phi, 0.95, 0);
+      sbox(acc, 'iron', px, y - 0.3, pz, 0.09, 0.09, 4.4, 0, { u: 1, v: 1, top: false, skip: 'lr', cell: 99 }); plate(acc, 'flag_kras', fx, y + 3.4, fz, 1.8, 1.2, phi, 0, [0, 0, 1, 1], true); }
   }
-  // the floodlights' glow rising off the lip (both faces): kept out of the Tower's sightlines from the boulevard and the
+  // the floodlights' glow rising off the crest (both faces): kept out of the Tower's sightlines from the boulevard and the
   // crossing, so the Tower's crown and cog stay the brightest things in the sky there
   const views = [[-40, 152.4], ACT1_WEST.toLocal(-40, 145)], tower = [-40, 330];
   PL.hazeSides = [];
   for (let k = 0; k <= n; k++) {
-    const [x0, z0] = plShellPt(k, S.lip), [x1, z1] = plShellPt(k + 1, S.lip);
+    const [x0, z0] = plShellPt(k, S.crest), [x1, z1] = plShellPt(k + 1, S.crest);
     const inLine = views.some(([vx, vz]) => {   // the side's bearing from there overlaps the Tower's (± 8°)
       const t = Math.atan2(tower[0] - vx, tower[1] - vz), a = Math.atan2(x0 - vx, z0 - vz) - t, b = Math.atan2(x1 - vx, z1 - vz) - t;
       return Math.min(a, b) < 0.14 && Math.max(a, b) > -0.14;
     });
     if (inLine) continue;
     PL.hazeSides.push(k);
-    for (const f of [false, true]) plRing(acc, 'plHaze', k, S.lip, S.lipY, S.lip, S.lipY + S.haze, [0, 0, 1, 1], f);
+    for (const f of [false, true]) plRing(acc, 'plHaze', k, S.crest, plCrestY, S.crest, (kk) => plCrestY(kk) + S.haze, [0, 0, 1, 1], f);
   }
-  plLight(G, S.c[0], S.lipY + 6, S.c[1], '#ffe6bc', 30, 1.5);
-  for (const s of [-1, 1]) plLight(G, S.c[0], S.lipY + 4, S.c[1] + s * 17, '#ffe6bc', 22, 1.1);
+  plLight(G, S.c[0], S.endY + 8, S.c[1], '#ffe6bc', 30, 1.6);   // the floods' light in the bowl (bakes only into this mesh)
+  for (const s of [-1, 1]) plLight(G, S.c[0], S.endY + 5, S.c[1] + s * 17, '#ffe6bc', 22, 1.1);
   // ---- the portico, set into the front: giant columns the height of the pilasters, PALACE OF SPORT along the frieze,
   // the athletes' relief over the doors behind them. Low enough that the Tower of Labor rises over it down the boulevard.
   { const [ax0, ax1, az0] = PL.annex, [d0, d1] = PL.doorW, pz = az0 - 3.6, ez0 = az0 - 4.5, ew = ax1 - ax0 + 0.4, ex = (ax0 + ax1) / 2, ezc = (ez0 + az0) / 2, ed = az0 - ez0;
