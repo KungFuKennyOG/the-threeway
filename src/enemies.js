@@ -484,8 +484,8 @@ class Enemy {
         this.faceToward(toP, dt);
         if (this.throwCd <= 0 && dist > 1.8 && dist < 7 && projectilesInAir() < CFG.projectiles.maxInAir) {
           this.carry = new Prop(this.lobType, this.body.by.wrR.x);
-          this.lobType = this.lobType === 'pot' ? 'potato' : (Math.random() < 0.6 ? 'potato' : 'pot');
-          if (c.throws) this.lobType = c.throws[Math.random() < 0.5 ? 0 : 1];
+          if (c.throws) this.lobType = c.throws[Math.random() < 0.5 ? 0 : 1];   // one draw, like the cook's (seeded runs keep their sequence)
+          else this.lobType = this.lobType === 'pot' ? 'potato' : (Math.random() < 0.6 ? 'potato' : 'pot');
           this.carry.heldByEnemy = this; this.carry.body.ignore = this.body; this.carry.pinAll();
           this.setState('lobWind'); AU.grunt();
           this.windFx = loopFx(['fx_windup', 'fx_windup', 'fx_spark', 'fx_windup'], () => this.carry ? this.carry.body.ps[0].x : this.body.by.wrR.x, 0.07);
