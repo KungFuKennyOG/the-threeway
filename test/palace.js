@@ -60,6 +60,12 @@ try {
   { const Pp = TW.ST.skylineMesh.geometry.attributes.position.array; let n = 0;
     for (const R of [AW.rect(PL.rect), PL.rail, PL.sqRect, PL.yard]) for (let i = 0; i < Pp.length; i += 3) if (Pp[i + 1] > 0.5 && Pp[i] > R[0] && Pp[i] < R[1] && Pp[i + 2] > R[2] && Pp[i + 2] < R[3]) n++;
     check('no far-city block sits on the Palace\'s ground, Station Square, the goods yard or the railway west', n === 0, n + ' vertices'); }
+  { const Pp = PL.inMesh.geometry.attributes.position.array; let out = 0, top = 0;   // (the inside mesh is built in the frame's coordinates)
+    for (let i = 0; i < Pp.length; i += 3) if (Pp[i + 2] > PL.gym[3] + 0.01) { if (Math.hypot(Pp[i] - PL.drum[0], Pp[i + 2] - PL.drum[1]) > PL.drum[2] + 0.01) out++; top = Math.max(top, Pp[i + 1]); }
+    check('the round bowl (stands, back wall, saucer ceiling, both tunnels) fits inside the drum', out === 0 && top <= PL.roofY + 0.01, `${out} vertices outside, top ${top.toFixed(1)} m`); }
+  { const solid = (lx, lz) => { const [x, z] = AW.toWorld(lx, lz); return TW.BLOCKERS.some(b => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1); }, lane = [];
+    for (let z = PL.gym[2] + 0.5; z < PL.gym[3]; z += 0.5) lane.push([-40, z], [-37.5, z]);
+    check('the gym\'s podium, pommel horse and vault are solid (cover); the way through the middle is clear', solid(-34.5, 198.6) && solid(-45.4, 195) && solid(-34, 191.75) && !lane.some(([x, z]) => solid(x, z))); }
 
   // ---- off the cradle, through the gap in the fence (no cut)
   run('startPodezd(false); resetPodezdRides("roof"); CRADLE.phase = "bottom"; CRADLE.y = 0; CRADLE.rect.y = 0; placeRides(); level.encounter = CFG.podezd.encounters.length - 1; game.state = "won";');
@@ -114,6 +120,9 @@ try {
   check('the Bear is a boss with a bar, in the ring', TW.game.bosses.length === 1 && TW.enemies[0].type === 'volkov' && Math.abs(L(TW.enemies[0].pos).z - PL.ring[1]) < 3, TW.enemies.map(e => e.type).join(','));
   walkL(-56, 226, 0.035, 500);
   check('the stands are a wall', LH().x > PL.floor[0], 'x ' + LH().x.toFixed(2));
+  walkL(-52, 214, 0.035, 500);
+  { const r = Math.hypot(LH().x - PL.bowlC[0], LH().z - PL.bowlC[1]);
+    check('the floor is round: heading for a corner, the ring of stands stops you', r < PL.floorR && r > PL.floorR - 1.6, 'r ' + r.toFixed(2)); }
   walkL(-40, 246, 0.035, 500);
   check('the north doors are shut while he\'s up', LH().z < PL.floor[3] && PL.shutter.visible, 'z ' + LH().z.toFixed(2));
   TW.player.hp = 0; run('loseRound()'); step(Math.ceil(3.7 / DT));

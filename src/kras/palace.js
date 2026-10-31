@@ -19,22 +19,24 @@ CFG.palace = {
       spawn: [['sambo', -45, 168], ['conscript', -35, 166.5], ['conscript', -40, 176], ['laborer', -46.5, 153]] },
     { name: 'gym', trigger: 191.4, arena: [190.3, 199.2], respawn: [-40, 190.9, 0, Math.PI], sign: 'gym',
       spawn: [['gymnast', -47.5, 197.5], ['gymnast', -32.5, 197], ['lifter', -40, 198.4], ['sambo', -46.5, 191.5]] },
-    { name: 'volkov', trigger: 214.5, arena: [212.3, 239.7], respawn: [-40, 213.2, 0, Math.PI], sign: 'bear', boss: true,
-      spawn: [['volkov', -40, 230]] },
+    { name: 'volkov', trigger: 212.6, arena: [210.9, 241.1], respawn: [-40, 211.6, 0, Math.PI], sign: 'bear', boss: true,
+      spawn: [['volkov', -40, 227.6]] },
   ],
   props: [['bin', -47.2, 172.6], ['crate', -33, 154.6], ['crate', -33.4, 155.4], ['sign', -46.8, 160], ['bin', -21.5, 177.5],
-          ['bottle', -30.8, 188.6], ['crate', -49.2, 192], ['bottle', -31, 192.4], ['stool', -36.8, 232.8]],
-  light: { inAmbient: [0.13, 0.12, 0.13], sodiumRadius: 14, sodiumK: 1.5, ring: '#fff4e0', ringRadius: 18, ringK: 2.2,
-           flood: '#ffe8c8', floodRadius: 26, floodK: 1.5, stand: '#ffd8a0', standRadius: 11, standK: 0.8 },
+          ['bottle', -30.8, 188.6], ['crate', -49.2, 192], ['bottle', -31, 192.4], ['stool', -35.7, 230.3]],
+  light: { inAmbient: [0.1, 0.095, 0.105], sodiumRadius: 14, sodiumK: 1.5, ring: '#fff4e0', ringRadius: 12, ringK: 4,
+           flood: '#ffe8c8', floodRadius: 12, floodK: 1.1, stand: '#ffd8a0', standRadius: 9, standK: 0.8 },
 };
 const PL = {
   gap: [-42, -38],                                   // the fence gap, the crossing, both tunnels (x)
   fenceZ: 137.5, barS: 138.2, barN: 151.3, track: 143,
   portal: [-8, -1, 137.8, 151, 7], mouth: [138.2, 147.9, 5.5],   // the tunnel under the wall the trains come out of
   blvd: [-48, -32, 151.4, 174], fore: [-60, -20, 174, 180],
-  annex: [-50, -30, 180, 201.5, 6], foyer: [-50, -30, 180, 190, 5.2], gym: [-50, -30, 190, 199.5, 6], doorW: [-43, -37],
-  floor: [-52, -28, 212, 240], bank: { rows: 5, depth: 0.9, rise: 0.7, front: 1.1 }, roofY: 12, tunnelH: 3,
-  drum: [-40, 226, 27, 17], ring: [-40, 229, 3.6],
+  annex: [-50, -30, 180, 201.5, 10.6], foyer: [-50, -30, 180, 190, 5.2], gym: [-50, -30, 190, 199.5, 6], doorW: [-43, -37],
+  // the bowl inside the drum: a 24-sided floor (corner radius floorR), a ring of stands round it (a vomitory through them
+  // south and north), the round back wall up to wallTop, a saucer ceiling up to roofY
+  bowlC: [-40, 226], sides: 24, floorR: 15.4, bank: { rows: 7, depth: 0.9, rise: 0.7, front: 1.1 }, wallTop: 10, roofY: 15.3, tunnelH: 3,
+  drum: [-40, 226, 27, 10.6], ring: [-40, 226, 3.6],  // the drum: centre, radius, height to the cornice
   rect: [-74, -6, 151, 254], rail: [-178, -122, 129, 151],      // rect: the boulevard to the north doors (local); rail: world
   // world: Station Square north of the crossing (you turn west there onto the boulevard), East Station on its east side
   square: [-56, -22, 151.7, 214], station: [-22, -7, 158, 206], sqRect: [-58, -4, 151.4, 216],
@@ -42,7 +44,10 @@ const PL = {
   crossMesh: null, crossLamps: [], crossTris: 0,
   inMesh: null, outMesh: null, inLamps: [], outLamps: [], inTris: 0, outTris: 0, shutter: null,
 };
-PL.bowl = [PL.floor[0] - 4.5, PL.floor[1] + 4.5, PL.floor[2] - 4.5, PL.floor[3] + 4.5];   // the stands' back walls
+PL.backR = PL.floorR + PL.bank.rows * PL.bank.depth;                                       // the stands' back wall (corner radius)
+{ const [cx, cz] = PL.bowlC, c = Math.cos(Math.PI / PL.sides), f = PL.floorR * c, b = PL.backR * c;
+  PL.floor = [cx - f, cx + f, cz - f, cz + f];   // the round floor's bounding box
+  PL.bowl = [cx - b, cx + b, cz - b, cz + b]; }  // the back wall's (the vomitories end at bowl[2] and bowl[3])
 PL.northZ = PL.drum[1] + PL.drum[2] * Math.cos(Math.PI / 24);                              // the drum's north door (z)
 const TRAIN = { x: 0, phase: 'gone', t: 0, bellT: 0, open: true, lift: 1, cars: [], booms: [], lampA: null, lampB: null };
 function plSolid(x0, z0, x1, z1, y0, y1) { WORLD_BOXES.push([x0, y0, z0, x1, y1, z1]); BLOCKERS.push({ x0, x1, z0, z1, y0, y1 }); }
@@ -106,34 +111,117 @@ function buildPalaceOutside(acc) {
     plate(acc, 'volkovPoster', x, 3.3, 177, 1.8, 2.4, phi, 0.08);
   }
   plPost(acc, L, -57, 178.6, 1); plPost(acc, L, -23, 178.6, -1);
-  // the foyer annex: a glass front with the doors, concrete sides, a flat roof, the sign on top
-  { const [ax0, ax1, az0, az1, ah] = PL.annex, [d0, d1] = PL.doorW;
-    for (const [a, b, y0] of [[ax0, d0, 0], [d0, d1, 2.8], [d1, ax1, 0]]) plFace(acc, 'glassFront', a, az0, b, az0, y0, ah, 0, -1, 3, 3, { u0: (a - ax0) / 3 });
-    plFace(acc, 'slabEnd', ax0, az0, ax0, az1, 0, ah, -1, 0, 4, 4); plFace(acc, 'slabEnd', ax1, az0, ax1, az1, 0, ah, 1, 0, 4, 4);
-    ground(acc, 'roofDark', ax0, az0, ax1, az1, ah + 0.02, 4, { cell: 8 });
-    sbox(acc, 'concrete', (ax0 + ax1) / 2, ah, az0 + 0.1, ax1 - ax0 + 0.4, 0.4, 0.5, 0, { u: 5, v: 1, top: 'wallTop', tu: 5, cell: 6 });
-    sbox(acc, 'concrete', (d0 + d1) / 2, 2.9, az0 - 1.0, d1 - d0 + 2, 2.0, 0.22, 0, { u: 2, v: 1 });   // the canopy
-    sbox(acc, 'litWarm', (d0 + d1) / 2, 2.82, az0 - 1.0, 1.2, 0.3, 0.08, 0, { u: 1, v: 1 });
-    plLight(L, (d0 + d1) / 2, 2.6, az0 - 1.3, '#ffd8a0', 8, 1.3);
-    for (const s of [-1, 1]) { sbox(acc, 'iron', (ax0 + ax1) / 2 + s * 5, ah + 0.5, az0 + 0.3, 0.1, 0.1, 1.4, 0, { u: 1, v: 1 }); }
-    plate(acc, 'palaceSign', (ax0 + ax1) / 2, ah + 1.7, az0 + 0.3, 13, 1.75, Math.PI, 0.02);
-    plSolid(ax0, az0, d0, az0 + 0.2, 0, ah); plSolid(d1, az0, ax1, az0 + 0.2, 0, ah); }
-  // the drum: ribbed concrete, the lit window band, a red rim, a shallow cone of roof; the north doors onto the square
-  { const [cx, cz, r, h] = PL.drum, n = 24, P = (a) => [cx + Math.cos(a) * r, cz + Math.sin(a) * r];
+  // ---- the Palace itself: a broad, low cream bowl (two storeys of pilasters with tall warm glass between, a heavy cornice,
+  // a plain attic with a ring of flags, a low metal saucer of roof) and a columned portico on the south over the doors
+  const [cx, cz, R, H1] = PL.drum, n = PL.sides, UP = '#ffe2b0', H2 = H1 + 0.7, H3 = H2 + 1.9;
+  const ang = (i) => -Math.PI / 2 + (i - 0.5) * 2 * Math.PI / n, at = (r, a) => [cx + Math.cos(a) * r, cz + Math.sin(a) * r];
+  const inAnnex = (x, z, m = 0.4) => x > PL.annex[0] - m && x < PL.annex[1] + m && z < PL.annex[3] + m;
+  const band = (key, i, r0, y0, r1, y1, uv, down) => {   // one segment of a ring band (r0, y0) → (r1, y1), facing out (or down)
+    const a0 = ang(i), a1 = ang(i + 1), am = (a0 + a1) / 2, [xa, za] = at(r0, a1), [xb, zb] = at(r0, a0), [xc, zc] = at(r1, a0), [xd, zd] = at(r1, a1);
+    const flat = y1 === y0, nr = down || flat ? 0 : y1 - y0, ny = down ? -1 : flat ? 1 : r0 - r1;
+    aq(acc, key, [xd, y1, zd], [xc, y1, zc], [xb, y0, zb], [xa, y0, za], uv || [0, 0, 1, 1], [nr * Math.cos(am), ny, nr * Math.sin(am)], 99);
+  };
+  { const [g0, g1] = PL.gap, TH = PL.tunnelH;
     for (let i = 0; i < n; i++) {
-      if (i === n / 2) continue;   // the south face: inside the foyer annex
-      const am = Math.PI / 2 + i * 2 * Math.PI / n, [xa, za] = P(am + Math.PI / n), [xb, zb] = P(am - Math.PI / n);
-      if (i === 0) {   // the north doors
-        const [g0, g1] = PL.gap, y = PL.tunnelH;
-        wall(acc, 'arenaWall', xa, za, g0, za, 0, h, 6, 20); wall(acc, 'arenaWall', g0, za, g1, zb, y, h, 6, 20, { u0: (g0 - xa) / 6 }); wall(acc, 'arenaWall', g1, za, xb, zb, 0, h, 6, 20, { u0: (g1 - xa) / 6 });
-        sbox(acc, 'concrete', cx, y, za + 0.9, g1 - g0 + 1.6, 1.8, 0.2, 0, { u: 2, v: 1 });
-        sbox(acc, 'litWarm', cx, y - 0.08, za + 0.9, 1, 0.3, 0.08, 0, { u: 1, v: 1 }); plLight(L, cx, y - 0.3, za + 1.2, '#ffd8a0', 7, 1.2);
-        plate(acc, 'palaceSign', cx, y + 1.3, za, 8, 1.08, 0, 0.05);
-      } else wall(acc, 'arenaWall', xa, za, xb, zb, 0, h, 6, 20, { u0: i * 0.37, cell: 6 });
+      const hid = i === 1 || i === n - 1;   // inside the annex (they'd poke into the gym): only their cornice and attic show
+      const [xa, za] = at(R, ang(i + 1)), [xb, zb] = at(R, ang(i)), len = Math.hypot(xb - xa, zb - za), um = len / 2;
+      if (i === n / 2) {   // the north doors onto the square: a doorway through the lower storey, a canopy, a lit sign
+        for (const [a, b, door] of [[xa, g0, 0], [g0, g1, 1], [g1, xb, 0]]) {
+          if (!door) wall(acc, 'stone', a, za, b, zb, 0, 1, 2, 1, { cell: 99 });
+          wall(acc, 'plFacade', a, za, b, zb, door ? TH : 1, H1, um, H1 - 1, { u0: (a - xa) / um, cell: 99 });
+        }
+        sbox(acc, 'plCornice', cx, TH, za + 1.1, g1 - g0 + 2.4, 2.2, 0.3, 0, { u: 2, v: 0.3, top: 'plAttic', tu: 2 });
+        sbox(acc, 'litWarm', cx, TH - 0.06, za + 1.1, 1.2, 0.3, 0.06, 0, { u: 1, v: 1 }); plLight(L, cx, TH - 0.4, za + 1.4, '#ffd8a0', 7, 1.3);
+        plate(acc, 'palaceSign', cx, TH + 0.8, za, 7, 0.94, 0, 0.05);
+      } else if (i !== 0 && !hid) {
+        wall(acc, 'stone', xa, za, xb, zb, 0, 1, 2, 1, { cell: 99 });
+        wall(acc, 'plFacade', xa, za, xb, zb, 1, H1, um, H1 - 1, { cell: 99 });
+        band('paving', i, R, 0.008, R + 3.2, 0.008, [0, 0, len / 4, 0.8]);   // a granite apron, warm from the uplights
+      }
+      band('plAttic', i, R, H1, R + 0.6, H1, [0, 0, 2, 0.2], true);                // the cornice's soffit
+      band('plCornice', i, R + 0.6, H1, R + 1.2, H2, [0, 0, len / 2, 1]);           // the cornice, leaning out
+      band('plAttic', i, R + 0.15, H2, R + 0.15, H3, [0, 0, len / 3, 1]);           // the attic
+      band('plRoofM', i, R + 0.15, H3, 17, H3 + 2.0, [0, 0, 2, 2]); band('plRoofM', i, 17, H3 + 2.0, 7, H3 + 3.5, [0, 0, 1, 2]); band('plRoofM', i, 7, H3 + 3.5, 0.05, H3 + 3.8, [0, 0, 1, 1]);
+      // a flag on the attic at every corner
+      { const a = ang(i), [px, pz] = at(R - 0.3, a), phi = Math.PI / 2 - a, [fx, fz] = LP(px, pz, phi, 0.95, 0);
+        sbox(acc, 'iron', px, H3, pz, 0.09, 0.09, 4.4, 0, { u: 1, v: 1, top: false, cell: 99 }); plate(acc, 'flag_kras', fx, H3 + 3.7, fz, 1.8, 1.2, phi, 0, [0, 0, 1, 1], true); }
     }
-    cyl(acc, 'roofDark', cx, h, cz, r + 0.4, 9, 4, n, { cell: 99 }); cyl(acc, 'roofDark', cx, h + 4, cz, 9, 0.05, 1.0, 12, { cell: 99 });
-    cyl(acc, 'banner', cx, h - 0.6, cz, r + 0.15, r + 0.15, 0.6, n, { u: 8, v: 4, cell: 99 });
-    for (const a of [0.4, 0.95, 2.2, 2.75, 3.5, 4.1, 5.3, 5.9]) { const [x, z] = P(a); plLight(L, cx + Math.cos(a) * (r + 2.5), 5, cz + Math.sin(a) * (r + 2.5), CFG.street.light.sodium, 17, 1.6); sbox(acc, 'litSodium', x + Math.cos(a) * 0.2, 6, z + Math.sin(a) * 0.2, 0.5, 0.5, 0.3, 0, { u: 1, v: 1 }); }
+    // the pilasters: one at every corner and mid-face, two storeys each, uplit from the ground (every corner one)
+    for (let k = 0; k < 2 * n; k++) {
+      const a = ang(0) + k * Math.PI / n, r = (k % 2 ? R * Math.cos(Math.PI / n) : R) + 0.25, [x, z] = at(r, a);
+      if (inAnnex(x, z) || (Math.abs(x - cx) < 3 && z > cz)) continue;
+      sbox(acc, 'plPilaster', x, 1, z, 0.75, 0.5, H1 - 1, Math.PI / 2 - a, { u: 0.75, v: (H1 - 1) / 2, top: false, skip: 'b', cell: 99 });
+      if (k % 2 === 0) { const [lx, lz] = at(r + 0.75, a); aq(acc, 'litWarm', [lx - 0.15, 0.03, lz + 0.15], [lx + 0.15, 0.03, lz + 0.15], [lx + 0.15, 0.03, lz - 0.15], [lx - 0.15, 0.03, lz - 0.15], [0, 0, 1, 1], [0, 1, 0], 99); plLight(L, lx, 0.35, lz, UP, 7.5, 1.7); }
+    }
+  }
+  // ---- the portico over the doors: six columns, an entablature with a relief of athletes, the attic with the name, a gold cog
+  { const [ax0, ax1, az0, az1, ah] = PL.annex, [d0, d1] = PL.doorW, pz = az0 - 3.6, ez0 = az0 - 4.5, ew = ax1 - ax0 + 0.4;
+    // the annex's own walls: the same two storeys (the drum's rhythm), the doors under the portico
+    for (const [x, s] of [[ax0, -1], [ax1, 1]]) {
+      plFace(acc, 'stone', x, az0, x, az1, 0, 1, s, 0, 2, 1, { cell: 99 }); plFace(acc, 'plFacade', x, az0, x, az1, 1, ah, s, 0, 3.58, ah - 1, { cell: 99 });
+      for (let k = 1; k < 6; k++) { const z = az0 + k * 3.58; sbox(acc, 'plPilaster', x + s * 0.25, 1, z, 0.75, 0.5, ah - 1, s * Math.PI / 2, { u: 0.75, v: (ah - 1) / 2, top: false, skip: 'b', cell: 99 }); if (k % 2) plLight(L, x + s * 1.0, 0.35, z, UP, 7, 1.5); }
+    }
+    sbox(acc, 'plCornice', (ax0 + ax1) / 2, ah, (az0 + az1) / 2 + 0.15, ew + 0.8, az1 - az0 + 0.3, 0.7, 0, { u: 2, v: 0.7, top: 'roofDark', tu: 4, cell: 99 });
+    for (const [a, b] of [[ax0, d0], [d1, ax1]]) plFace(acc, 'plDoors', a, az0, b, az0, 0, 2.8, 0, -1, 2, 2.8, { cell: 99 });
+    plFace(acc, 'plAttic', ax0, az0, ax1, az0, 2.8, 3.4, 0, -1, 2, 0.6, { cell: 99 });
+    plFace(acc, 'plFacade', ax0, az0, ax1, az0, 3.4, ah, 0, -1, (ax1 - ax0) / 6, ah - 1, { cell: 99 });
+    // the columns, each lit from below
+    for (const x of [-49.2, -46.4, -43.6, -36.4, -33.6, -30.8]) {
+      sbox(acc, 'stone', x, 0, pz, 1.1, 1.1, 0.5, 0, { u: 1, v: 0.5, top: 'stone', tu: 1, cell: 99 });
+      cyl(acc, 'plColumn', x, 0.5, pz, 0.44, 0.4, 7.5, 8, { u: 0.35, v: 7.5, cell: 99 });
+      sbox(acc, 'plCornice', x, 8.0, pz, 1.15, 1.15, 0.6, 0, { u: 1.15, v: 0.6, top: false, cell: 99 });
+      plSolid(x - 0.55, pz - 0.55, x + 0.55, pz + 0.55, 0, 8.6);
+      aq(acc, 'litWarm', [x - 0.2, 0.52, pz - 0.75], [x + 0.2, 0.52, pz - 0.75], [x + 0.2, 0.52, pz - 0.6], [x - 0.2, 0.52, pz - 0.6], [0, 0, 1, 1], [0, 1, 0], 99);
+      plLight(L, x, 0.6, pz - 1.0, UP, 6, 1.15);
+    }
+    // the entablature (architrave, the frieze, a cornice) and the attic, roofed back to the annex
+    const ex = (ax0 + ax1) / 2, ezc = (ez0 + az0) / 2, ed = az0 - ez0;
+    sbox(acc, 'plCornice', ex, 8.6, ezc, ew, ed, 0.6, 0, { u: 2, v: 0.6, top: false, cell: 99 });
+    sbox(acc, 'plAttic', ex, 9.2, ezc, ew, ed, 1.7, 0, { u: 3, v: 1.7, top: false, cell: 99 });
+    plate(acc, 'plFrieze', ex, 10.05, ez0, ew - 0.2, 1.62, Math.PI, 0.02);
+    sbox(acc, 'plCornice', ex, 10.9, ezc - 0.2, ew + 0.8, ed + 0.8, 0.6, 0, { u: 2, v: 0.6, top: false, cell: 99 });
+    sbox(acc, 'plAttic', ex, 11.5, ezc + 0.2, ew - 0.4, ed - 0.4, 2.6, 0, { u: 2.5, v: 2.6, top: 'roofDark', tu: 4, cell: 99 });
+    aq(acc, 'plAttic', [ax0 - 0.2, 8.6, az0], [ax1 + 0.2, 8.6, az0], [ax1 + 0.2, 8.6, ez0], [ax0 - 0.2, 8.6, ez0], [0, 0, 6, 2], [0, -1, 0], 99);   // the portico's ceiling
+    for (const x of [-46, -40, -34]) { aq(acc, 'litWarm', [x - 0.5, 8.58, pz + 1.3], [x + 0.5, 8.58, pz + 1.3], [x + 0.5, 8.58, pz + 0.5], [x - 0.5, 8.58, pz + 0.5], [0, 0, 1, 1], [0, -1, 0], 99); plLight(L, x, 7.9, pz + 0.9, '#ffd8a0', 8, 0.8); }
+    // PALACE OF SPORT in big red letters along the attic (read left to right: from +x to -x as you face north)
+    { const text = 'PALACE OF SPORT', step = 1.12, sp = 0.7, wid = [...text].reduce((w, ch) => w + (ch === ' ' ? sp : step), 0);
+      let x = ex + wid / 2; const az = ez0 + 0.2;
+      for (const ch of text) { if (ch === ' ') { x -= sp; continue; } const k = 'PALCEOFSRT'.indexOf(ch); plate(acc, 'plLetters', x - step / 2, 12.75, az, 1.02, 1.4, Math.PI, 0.03, [k / 10, 0, (k + 1) / 10, 1]); x -= step; } }
+    plate(acc, 'cog', ex, 15.4, ez0 + 1.4, 3.4, 3.4, Math.PI, 0, [0, 0, 1, 1], true);
+    sbox(acc, 'plAttic', ex, 14.1, ez0 + 1.4, 1.2, 0.4, 0.4, 0, { u: 1, v: 0.4, cell: 99 });
+    plLight(L, ex, 12.0, ez0 - 4, '#ffe2b0', 9, 1.2);   // the name and the cog, floodlit
+    // monumental steps only as edges: three painted risers across the front, stepped cheeks either side (solid)
+    for (const [z, k] of [[pz - 2.4, 0], [pz - 1.8, 1], [pz - 1.2, 2]]) aq(acc, 'plStepEdge', [ax0 - 1.5, 0.01 + k * 0.002, z + 0.6], [ax1 + 1.5, 0.01 + k * 0.002, z + 0.6], [ax1 + 1.5, 0.01 + k * 0.002, z], [ax0 - 1.5, 0.01 + k * 0.002, z], [0, 0, 12, 1], [0, 1, 0], 99);
+    for (const s of [-1, 1]) {
+      const x = ex + s * (ew / 2 + 0.75);
+      for (const [h, d] of [[0.45, 5.4], [0.9, 4.8], [1.35, 4.2]]) sbox(acc, 'stone', x, 0, az0 - d / 2 + 0.2, 1.4, d, h, 0, { u: 1, v: 0.45, top: 'stone', tu: 1, cell: 99 });
+      plSolid(x - 0.7, az0 - 5.2, x + 0.7, az0, 0, 1.35);
+      plStatue(acc, ex + s * 14, az0 - 2.4, Math.PI, 1.15);
+      plLight(L, ex + s * 14, 0.5, az0 - 4.2, UP, 7, 1.4);
+    }
+    plSolid(ax0, az0, d0, az0 + 0.2, 0, ah); plSolid(d1, az0, ax1, az0 + 0.2, 0, ah); }
+  // ---- four lattice floodlight masts round the bowl, their light banks turned on it
+  for (const a of [-3 * Math.PI / 4, -Math.PI / 4, Math.PI / 4, 3 * Math.PI / 4]) {
+    const [x, z] = at(36.6, a), dx = -Math.cos(a), dz = -Math.sin(a), h = 38.5;
+    frustum(acc, 'plLattice', x, 0, z, 2.6, 2.6, 0.9, 0.9, h, 0, { u: 2.6, v: 6, top: false, cell: 99 });
+    plLatticeIn(acc, x, z, 2.6, 0.9, h);
+    sbox(acc, 'iron', x, h, z, 2.4, 2.4, 0.25, 0, { u: 1, v: 1, cell: 99 });
+    const c = [x + dx * 0.9, h + 2.3, z + dz * 0.9], ca = Math.cos(0.6), sa = Math.sin(0.6), u = [-dz * 3.4, 0, dx * 3.4], v = [dx * sa * 2.3, ca * 2.3, dz * sa * 2.3];
+    const Q = (s, t) => [c[0] + u[0] * s + v[0] * t, c[1] + u[1] * s + v[1] * t, c[2] + u[2] * s + v[2] * t];
+    aq(acc, 'plFloodBank', Q(-1, 1), Q(1, 1), Q(1, -1), Q(-1, -1), [0, 0, 1, 1], [dx * ca, -sa, dz * ca], 99);
+    aq(acc, 'iron', Q(1, 1), Q(-1, 1), Q(-1, -1), Q(1, -1), [0, 0, 1, 1], [-dx * ca, sa, -dz * ca], 99);
+    sbox(acc, 'litRed', x, h + 3.9, z, 0.3, 0.3, 0.3, 0, { u: 1, v: 1, cell: 99 });
+    plSolid(x - 1.3, z - 1.3, x + 1.3, z + 1.3, 0, h);
+    plLight(L, x + dx * 5.6, 22, z + dz * 5.6, '#fff4dc', 26, 1.5);   // onto the roof, the attic and the flags
+    plLight(L, x + dx * 6, 9, z + dz * 6, '#fff4dc', 14, 1.1);      // a pool at the mast's foot
+  }
+}
+// the back faces of a lattice mast (seen through the front ones)
+function plLatticeIn(acc, x, z, w0, w1, h) {
+  const b = [[-1, -1], [1, -1], [1, 1], [-1, 1]];
+  for (let i = 0; i < 4; i++) {
+    const [sx0, sz0] = b[i], [sx1, sz1] = b[(i + 1) % 4], nx = (sx0 + sx1) / 2, nz = (sz0 + sz1) / 2;
+    aq(acc, 'plLattice', [x + sx0 * w1 / 2, h, z + sz0 * w1 / 2], [x + sx1 * w1 / 2, h, z + sz1 * w1 / 2], [x + sx1 * w0 / 2, 0, z + sz1 * w0 / 2], [x + sx0 * w0 / 2, 0, z + sz0 * w0 / 2], [0, 0, 1, h / 6], [-nx, 0, -nz], 99);
   }
 }
 // ---- Station Square (world): over the crossing you come up onto the square in front of East Station, and turn west
@@ -208,26 +296,39 @@ function buildPalaceCrossing(acc) {
   buildStationSquare(acc, L);
 }
 // ---- inside: the foyer, the gym, the tunnels, the bowl (floor, stands, roof, the ring under its lights)
-// a bank of stands along one side of the floor: the edge runs (ax, az) → (bx, bz); (ox, oz) points away from the floor;
-// gap = [u0, u1] along the edge left open for a tunnel; ends: cheek the two ends
-function plBank(acc, ax, az, bx, bz, ox, oz, gap, ends) {
-  const B = PL.bank, len = Math.hypot(bx - ax, bz - az), ux = (bx - ax) / len, uz = (bz - az) / len, D = B.rows * B.depth;
-  const at = (u, d) => [ax + ux * u + ox * d, az + uz * u + oz * d];
-  const top = (k) => B.front + k * B.rise;
-  const cheek = (u, sx, sz) => { for (let k = 0; k < B.rows; k++) { const [x0, z0] = at(u, k * B.depth), [x1, z1] = at(u, (k + 1) * B.depth); plFace(acc, 'concrete', x0, z0, x1, z1, 0, top(k), sx, sz, 2, 2); } };
-  for (const [a, b] of gap ? [[0, gap[0]], [gap[1], len]] : [[0, len]]) {
-    const face = (key, d, y0, y1, um, vm) => { const [x0, z0] = at(a, d), [x1, z1] = at(b, d); plFace(acc, key, x0, z0, x1, z1, y0, y1, -ox, -oz, um, vm, { u0: a / um }); };
-    face('arenaBoard', 0, 0, B.front, 4, B.front);
-    for (let k = 0; k < B.rows; k++) {
-      if (k > 0) face('crowd', k * B.depth, top(k - 1), top(k), 4, B.rise);
-      const [x0, z0] = at(a, k * B.depth), [x1, z1] = at(b, (k + 1) * B.depth);
-      ground(acc, 'concrete', Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), top(k), 2, { cell: 4 });
+// the bowl's polygon: segment i faces the centre from angle -π/2 + i·2π/sides (0 = south, sides/2 = north: the vomitories);
+// plAng(i) is the corner between segment i-1 and segment i
+const plAng = (i) => -Math.PI / 2 + (i - 0.5) * 2 * Math.PI / PL.sides;
+const plAt = (r, a) => [PL.bowlC[0] + Math.cos(a) * r, PL.bowlC[1] + Math.sin(a) * r];
+// the stands: a ring of tiers round the floor (the boards, then the crowd on every riser), open south and north for the
+// vomitories, whose cheeks step up with the tiers
+function plTiers(acc) {
+  const B = PL.bank, n = PL.sides, top = (k) => B.front + k * B.rise, R = (k) => PL.floorR + k * B.depth;
+  for (let i = 0; i < n; i++) {
+    const a0 = plAng(i), a1 = plAng(i + 1);
+    if (i === 0 || i === n / 2) {
+      for (let k = 0; k < B.rows; k++) for (const [a, s] of [[a0, 1], [a1, -1]]) {
+        const [x0, z0] = plAt(R(k), a), [x1, z1] = plAt(R(k + 1), a);
+        plFace(acc, 'concrete', x0, z0, x1, z1, 0, top(k), -Math.sin(a) * s, Math.cos(a) * s, 2, 2, { cell: 99 });
+      }
+      continue;
     }
-    const [x0, z0] = at(a, 0), [x1, z1] = at(b, D);
-    plSolid(Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1), 0, top(B.rows - 1));
+    for (let k = 0; k < B.rows; k++) {
+      const [xa, za] = plAt(R(k), a0), [xb, zb] = plAt(R(k), a1), [xc, zc] = plAt(R(k + 1), a1), [xd, zd] = plAt(R(k + 1), a0), len = Math.hypot(xb - xa, zb - za);
+      if (k === 0) wall(acc, 'arenaBoard', xa, za, xb, zb, 0, B.front, 4, B.front, { cell: 99 });
+      else wall(acc, 'crowd', xa, za, xb, zb, top(k - 1), top(k), 4, B.rise, { u0: (i * 0.37 + k * 0.29) % 1 });
+      aq(acc, 'concrete', [xd, top(k), zd], [xc, top(k), zc], [xb, top(k), zb], [xa, top(k), za], [0, 0, len / 2, B.depth / 2], [0, 1, 0], 99);
+    }
+    // a box under the front rows for props that land there (goons and ragdolls are kept on the floor by the walk rects)
+    { const [x, z] = plAt(R(0) + 1.4, (a0 + a1) / 2); WORLD_BOXES.push([x - 1.2, 0, z - 1.2, x + 1.2, top(2), z + 1.2]); }
   }
-  if (gap) { cheek(gap[0], ux, uz); cheek(gap[1], -ux, -uz); }
-  if (ends) { cheek(0, -ux, -uz); cheek(len, ux, uz); }
+}
+// an iron lamp shade hanging from the ceiling at height y, lit underneath
+function plShade(acc, list, x, z, y, top, col, r, k) {
+  sbox(acc, 'iron', x, y + 0.4, z, 0.03, 0.03, top - y - 0.4, 0, { u: 1, v: 1, top: false, cell: 99 });
+  frustum(acc, 'iron', x, y, z, 0.9, 0.9, 0.3, 0.3, 0.4, 0, { u: 1, v: 1, cell: 99 });
+  aq(acc, 'litWarm', [x - 0.38, y + 0.02, z + 0.38], [x + 0.38, y + 0.02, z + 0.38], [x + 0.38, y + 0.02, z - 0.38], [x - 0.38, y + 0.02, z - 0.38], [0, 0, 1, 1], [0, -1, 0], 99);
+  plLight(list, x, y - 0.4, z, col, r, k);
 }
 function buildPalaceInside(acc) {
   const L = PL.inLamps, C = CFG.palace.light, [g0, g1] = PL.gap, [d0, d1] = PL.doorW, TH = PL.tunnelH;
@@ -241,67 +342,123 @@ function buildPalaceInside(acc) {
     for (const x of [-47, -33]) plate(acc, 'volkovPoster', x, 2.6, z1, 1.6, 2.1, Math.PI, 0.02);
     plate(acc, 'banner', -40, 4.1, z1, 1.2, 1.8, Math.PI, 0.02);
     for (const [x, z] of [[-45, 183.5], [-35, 183.5], [-40, 187.5]]) { sbox(acc, 'litWarm', x, H - 0.1, z, 0.5, 0.5, 0.1, 0, { u: 1, v: 1 }); plLight(L, x, H - 0.4, z, '#ffd8a0', 7.5, 1.2); } }
-  // ---- the gym: sprung floor, wall bars, mats, a vaulting horse, a beam, rings, the barbells
-  { const [x0, x1, z0, z1, H] = PL.gym;
+  // ---- the gym: the national training hall at night. The gymnast mural over the tunnel door with the podium under it,
+  // wall bars, climbing ropes, rings, a pommel horse, the vault's runway, springboard and horse, the champions' banners,
+  // the coach's lit window up on the east wall, a chalk trough; a few hard pools of light and the dark between them
+  { const [x0, x1, z0, z1, H] = PL.gym, LW = '#fff0d8';
     pzWalls(acc, 'sportWall', [x0, x1, z0, z1], 0, 3, { s: [[d0, d1, 2.8]], n: [[g0, g1, TH - 0.2]] }); pzWalls(acc, 'creamWall', [x0, x1, z0, z1], 3, H - 3);
     pzFloorCeil(acc, [x0, x1, z0, z1], 0, H, 'sportFloor');
-    for (const [x, phi] of [[x0, Math.PI / 2], [x1, -Math.PI / 2]]) for (const z of [192, 194.8, 197.6]) plate(acc, 'wallBars', x, 1.5, z, 2.6, 2.8, phi, 0.06);
+    for (const z of [192, 194.8, 197.6]) sbox(acc, 'iron', (x0 + x1) / 2, H - 0.35, z, x1 - x0, 0.22, 0.3, 0, { u: 1, v: 1, cell: 99 });   // roof beams
+    // walls: the mural and its wash, the slogan over the door you came in by, wall bars (cut out), night windows, the coach
+    plate(acc, 'gymMural', -40, 4.45, z1, 12, 3.0, Math.PI, 0.03);
+    sbox(acc, 'litWarm', -40, H - 0.12, z1 - 0.5, 7, 0.12, 0.08, 0, { u: 1, v: 1, cell: 99 }); plLight(L, -40, 5.4, z1 - 1.3, '#ffe8c8', 7.5, 1.5);
+    plate(acc, 'gymSlogan', -40, 4.7, z0, 13, 0.92, 0, 0.03);
+    plate(acc, 'gymBars', x0, 1.45, 195, 8, 2.9, Math.PI / 2, 0.12, [0, 0, 8, 2.9]);
+    plate(acc, 'gymBars', x1, 1.45, 193, 4, 2.9, -Math.PI / 2, 0.12, [0, 0, 4, 2.9]);
     for (const z of [192.4, 195.4, 198.2]) plate(acc, 'windowNight', x0, 4.4, z, 1.6, 1.6, Math.PI / 2, 0.02);
-    for (const [a, b, c, d] of [[-48, -44, 191, 194], [-36, -32, 195.5, 198.6], [-47.6, -43.6, 196, 199]]) ground(acc, 'mat', a, c, b, d, 0.035, 2);
-    sbox(acc, 'padRed', -40, 0.75, 194.6, 1.7, 0.45, 0.4, 0, { u: 1, v: 1 }); for (const sx of [-0.6, 0.6]) for (const sz of [-0.15, 0.15]) sbox(acc, 'iron', -40 + sx, 0, 194.6 + sz, 0.06, 0.06, 0.75, 0, { u: 1, v: 1, top: false });
-    plSolid(-40.9, 194.3, -39.1, 194.9, 0, 1.15);
-    sbox(acc, 'darkwood', -34, 1.0, 192.2, 4.6, 0.14, 0.14, 0, { u: 1, v: 1 }); for (const sx of [-2, 2]) sbox(acc, 'iron', -34 + sx, 0, 192.2, 0.08, 0.4, 1.0, 0, { u: 1, v: 1 });
-    plSolid(-36.4, 192.05, -31.6, 192.35, 0, 1.14);
-    for (const x of [-45.5, -44.6]) { sbox(acc, 'iron', x, 2.0, 193, 0.03, 0.03, H - 2.0, 0, { u: 1, v: 1, top: false, cell: 99 }); cyl(acc, 'darkwood', x, 1.85, 193, 0.14, 0.14, 0.12, 6, { u: 1, v: 1 }); }
-    sbox(acc, 'iron', x1 - 0.5, 0.9, 191.2, 0.1, 1.9, 0.06, 0, { u: 1, v: 1 }); for (const s of [-0.85, 0.85]) cyl(acc, 'black', x1 - 0.5, 0.55, 191.2 + s, 0.22, 0.22, 0.7, 8, { u: 1, v: 1 });
-    sbox(acc, 'iron', x1 - 0.5, 0, 191.2, 0.4, 1.4, 0.9, 0, { u: 1, v: 1 }); plSolid(x1 - 0.8, 190.3, x1, 192.1, 0, 1.0);
-    for (const [x, z] of [[-45, 192.2], [-35, 192.2], [-45, 197.4], [-35, 197.4]]) { sbox(acc, 'fluor', x, H - 0.1, z, 2.6, 0.24, 0.1, 0, { u: 1, v: 1 }); plLight(L, x, H - 0.4, z, '#e8f4ff', 10, 1.4); } }
-  // ---- the players' tunnel under the south stands: green dado, a bare bulb
-  { const [z0, z1] = [PL.gym[3], PL.bowl[2]];
+    plLight(L, x0 + 1, 4.6, 195.2, '#7a96d8', 6, 0.7);   // moonlight through them
+    plate(acc, 'coachWin', x1, 3.9, 196.6, 2.6, 1.6, -Math.PI / 2, 0.03); plLight(L, x1 - 0.8, 3.9, 196.6, '#ffcf86', 5, 0.9);
+    // the champions' banners, hung between the beams (a face each way so both doors read them)
+    [-48.2, -45.4, -34.6, -31.8].forEach((x, k) => { for (const phi of [Math.PI, 0]) plate(acc, 'gymChamps', x, 4.95, 193.6 + (phi ? -0.01 : 0.01), 1.0, 1.5, phi, 0, [k / 4, 0, (k + 1) / 4, 1]); sbox(acc, 'iron', x, 5.7, 193.6, 1.2, 0.05, 0.05, 0, { u: 1, v: 1, cell: 99 }); });
+    // floor: mats, the vault's runway (the running line), the chalk patch
+    for (const [a, b, c, d] of [[-47.4, -43.4, 194, 196], [-35.5, -32.5, 193.8, 195.8], [-33, -30.6, 191.1, 193]]) ground(acc, 'mat', a, c, b, d, 0.035, 2);
+    aq(acc, 'gymLane', [-48.5, 0.008, 192.2], [-36.5, 0.008, 192.2], [-36.5, 0.008, 191.3], [-48.5, 0.008, 191.3], [0, 0, 12, 1], [0, 1, 0], 2);
+    ground(acc, 'gymChalk', -32.2, 190.2, -30.4, 191.6, 0.012, 1.8);
+    // the vault: springboard, horse
+    { const xa = -36.4, xb = -35.2, za = 191.45, zb = 192.05, h0 = 0.06, h1 = 0.32;
+      aq(acc, 'gymSpring', [xa, h0, za], [xb, h1, za], [xb, h1, zb], [xa, h0, zb], [0, 0, 1, 1], [-0.2, 1, 0], 99);
+      for (const z of [za, zb]) aq(acc, 'gymSpring', [xa, h0, z], [xb, h1, z], [xb, 0, z], [xa, 0, z], [0, 0, 1, 0.3], [0, 0, z === za ? -1 : 1], 99);
+      aq(acc, 'gymSpring', [xb, h1, za], [xb, h1, zb], [xb, 0, zb], [xb, 0, za], [0, 0, 1, 0.3], [1, 0, 0], 99);
+      plSolid(xa, za, xb, zb, 0, h1);
+      sbox(acc, 'gymLeather', -34, 0.95, 191.75, 1.6, 0.4, 0.34, 0, { u: 1, v: 1, cell: 99 });
+      for (const sx of [-0.6, 0.6]) for (const sz of [-0.12, 0.12]) sbox(acc, 'iron', -34 + sx, 0, 191.75 + sz, 0.06, 0.06, 0.95, 0, { u: 1, v: 1, top: false, cell: 99 });
+      plSolid(-34.8, 191.5, -33.2, 192, 0, 1.29); }
+    // the pommel horse
+    { const x = -45.4, z = 195;
+      sbox(acc, 'gymLeather', x, 0.85, z, 1.6, 0.36, 0.3, 0, { u: 1, v: 1, cell: 99 });
+      for (const sx of [-0.35, 0.35]) { for (const sz of [-0.1, 0.1]) sbox(acc, 'darkwood', x + sx, 1.15, z + sz, 0.05, 0.05, 0.13, 0, { u: 1, v: 1, top: false, cell: 99 }); sbox(acc, 'darkwood', x + sx, 1.28, z, 0.06, 0.28, 0.05, 0, { u: 1, v: 1, cell: 99 }); }
+      for (const sx of [-0.6, 0.6]) { sbox(acc, 'iron', x + sx, 0, z, 0.1, 0.1, 0.85, 0, { u: 1, v: 1, top: false, cell: 99 }); sbox(acc, 'iron', x + sx, 0, z, 0.08, 0.7, 0.06, 0, { u: 1, v: 1, cell: 99 }); }
+      plSolid(x - 0.8, z - 0.2, x + 0.8, z + 0.2, 0, 1.33); }
+    // the rings, the climbing ropes
+    for (const x of [-34.25, -33.75]) { sbox(acc, 'darkwood', x, 2.56, 194.8, 0.04, 0.04, H - 2.9, 0, { u: 1, v: 1, top: false, cell: 99 }); plate(acc, 'gymRing', x, 2.42, 194.8, 0.3, 0.3, 0, 0, [0, 0, 1, 1], true); }
+    for (const x of [-48.6, -47.8, -47]) { sbox(acc, 'gymRope', x, 0.25, 192, 0.06, 0.06, H - 0.6, 0, { u: 0.06, v: 2, top: false, cell: 99 }); sbox(acc, 'gymRope', x, 0.2, 192, 0.13, 0.13, 0.22, 0, { u: 0.13, v: 0.22, cell: 99 }); }
+    // the podium, 2 · 1 · 3 as you face it, under the mural: red and white, numbered, cover in a fight
+    [[-33.2, 0.55, 1], [-34.5, 0.8, 0], [-35.8, 0.4, 2]].forEach(([x, h, k]) => {
+      sbox(acc, 'gymPodSide', x, 0, 198.6, 1.3, 1.0, h, 0, { u: 1.3, v: 0.8, top: 'padRed', tu: 1, cell: 99 });
+      plate(acc, 'gymPodNum', x, h - 0.26, 198.1, 0.5, 0.4, Math.PI, 0.01, [k / 3, 0, (k + 1) / 3, 1]);
+    });
+    plSolid(-36.45, 198.1, -32.55, 199.1, 0, 0.8);
+    // the chalk trough
+    sbox(acc, 'iron', -31.2, 0, 190.8, 0.1, 0.1, 0.85, 0, { u: 1, v: 1, top: false, cell: 99 });
+    frustum(acc, 'darkwood', -31.2, 0.85, 190.8, 0.3, 0.3, 0.62, 0.62, 0.22, 0, { u: 1, v: 1, top: 'white', cell: 99 });
+    plSolid(-31.5, 190.5, -30.9, 191.1, 0, 1.07);
+    // the light: hard pools over the apparatus, darker between
+    for (const [x, z, r, k] of [[-45.4, 195, 7.5, 2.3], [-34, 194.6, 7.5, 2.3], [-40, 192.2, 6.5, 1.7], [-40, 194.3, 5.5, 1.2], [-47.8, 191.6, 5.5, 1.4]]) plShade(acc, L, x, z, 4.6, H, LW, r, k); }
+  // ---- the players' tunnel (the gym to the south vomitory) and the way out (the north vomitory to the north doors)
+  const [cx, cz] = PL.bowlC, n = PL.sides, sn = Math.sin(Math.PI / n), rb = PL.backR, zs = PL.bowl[2], zn = PL.bowl[3], WT = PL.wallTop;
+  for (const [z0, z1] of [[PL.gym[3], zs], [zn, PL.northZ]]) {
     plFace(acc, 'stairWall', g0, z0, g0, z1, 0, TH, 1, 0); plFace(acc, 'stairWall', g1, z0, g1, z1, 0, TH, -1, 0);
-    ground(acc, 'stairFloor', g0, z0, g1, PL.floor[2], 0.004, 1.6); plCeil(acc, 'slabEnd', g0, z0, g1, z1, TH, 4);
-    sbox(acc, 'litWarm', -40, TH - 0.1, (z0 + z1) / 2, 0.3, 0.3, 0.1, 0, { u: 1, v: 1 }); plLight(L, -40, TH - 0.3, (z0 + z1) / 2, '#ffd8a0', 6, 1.2); }
-  // ---- out to the north doors, the same; a steel shutter until the Bear is down (its own little mesh)
-  { const [z0, z1] = [PL.bowl[3], PL.northZ];
-    plFace(acc, 'stairWall', g0, z0, g0, z1, 0, TH, 1, 0); plFace(acc, 'stairWall', g1, z0, g1, z1, 0, TH, -1, 0);
-    ground(acc, 'stairFloor', g0, PL.floor[3], g1, z1, 0.004, 1.6); plCeil(acc, 'slabEnd', g0, z0, g1, z1, TH, 4);
-    sbox(acc, 'litWarm', -40, TH - 0.1, (z0 + z1) / 2, 0.3, 0.3, 0.1, 0, { u: 1, v: 1 }); plLight(L, -40, TH - 0.3, (z0 + z1) / 2, '#ffd8a0', 6, 1.2); }
-  // ---- the bowl: the sports floor, four banks of stands (full), the back walls, the roof
-  const [fx0, fx1, fz0, fz1] = PL.floor, [wx0, wx1, wz0, wz1] = PL.bowl, R = PL.roofY, gu = [g0 - wx0, g1 - wx0];
-  ground(acc, 'sportFloor', fx0, fz0, fx1, fz1, 0.004, 4, { cell: 4 });
-  plBank(acc, wx0, fz0, wx1, fz0, 0, -1, gu, false); plBank(acc, wx0, fz1, wx1, fz1, 0, 1, gu, false);
-  plBank(acc, fx0, fz0, fx0, fz1, -1, 0, null, true); plBank(acc, fx1, fz0, fx1, fz1, 1, 0, null, true);
-  for (const [z, s] of [[wz0, 1], [wz1, -1]]) for (const [a, b, y0] of [[wx0, g0, 0], [g0, g1, TH], [g1, wx1, 0]]) plFace(acc, 'slabEnd', a, z, b, z, y0, R, 0, s, 4, 4);
-  plFace(acc, 'slabEnd', wx0, wz0, wx0, wz1, 0, R, 1, 0, 4, 4); plFace(acc, 'slabEnd', wx1, wz0, wx1, wz1, 0, R, -1, 0, 4, 4);
-  plCeil(acc, 'roofDark', wx0, wz0, wx1, wz1, R, 8);
-  // banners and flags round the back walls, the Bear over the north tunnel
-  for (const x of [-52, -46, -34, -28]) { plate(acc, 'banner', x, 7.6, wz0, 1.6, 4.2, 0, 0.03); plate(acc, 'banner', x, 7.6, wz1, 1.6, 4.2, Math.PI, 0.03); }
-  for (const z of [218, 226, 234]) { plate(acc, 'flag_kras', wx0, 7.4, z, 3.6, 2.4, Math.PI / 2, 0.03); plate(acc, 'flag_kras', wx1, 7.4, z, 3.6, 2.4, -Math.PI / 2, 0.03); }
-  plate(acc, 'volkovPoster', -40, 6.6, wz1, 3.0, 4.0, Math.PI, 0.04);
-  plate(acc, 'palaceSign', -40, 5.4, wz0, 8, 1.08, 0, 0.04);
-  // the lighting rig: a truss over the floor, floods at its corners, the scoreboard, the ring's lamps
-  const [rx, rz, rs] = PL.ring, ty = 9.4;
-  for (const [a, b, c, d] of [[-50, -30, 215, 215], [-50, -30, 237, 237], [-50, -50, 215, 237], [-30, -30, 215, 237]]) sbox(acc, 'iron', (a + b) / 2, ty, (c + d) / 2, Math.max(0.3, b - a), Math.max(0.3, d - c), 0.3, 0, { u: 1, v: 1 });
-  for (const [x, z] of [[-50, 215], [-30, 215], [-50, 237], [-30, 237], [-50, 226], [-30, 226]]) { sbox(acc, 'iron', x, ty + 0.3, z, 0.05, 0.05, R - ty - 0.3, 0, { u: 1, v: 1, top: false, cell: 99 }); sbox(acc, 'flood', x, ty - 0.45, z, 0.8, 0.8, 0.45, 0, { u: 0.8, v: 0.45, top: 'iron' }); plLight(L, x, ty - 0.8, z, C.flood, C.floodRadius, C.floodK); }
-  sbox(acc, 'scoreboard', -40, 8.6, 222, 3.6, 3.6, 2.0, 0, { u: 3.6, v: 2.0, top: 'iron' }); sbox(acc, 'iron', -40, 10.6, 222, 0.08, 0.08, R - 10.6, 0, { u: 1, v: 1, top: false, cell: 99 });
-  sbox(acc, 'iron', rx, 7.6, rz, rs * 2, rs * 2, 0.16, 0, { u: 1, v: 1 }); sbox(acc, 'iron', rx, 7.76, rz, 0.06, 0.06, R - 7.76, 0, { u: 1, v: 1, top: false, cell: 99 });
-  for (const sx of [-1, 1]) for (const sz of [-1, 1]) sbox(acc, 'flood', rx + sx * rs * 0.7, 7.25, rz + sz * rs * 0.7, 0.6, 0.6, 0.35, 0, { u: 0.6, v: 0.35, top: 'iron' });
-  plLight(L, rx, 6.9, rz, C.ring, C.ringRadius, C.ringK);
-  for (const z of [216, 236]) plLight(L, -40, 7, z, C.flood, 15, 0.9);   // a wash over the floor at either end
-  for (const [x, z] of [[-48, wz0 + 1.2], [-32, wz0 + 1.2], [-48, wz1 - 1.2], [-32, wz1 - 1.2], [wx0 + 1.2, 226], [wx1 - 1.2, 226]]) plLight(L, x, 8.5, z, C.stand, C.standRadius, C.standK);
+    ground(acc, 'stairFloor', g0, z0, g1, z1, 0.004, 1.6); plCeil(acc, 'slabEnd', g0, z0, g1, z1, TH, 4);
+    sbox(acc, 'litWarm', -40, TH - 0.1, (z0 + z1) / 2, 0.3, 0.3, 0.1, 0, { u: 1, v: 1 }); plLight(L, -40, TH - 0.3, (z0 + z1) / 2, '#ffd8a0', 6, 1.2);
+  }
+  ground(acc, 'stairFloor', cx - rb * sn, zs, cx + rb * sn, cz - 16, 0.004, 1.6); ground(acc, 'stairFloor', cx - rb * sn, cz + 16, cx + rb * sn, zn, 0.004, 1.6);
+  // ---- the bowl: the round floor, the ring of stands, the round back wall, the saucer ceiling
+  ground(acc, 'sportFloor', cx - 16, cz - 16, cx + 16, cz + 16, 0.004, 4, { cell: 2 });
+  for (let i = 0; i < n; i++) {   // a red circle round the floor
+    const [xa, za] = plAt(13.4, plAng(i)), [xb, zb] = plAt(13.4, plAng(i + 1)), [xc, zc] = plAt(13.65, plAng(i + 1)), [xd, zd] = plAt(13.65, plAng(i));
+    aq(acc, 'padRed', [xd, 0.01, zd], [xc, 0.01, zc], [xb, 0.01, zb], [xa, 0.01, za], [0, 0, 1, 1], [0, 1, 0], 99);
+  }
+  plTiers(acc);
+  const topT = PL.bank.front + (PL.bank.rows - 1) * PL.bank.rise;
+  for (let i = 0; i < n; i++) {
+    const [xa, za] = plAt(rb, plAng(i)), [xb, zb] = plAt(rb, plAng(i + 1));
+    if (i === 0 || i === n / 2) {   // the back of a vomitory: the corridor's mouth
+      const xs = xa < xb ? [xa, g0, g1, xb] : [xa, g1, g0, xb];
+      wall(acc, 'slabEnd', xs[0], za, xs[1], za, 0, WT, 4, 4); wall(acc, 'slabEnd', xs[1], za, xs[2], za, TH, WT, 4, 4); wall(acc, 'slabEnd', xs[2], za, xs[3], za, 0, WT, 4, 4);
+    } else wall(acc, 'slabEnd', xa, za, xb, zb, topT, WT, 4, 4, { cell: 3 });
+  }
+  { const prof = [[rb, WT], [18.6, 12.3], [13.6, 14.0], [7.6, 15.0], [2.6, PL.roofY - 0.05], [0.02, PL.roofY]];
+    for (let j = 0; j < prof.length - 1; j++) for (let i = 0; i < n; i++) {
+      const [r0, y0] = prof[j], [r1, y1] = prof[j + 1], a0 = plAng(i), a1 = plAng(i + 1), am = (a0 + a1) / 2;
+      const [xa, za] = plAt(r0, a0), [xb, zb] = plAt(r0, a1), [xc, zc] = plAt(r1, a1), [xd, zd] = plAt(r1, a0);
+      aq(acc, 'domeRib', [xd, y1, zd], [xc, y1, zc], [xb, y0, zb], [xa, y0, za], [0, 0, 1, 1], [-(y1 - y0) * Math.cos(am), r1 - r0, -(y1 - y0) * Math.sin(am)], 99);
+    } }
+  // banners and flags round the back wall, the Bear over the way out, the Palace's name over the way in
+  for (let i = 0; i < n; i++) {
+    const am = -Math.PI / 2 + i * 2 * Math.PI / n, [x, z] = plAt(rb * Math.cos(Math.PI / n), am), phi = Math.atan2(-Math.cos(am), -Math.sin(am));
+    if (i === 0) plate(acc, 'palaceSign', x, 6.8, z, 7, 0.94, phi, 0.04);
+    else if (i === n / 2) plate(acc, 'volkovPoster', x, 6.7, z, 3.0, 4.0, phi, 0.04);
+    else if (i % 2) plate(acc, 'banner', x, 7.9, z, 1.6, 3.6, phi, 0.03);
+    else plate(acc, 'flag_kras', x, 7.9, z, 3.6, 2.4, phi, 0.03);
+  }
+  // the lighting rig: a ring truss under the saucer, floods hanging off it, the scoreboard over the ring, the ring's lamps
+  const [rx, rz, rs] = PL.ring, tr = 8.6, ty = 10.8;
+  for (let i = 0; i < n; i++) {
+    const am = -Math.PI / 2 + i * 2 * Math.PI / n, [x, z] = plAt(tr * Math.cos(Math.PI / n), am);
+    sbox(acc, 'iron', x, ty, z, 2 * tr * sn + 0.1, 0.45, 0.45, -am - Math.PI / 2, { u: 1, v: 1, cell: 99 });
+    if (i % 2 === 0) { const [fx, fz] = plAt(tr - 0.1, am); sbox(acc, 'iron', fx, ty - 0.55, fz, 0.7, 0.7, 0.55, 0, { u: 1, v: 1, cell: 99 }); aq(acc, 'flood', [fx - 0.3, ty - 0.56, fz + 0.3], [fx + 0.3, ty - 0.56, fz + 0.3], [fx + 0.3, ty - 0.56, fz - 0.3], [fx - 0.3, ty - 0.56, fz - 0.3], [0, 0, 1, 1], [0, -1, 0], 99);
+      const [lx, lz] = plAt(12.5, am); plLight(L, lx, 9.5, lz, C.flood, C.floodRadius, C.floodK); }   // aimed out at the stands
+    if (i % 4 === 2) sbox(acc, 'iron', x, ty + 0.45, z, 0.05, 0.05, 15 - ty - 0.45, 0, { u: 1, v: 1, top: false, cell: 99 });
+    if (i % 4 === 1) { const [sx, sz] = plAt(17, am); plLight(L, sx, 11, sz, C.stand, C.standRadius, C.standK); }   // the upper tiers
+  }
+  sbox(acc, 'iron', rx, 8.9, rz, 3.5, 3.5, 2.0, 0, { u: 1, v: 1, cell: 99 }); for (let k = 0; k < 4; k++) plate(acc, 'scoreboard', rx, 9.9, rz, 3.4, 1.9, k * Math.PI / 2, 1.76); sbox(acc, 'iron', rx, 10.9, rz, 0.08, 0.08, PL.roofY - 10.9, 0, { u: 1, v: 1, top: false, cell: 99 });
+  sbox(acc, 'iron', rx, 7.6, rz, rs * 2, rs * 2, 0.16, 0, { u: 1, v: 1, cell: 99 });
+  for (const sx of [-1, 1]) for (const sz of [-1, 1]) sbox(acc, 'flood', rx + sx * rs * 0.7, 7.25, rz + sz * rs * 0.7, 0.6, 0.6, 0.35, 0, { u: 0.6, v: 0.35, top: 'iron', cell: 99 });
+  plLight(L, rx, 6.5, rz, C.ring, C.ringRadius, C.ringK);   // a hard white pool on the canvas
+  for (const z of [zs + 3, zn - 3]) plLight(L, -40, 4.5, z, '#ffd8a0', 8, 1.0);   // the vomitories
   // the ring: canvas on the floor, red/blue corners, three ropes (open on the side you come in from)
   ground(acc, 'canvas', rx - rs, rz - rs, rx + rs, rz + rs, 0.02, 2);
-  for (const [cx, cz, k] of [[-rs, -rs, 'padRed'], [rs, -rs, 'padBlue'], [-rs, rs, 'padBlue'], [rs, rs, 'padRed']]) {
-    sbox(acc, 'iron', rx + cx, 0, rz + cz, 0.14, 0.14, 1.5, 0, { u: 1, v: 1 }); sbox(acc, k, rx + cx, 0.5, rz + cz, 0.26, 0.26, 0.9, 0, { u: 1, v: 1 });
-    plSolid(rx + cx - 0.12, rz + cz - 0.12, rx + cx + 0.12, rz + cz + 0.12, 0, 1.5);
+  for (const [cx2, cz2, k] of [[-rs, -rs, 'padRed'], [rs, -rs, 'padBlue'], [-rs, rs, 'padBlue'], [rs, rs, 'padRed']]) {
+    sbox(acc, 'iron', rx + cx2, 0, rz + cz2, 0.14, 0.14, 1.5, 0, { u: 1, v: 1 }); sbox(acc, k, rx + cx2, 0.5, rz + cz2, 0.26, 0.26, 0.9, 0, { u: 1, v: 1 });
+    plSolid(rx + cx2 - 0.12, rz + cz2 - 0.12, rx + cx2 + 0.12, rz + cz2 + 0.12, 0, 1.5);
   }
   for (const y of [0.55, 0.95, 1.35]) for (const [a, b] of [[[-rs, rs], [rs, rs]], [[-rs, -rs], [-rs, rs]], [[rs, -rs], [rs, rs]]]) {
-    const x0 = rx + a[0], z0 = rz + a[1], x1 = rx + b[0], z1 = rz + b[1];
-    sbox(acc, 'rope', (x0 + x1) / 2, y, (z0 + z1) / 2, Math.abs(x1 - x0) + 0.04, Math.abs(z1 - z0) + 0.04, 0.04, 0, { u: 8, v: 1, cell: 99 });
+    const xa = rx + a[0], za = rz + a[1], xb = rx + b[0], zb = rz + b[1];
+    sbox(acc, 'rope', (xa + xb) / 2, y, (za + zb) / 2, Math.abs(xb - xa) + 0.04, Math.abs(zb - za) + 0.04, 0.04, 0, { u: 8, v: 1, cell: 99 });
   }
   // the judges' table by the ring
-  sbox(acc, 'darkwood', -47.5, 0, 229, 0.9, 3.2, 0.8, 0, { u: 1, v: 1 }); plSolid(-47.95, 227.4, -47.05, 230.6, 0, 0.8);
-  sbox(acc, 'gilt', -47.5, 0.8, 228.2, 0.2, 0.2, 0.3, 0, { u: 1, v: 1 });
+  sbox(acc, 'darkwood', -49, 0, rz, 0.9, 3.2, 0.8, 0, { u: 1, v: 1 }); plSolid(-49.45, rz - 1.6, -48.55, rz + 1.6, 0, 0.8);
+  sbox(acc, 'gilt', -49, 0.8, rz - 0.8, 0.2, 0.2, 0.3, 0, { u: 1, v: 1 });
 }
 function buildTrain() {   // four cars of the evening electric, each its own small mesh (they come out of the tunnel one by one)
   const T = CFG.palace.train;
@@ -360,7 +517,10 @@ function buildPalace() {
   // where you can walk: the gap in the fence, the crossing (once the train's by), the boulevard, the forecourt, the foyer,
   // the gym, the tunnel, the arena floor, the way out north (once the Bear's down)
   const on = () => level.name === 'palace', P = 0.3, [g0, g1] = PL.gap, [d0, d1] = PL.doorW;
-  const [bx0, bx1, bz0, bz1] = PL.blvd, [fx0, fx1, fz0, fz1] = PL.fore, F2 = PL.floor;
+  const [bx0, bx1, bz0, bz1] = PL.blvd, [fx0, fx1, fz0, fz1] = PL.fore;
+  // the round floor: overlapping rects inside the stands' boards (corners on a circle Rw from the centre)
+  const [cx, cz] = PL.bowlC, Rw = PL.floorR * Math.cos(Math.PI / PL.sides) - 0.35;
+  const round = [10, 28, 45, 62, 80].map((d, k) => { const c = Math.cos(d * Math.PI / 180) * Rw, s = Math.sin(d * Math.PI / 180) * Rw; return { x0: cx - c, x1: cx + c, z0: cz - s, z1: cz + s, pad: P, area: 'plFloor' + k, on }; });
   [ { x0: g0 + 0.3, x1: g1 - 0.3, z0: 135.6, z1: PL.barS - 0.3, pad: P, area: 'plGap', world: true, on: () => (level.name === 'podezd' && CRADLE.phase === 'bottom') || on() },
     { x0: g0 + 0.3, x1: g1 - 0.3, z0: PL.barS - 0.4, z1: PL.barN + 0.4, pad: P, area: 'plCross', world: true, on: () => on() && TRAIN.open },
     { x0: bx0, x1: bx1, z0: bz0 + 0.3, z1: bz1 + 0.3, pad: P, area: 'plBlvd', on },
@@ -369,9 +529,9 @@ function buildPalace() {
     { x0: PL.foyer[0] + 0.3, x1: PL.foyer[1] - 0.3, z0: PL.foyer[2] + 0.3, z1: PL.foyer[3] - 0.3, pad: P, area: 'plFoyer', on },
     { x0: d0 + 0.3, x1: d1 - 0.3, z0: PL.foyer[3] - 0.5, z1: PL.foyer[3] + 0.5, pad: P, area: 'plGymDoor', on },
     { x0: PL.gym[0] + 0.3, x1: PL.gym[1] - 0.3, z0: PL.gym[2] + 0.3, z1: PL.gym[3] - 0.3, pad: P, area: 'plGym', on },
-    { x0: g0 + 0.3, x1: g1 - 0.3, z0: PL.gym[3] - 0.5, z1: F2[2] + 0.5, pad: P, area: 'plTunnel', on },
-    { x0: F2[0] + 0.25, x1: F2[1] - 0.25, z0: F2[2] + 0.25, z1: F2[3] - 0.25, pad: P, area: 'plFloor', on },
-    { x0: g0 + 0.3, x1: g1 - 0.3, z0: F2[3] - 0.5, z1: PL.northZ + 1.2, pad: P, area: 'plNorth', on: () => level.name === 'parade' || (on() && palaceNorthOpen()) },
+    { x0: g0 + 0.3, x1: g1 - 0.3, z0: PL.gym[3] - 0.5, z1: cz - Rw + 1, pad: P, area: 'plTunnel', on },
+    ...round,
+    { x0: g0 + 0.3, x1: g1 - 0.3, z0: cz + Rw - 1, z1: PL.northZ + 1.2, pad: P, area: 'plNorth', on: () => level.name === 'parade' || (on() && palaceNorthOpen()) },
   ].forEach(addWalk);
   ACT1_WEST.end();
   // the crossing's mesh last, so the boulevard's lamps (world now) light the square's west edge too
@@ -380,7 +540,7 @@ function buildPalace() {
 }
 const palaceNorthOpen = () => level.encounter >= CFG.palace.encounters.length - 1 && (game.state === 'walk' || game.state === 'won' || game.state === 'cleared');
 const inPalace = (p) => p.y < PL.roofY + 1 && ((p.x > PL.annex[0] - 0.3 && p.x < PL.annex[1] + 0.3 && p.z > PL.foyer[2] + 0.02 && p.z < PL.gym[3])
-  || (p.x > PL.bowl[0] - 0.3 && p.x < PL.bowl[1] + 0.3 && p.z >= PL.gym[3] && p.z < PL.northZ));
+  || (p.z >= PL.gym[3] && p.z < PL.northZ && Math.hypot(p.x - PL.drum[0], p.z - PL.drum[1]) < PL.drum[2]));   // the drum
 const _plL = new V3();
 function palaceRooms() {   // (the inside is in the frame's coordinates)
   const W = ACT1_WEST;
