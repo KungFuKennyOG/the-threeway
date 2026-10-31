@@ -162,7 +162,7 @@ function buildStationSquare(acc, L) {
   plSolid(ex0, sz0, sx1, sz1, 0, 19);
   // the square: sodium posts round the edge, poplars along the north side, a monument to the railwaymen in the middle
   // (facing you as you come up from the crossing); the boulevard opens off the west side (local x -48..-32 = z 190..206)
-  for (const [x, z, d] of [[x0 + 0.3, 160, 1], [x0 + 0.3, 176, 1], [x0 + 0.3, 212, 1], [x1 - 0.3, 166, -1], [x1 - 0.3, 198, -1], [-40, z1 - 0.3, 1]]) plPost(acc, L, x, z, d);
+  for (const [x, z, d] of [[x0 + 0.3, 160, 1], [x0 + 0.3, 176, 1], [x0 + 0.3, 212, 1], [x1 - 0.3, 166, -1], [x1 - 0.3, 198, -1], [-40, z1 - 0.3, 1], [-46.5, 168, 1], [-33.5, 168, -1]]) plPost(acc, L, x, z, d);
   for (let x = x0 + 4; x < x1 - 3; x += 5) plTree(acc, x, z1 - 2.2, 1.1);
   plStatue(acc, -31, 181, Math.PI);
   plLight(L, -31, 2.4, 177.6, '#ffe8c0', 7, 1.2);

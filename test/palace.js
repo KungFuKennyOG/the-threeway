@@ -79,7 +79,7 @@ try {
 
   // ---- Station Square: north to the boulevard, then turn west down it (flat, no cut)
   walkTo(-40, 198);
-  check('up the square to the boulevard\'s mouth, East Station on your right', TW.player.head.z > 197.5 && TW.level.name === 'palace' && TW.level.encounter === -1, 'z ' + TW.player.head.z.toFixed(2));
+  check('up the square to the boulevard\'s mouth, East Station on your left', TW.player.head.z > 197.5 && TW.level.name === 'palace' && TW.level.encounter === -1, 'z ' + TW.player.head.z.toFixed(2));
   walkTo(-30, 230, 0.035, 900);
   check('the square ends: north (the poplars) and east (the station) are walls', TW.player.head.z < PL.square[3] && TW.player.head.x < PL.square[1], `${TW.player.head.x.toFixed(2)}, ${TW.player.head.z.toFixed(2)}`);
   walkTo(-40, 198); walkTo(-60, 175, 0.035, 900);
