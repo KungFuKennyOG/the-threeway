@@ -51,7 +51,7 @@ function startEncounter(i) {
   level.encounter = i; level.arena = E.arena || null;
   if (typeof LOCKED !== 'undefined') { LOCKED.clear(); for (const a of E.lock || []) LOCKED.add(a); }
   game.state = 'intro'; game.timer = 0; game.queue = E.spawn.slice(); game.spawnT = 0.3; game.bosses = [];
-  showSign(E.sign || 'fight', E.boss ? 2.2 : 1.4); if (E.boss) AU.roar(); else AU.bell();
+  showSign(E.sign || 'fight', E.boss ? 2.2 : 1.4); if (E.boss) { AU.roar(); MUSIC.cue('boss'); } else AU.bell();
 }
 // Act 1, level 2: straight on from the checkpoint, no cut. From the street you just keep walking (the boom stays up);
 // from the menu you start just past the boom.
@@ -147,6 +147,7 @@ function updateArea(dt) {
   }
   if (ST.skyMesh) { camera.getWorldPosition(_v1); ST.skyMesh.position.set(_v1.x, 0, _v1.z); ST.skyMesh.updateMatrix(); }
   updateDoor(dt);
+  MUSIC.update();   // the music follows the level and the fight (src/music.js)
   // portals: rooms are only drawn through open doorways in view (src/rooms.js)
   if (ROOMS.size) updateRooms();
   if (ST.beaconMesh) { ST.beaconT = (ST.beaconT || 0) + dt; ST.beaconMesh.visible = ST.beaconMesh.visible && (ST.beaconT % CFG.street.beaconBlink) < CFG.street.beaconBlink * 0.5; }

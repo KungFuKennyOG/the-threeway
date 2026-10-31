@@ -1,0 +1,38 @@
+{
+ "threeway": {
+  "file": "1-the-threeway.ogg",
+  "bpm": 138,
+  "bars": 42,
+  "sampleRate": 48000,
+  "loopSamples": 3506087,
+  "loopStart": 0.25,
+  "loopEnd": 73.293479
+ },
+ "krasnovia": {
+  "file": "2-krasnovia.ogg",
+  "bpm": 132,
+  "bars": 39,
+  "sampleRate": 48000,
+  "loopSamples": 3403635,
+  "loopStart": 0.25,
+  "loopEnd": 71.159063
+ },
+ "columbia": {
+  "file": "3-columbia.ogg",
+  "bpm": 152,
+  "bars": 43,
+  "sampleRate": 48000,
+  "loopSamples": 3258946,
+  "loopStart": 0.25,
+  "loopEnd": 68.144708
+ },
+ "hinomoto": {
+  "file": "4-hinomoto.ogg",
+  "bpm": 150,
+  "bars": 43,
+  "sampleRate": 48000,
+  "loopSamples": 3302400,
+  "loopStart": 0.25,
+  "loopEnd": 69.05
+ }
+}

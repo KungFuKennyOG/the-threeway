@@ -16,7 +16,7 @@ const PANEL = { w: 1.2, h: 0.9, dist: 1.6 };  // metres
 // ---- options (saved per browser)
 const BASE_SPEED = CFG.move.speed;
 const SPEEDS = [['SLOW', 0.75], ['NORMAL', 1], ['FAST', 1.3]], SNAPS = [15, 30, 45, 60];
-const OPTS = { vol: 6, snap: CFG.move.snapTurnDeg, speed: 1 };
+const OPTS = { vol: 6, music: 7, snap: CFG.move.snapTurnDeg, speed: 1 };   // music: src/music.js reads it
 function applyOpts() {
   CFG.move.snapTurnDeg = OPTS.snap; CFG.move.speed = BASE_SPEED * SPEEDS[OPTS.speed][1];
   if (AU.master) AU.master.gain.value = 0.1 * OPTS.vol;
@@ -24,7 +24,7 @@ function applyOpts() {
 function saveOpts() { try { localStorage.setItem('tw.opts', JSON.stringify(OPTS)); } catch (e) { /* private mode */ } }
 try { const o = JSON.parse(localStorage.getItem('tw.opts') || 'null'); if (o) Object.assign(OPTS, o); } catch (e) { /* none saved */ }
 if (!SNAPS.includes(OPTS.snap)) OPTS.snap = 30;
-OPTS.speed = clamp(OPTS.speed | 0, 0, 2); OPTS.vol = clamp(OPTS.vol | 0, 0, 10);
+OPTS.speed = clamp(OPTS.speed | 0, 0, 2); OPTS.vol = clamp(OPTS.vol | 0, 0, 10); OPTS.music = clamp(OPTS.music == null ? 7 : OPTS.music | 0, 0, 10);
 applyOpts();
 { const init = AU.init; AU.init = function () { init.call(this); applyOpts(); }; }
 Object.assign(AU, {
@@ -67,6 +67,7 @@ const STORY = ['ONE CITY. THREE POWERS. THREE WALLS.', 'THEY ALL DRINK AT ONE BA
   'NOW THE OFFICIALS WANT IT SHUT.', 'THEIR MUSCLE JUST WALKED IN.', '', 'THROW THEM OUT. THEN GO GET', 'THREE SIGNATURES TO REOPEN.'];
 const optItems = () => [
   { label: 'VOLUME', val: () => OPTS.vol, bar: 10, adj: (d) => { OPTS.vol = clamp(OPTS.vol + d, 0, 10); } },
+  { label: 'MUSIC', val: () => OPTS.music, bar: 10, adj: (d) => { OPTS.music = clamp(OPTS.music + d, 0, 10); } },
   { label: 'SNAP TURN', val: () => OPTS.snap + ' DEG', adj: (d) => { OPTS.snap = SNAPS[(SNAPS.indexOf(OPTS.snap) + d + SNAPS.length) % SNAPS.length]; } },
   { label: 'MOVE SPEED', val: () => SPEEDS[OPTS.speed][0], adj: (d) => { OPTS.speed = (OPTS.speed + d + 3) % 3; } },
   { label: 'BACK', act: menuBack },
