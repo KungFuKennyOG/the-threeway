@@ -3,7 +3,8 @@
   zep_strip.png  the Halcyon zeppelin on a clear strip; bar.js scrolls it slowly across the window's upper panes
   menuboard.png  the lit board behind the bar: FROM HOME (Columbia Cola, bottled in Halcyon; Krasnograd vodka; Ōkyō beer)
   bottles.png    the three bottles, relabelled: Columbia Cola, Okyo beer, Krasnograd vodka (same 24x16 layout: props use it too)
-Run from the repo root, then repack the atlas:  python3 tools/bar_home.py && python3 tools/bar_atlas.py"""
+Run from the repo root, then repack the atlas:  python3 tools/bar_home.py && python3 tools/bar_atlas.py
+(tools/bar_room.py paints the rest of the room's new pieces with the same Pix.)"""
 import random, re
 from PIL import Image
 
@@ -150,5 +151,6 @@ def bottles():
     p.set(19, 0, '#b8231e'); p.set(20, 0, '#b8231e')
     p.save('bottles')
 
-window(); zeppelin(); menuboard(); bottles()
-print('painted window, zep_strip, menuboard, bottles')
+if __name__ == '__main__':
+    window(); zeppelin(); menuboard(); bottles()
+    print('painted window, zep_strip, menuboard, bottles')
