@@ -11,10 +11,20 @@ A goon is a character you'd recognise from across the room. "A clerk in a waistc
 1. **One loud signature shape** you can read at 10 m in silhouette: giant gloves, a bat, a riot shield, a pompadour, a long coat, a barrel chest, a plumed hat, a giant moustache, a flagpole, an instrument. If you can't name it in three words, the goon doesn't have one.
 2. **Pushed proportions.** Don't use one default body. Push it: huge forearms and hands, barrel chests on short legs, skinny limbs, refrigerator shoulders with a tiny head, a belly. Exaggerate until it reads, then keep going a little.
 3. **A face with a personality.** It should be big and distinct, with a strong jaw or none, heavy brows, a scowl, a grin, a beard, a moustache, scars, glasses or shades. No two goons share a face type.
-4. **Dense hand-pixeled sheets, not flat colour blocks.** Paint graphic motifs (a star, patches, flames, checks, stripes, a cog, medals), highlights and shadows, folds, wear, stitching and dither. Use the original sheets' density as the target: about 16 colours used well. If a sheet looks like a flag, it's not finished.
+4. **Dense hand-pixeled sheets, not flat colour blocks.** Paint graphic motifs (a star, patches, flames, checks, stripes, a cog, medals), highlights and shadows, folds, wear, stitching and dither. Use the original sheets' density as the target: they use 17–29 colours, and goonkit allows up to 32 on goon sheets. Paint every face from scratch, never from a shared template. If a sheet looks like a flag, it's not finished.
 5. **Attitude in the idle pose.** Guards up, a wide stance, a hunch, a swagger, ramrod posture, a crouch. A neutral stance with the arms down is forbidden.
 6. **Distinct front, back and side panels.** No tie on a back. Give the back something too: a number, a patch, a coat seam, hair.
 7. **Their gear is part of the read**, not hidden. The prop, the hat and the instrument are drawn big enough to see in VR.
+8. **Value contrast in the bar's light.** A dark suit or coat vanishes against the wood. Every goon needs a bright mass (white, red or gold); avoid dark-on-dark.
+9. **The face must show at the player's eye height** (about 1.65 m, looking slightly down). Caps, visors, fur collars, raised shoulders and big chests easily hide a face.
+
+## Kit notes (from the first flair pass)
+
+- **Use `lean` in `humanoid()`.** It subdivides only the face and the chest front, which frees about 54 triangles for signature boxes.
+- **Push proportions within the fixed skeleton.** Joint lengths drive the physics, so don't change them. Push thickness with `armK`, `farmK`, `handK`, `legK`, `shinK`, `neckW`, and fake short legs with stance and low belly boxes.
+- **Extra boxes:** one panel wraps every face of an extra box unless you split it, so a badge ends up on the back too. `peakedCap()` already splits its side and back.
+- **Boxes on a raised forearm:** the local front faces backwards, so a held board needs its paper on `b`.
+- **Side panels:** they're mirrored front to back between the left and right faces.
 
 ## The bar for done
 
