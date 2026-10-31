@@ -49,6 +49,10 @@ try {
     PZ.parts.bank < 4600 && PZ.parts.roof < 1600 && PZ.parts.lobby + PZ.parts.up < 7000, JSON.stringify(PZ.parts));
   check('the 7th and the wing are the lobby\'s child, the roof the bank\'s (culled by three, hidden past the fog)', PZ.upMesh.parent === PZ.inMesh && PZ.roofMesh.parent === PZ.outMesh && PZ.roofMesh.frustumCulled && !PZ.outMesh.frustumCulled
     && !run('sbSeen(PZ.roofMesh, { x: -190, y: 1.7, z: 198 })') && run('sbSeen(PZ.roofMesh, { x: -30, y: 1.7, z: 140 })'));
+  { const AW = run('ACT1_WEST'), n = PZ.outMesh.userData.near, near = (x, y, z) => y > n[3] || Math.hypot(x - n[0], z - n[1]) < n[2];
+    const must = [[0, 1.7, 10], [-3, 1.7, 62], [-20, 1.7, 105], [-30, 35.2, 121], [-35, 1.7, 136], [-40, 1.7, 145], [-56, 1.7, 198]], far = [AW.toWorld(0, 250), AW.toWorld(-40, 305)];
+    check('the railway bank and the roof are drawn from the street, the yard, the roof, the crossing and the boulevard, not from Parade Square or the Tower (src/rooms.js)',
+      !!n && must.every(p => near(...p)) && far.every(([x, z]) => !near(x, 1.7, z)), JSON.stringify(n)); }
   const solidAt = (x, z, y, r = 0.25) => TW.BLOCKERS.some(b => (b.y1 === undefined ? y < 0.5 : y >= (b.y0 || 0) - 0.1 && y < b.y1 - 0.1) && x > b.x0 - r && x < b.x1 + r && z > b.z0 - r && z < b.z1 + r);
   { const [f0, f1, fz0, fz1] = PZ.flat, bad = [];
     for (const E of C.encounters) for (const [t, x, z, y] of E.spawn) if (solidAt(x, z, y)) bad.push(`${E.name}:${t}@${x},${z}`);
@@ -61,7 +65,7 @@ try {
   // the cog's sightline from the wing roof against the roof's aerials and the estate's children (the Tower's own check
   // in test/tower.js tests the meshes drawn everywhere)
   { const AW = run('ACT1_WEST'), TWR = run('TWR'), [cx, cz] = AW.toWorld(-40, 330), o = V(-36, PZ.wingRoof + 1.7, 129), t = V(cx, TWR.cogY, cz);
-    let hit = 0; for (const m of [PZ.roofMesh, TW.SBX.gate, TW.SBX.yard]) { const a = m.geometry.attributes.position.array;
+    let hit = 0; for (const m of [PZ.roofMesh, TW.SBX.shell, TW.SBX.gate, TW.SBX.yard]) { const a = m.geometry.attributes.position.array;
       for (let i = 0; i < a.length; i += 9) { const e1 = [a[i + 3] - a[i], a[i + 4] - a[i + 1], a[i + 5] - a[i + 2]], e2 = [a[i + 6] - a[i], a[i + 7] - a[i + 1], a[i + 8] - a[i + 2]], d = [t.x - o.x, t.y - o.y, t.z - o.z];
         const p = [d[1] * e2[2] - d[2] * e2[1], d[2] * e2[0] - d[0] * e2[2], d[0] * e2[1] - d[1] * e2[0]], det = e1[0] * p[0] + e1[1] * p[1] + e1[2] * p[2]; if (Math.abs(det) < 1e-9) continue;
         const sv = [o.x - a[i], o.y - a[i + 1], o.z - a[i + 2]], u = (sv[0] * p[0] + sv[1] * p[1] + sv[2] * p[2]) / det; if (u < 0 || u > 1) continue;

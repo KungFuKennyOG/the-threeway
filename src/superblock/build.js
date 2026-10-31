@@ -6,12 +6,14 @@
 // laundry, and the 22-storey point block whose door (podezd 3) leads to the stairwell (next level).
 // World coordinates throughout (+z = down the old road from the Threeway; Krasnovia is -x).
 //
-// Three baked meshes on the street atlas. SBX.mesh is the estate's shell (the slabs, the wings, the point block, the
-// rooftop slogan, the windows with a story), drawn from everywhere outside like every level's. Its two children carry the
-// ground and everything down at ground level: SBX.gate (the border post on the Ring Road, the forecourt, the arch) and
-// SBX.yard (the courtyard). Three culls each when it's out of view, and they're hidden past the fog (more than
-// CFG.street.fog.far from your eye, every vertex is fog colour anyway), so the yard costs nothing from the wing roof
-// looking at the Tower, from Parade Square or the glass lift.
+// Four baked meshes on the street atlas. SBX.mesh is the 22-storey point block, drawn from everywhere outside like every
+// level's (its tower shows over the Palace as far off as the Tower's apron). Its children: SBX.shell, the rest of the
+// estate's shell (the slabs, the wings, the rooftop slogan, aerials, the windows with a story), drawn within
+// CFG.superblock.drawNear (from Parade Square and the Tower the Palace and the slabs hide it: compared pixel for pixel);
+// SBX.gate (the border post on the Ring Road, the forecourt, the arch) and SBX.yard (the courtyard), which carry the
+// ground and everything down at ground level: three culls each when it's out of view, and they're hidden past the fog
+// too (more than CFG.street.fog.far from your eye, every vertex is fog colour anyway), so the yard costs nothing from
+// the wing roof looking at the Tower.
 const SB = {
   gateZ: 73, gateOpen: [-8.7, -0.6],
   south: [-46, -4, 86, 92, 25.2], arch: [-21.8, -17.8, 5.6],          // [x0, x1, z0, z1, h]; the arch: [x0, x1, h] (two storeys)
@@ -165,7 +167,7 @@ function forecourt(acc) {
 }
 // ---- the estate's shell (SBX.mesh, drawn from everywhere outside): the slabs, the arch's opening, the wings, the point
 // block and its crown, the rooftop slogan, aerials, and the windows that tell a story
-function superblockShell(acc) {
+function superblockShell(acc, pt) {
   const [sx0, sx1, sz0, sz1, sh] = SB.south, [ax0, ax1, ah] = SB.arch;
   slabBlock(acc, sx0, ax0, sz0, sz1, 0, sh, { faceKey: { r: 'slabEnd' } });
   slabBlock(acc, ax1, sx1, sz0, sz1, 0, sh, { faceKey: { l: 'slabEnd' } });
@@ -178,31 +180,32 @@ function superblockShell(acc) {
   // the wings around the courtyard and the point block
   slabBlock(acc, ...SB.west.slice(0, 4), 0, SB.west[4]);
   slabBlock(acc, ...SB.north.slice(0, 4), 0, SB.north[4], { solid: false });   // hollow: its 7th floor and roof are walked (src/kras/podezd.js)
+  // (the point block goes in pt, SBX.mesh itself: its tower shows over the Palace from as far as the Tower's apron)
   { const [px0, px1, pz0, , ph] = SB.point, [dx] = SB.door, u = (x) => (px1 - x) / 12;   // south face: around the street door (podezd 3 is inside)
-    slabBlock(acc, ...SB.point.slice(0, 4), 0, ph, { skip: 'b', solid: false });
-    wall(acc, 'slab', px1, pz0, dx + 0.6, pz0, 0, ph, 12, 11.2, { u0: 0, cell: 4 }); wall(acc, 'slab', dx - 0.6, pz0, px0, pz0, 0, ph, 12, 11.2, { u0: u(dx - 0.6), cell: 4 });
-    wall(acc, 'slab', dx + 0.6, pz0, dx - 0.6, pz0, 2.2, ph, 12, 11.2, { u0: u(dx + 0.6), cell: 4 });
+    slabBlock(pt, ...SB.point.slice(0, 4), 0, ph, { skip: 'b', solid: false });
+    wall(pt, 'slab', px1, pz0, dx + 0.6, pz0, 0, ph, 12, 11.2, { u0: 0, cell: 4 }); wall(pt, 'slab', dx - 0.6, pz0, px0, pz0, 0, ph, 12, 11.2, { u0: u(dx - 0.6), cell: 4 });
+    wall(pt, 'slab', dx + 0.6, pz0, dx - 0.6, pz0, 2.2, ph, 12, 11.2, { u0: u(dx + 0.6), cell: 4 });
     for (const [a, b] of [[px0, dx - 0.6], [dx + 0.6, px1]]) sbSolid(a, pz0, b, pz0 + 0.3, ph); }
-  plate(acc, 'stairStrip', -8.6, 32.2, SB.point[2], 1.2, 58.8, Math.PI, 0.04);   // the stairwell's windows, one per landing
+  plate(pt, 'stairStrip', -8.6, 32.2, SB.point[2], 1.2, 58.8, Math.PI, 0.04);   // the stairwell's windows, one per landing
   // the point block's crown: the lift motor rooms, a tank, red aviation lights on the corners
   { const [px0, px1, pz0, pz1, ph] = SB.point;
-    sbox(acc, 'slabEnd', -13, ph, 125.5, 6.5, 4.6, 3.0, 0, { u: 4, v: 3, top: 'roofDark', cell: 99 }); sbox(acc, 'slabEnd', -9, ph, 129.5, 2.4, 2.4, 1.8, 0, { u: 2.4, v: 1.8, top: 'roofDark', cell: 99 });
-    for (const [x, z] of [[px0 + 0.3, pz0 + 0.3], [px1 - 0.3, pz0 + 0.3], [px0 + 0.3, pz1 - 0.3], [px1 - 0.3, pz1 - 0.3]]) sbox(acc, 'litRed', x, ph, z, 0.3, 0.3, 0.3, 0, { u: 1, v: 1 });
+    sbox(pt, 'slabEnd', -13, ph, 125.5, 6.5, 4.6, 3.0, 0, { u: 4, v: 3, top: 'roofDark', cell: 99 }); sbox(pt, 'slabEnd', -9, ph, 129.5, 2.4, 2.4, 1.8, 0, { u: 2.4, v: 1.8, top: 'roofDark', cell: 99 });
+    for (const [x, z] of [[px0 + 0.3, pz0 + 0.3], [px1 - 0.3, pz0 + 0.3], [px0 + 0.3, pz1 - 0.3], [px1 - 0.3, pz1 - 0.3]]) sbox(pt, 'litRed', x, ph, z, 0.3, 0.3, 0.3, 0, { u: 1, v: 1 });
     sbLight(px0 - 2.5, SB.north[4] + 1.2, 125, '#ffc888', 16, 1.6); }   // a lamp on the wing's roof washes the point block's foot: it towers up out of the light
   // the windows with a story (all lit: drawn as one of the slab's windows each)
   for (const [k, f, b, s] of [['winParty', 'west', 2, 7], ['winQuarrel', 'west', 5, 9], ['winTV', 'west', 7, 3], ['winGran', 'west', 4, 11], ['winStudent', 'west', 1, 5],
     ['winCat', 'north', 0, 2], ['winFamily', 'north', 1, 8], ['winKitchen7', 'north', 2, 4], ['winKitchen7', 'north', 3, 4], ['winTV', 'north', 3, 10],
     ['winLanding', 'point', 3, 14], ['winLanding', 'point', 1, 14], ['winParty2', 'point', 2, 5], ['winSmoker', 'point', 3, 17], ['winCat', 'point', 1, 9],
     ['winParty', 'pointWest', 2, 6], ['winTV', 'pointWest', 1, 8], ['winSmoker', 'pointWest', 3, 7],
-    ['winFamily', 'northBack', 3, 5], ['winTV', 'northBack', 4, 8], ['winGran', 'northBack', 2, 2], ['winCat', 'northBack', 3, 9]]) sbStory(acc, k, f, b, s);
+    ['winFamily', 'northBack', 3, 5], ['winTV', 'northBack', 4, 8], ['winGran', 'northBack', 2, 2], ['winCat', 'northBack', 3, 9]]) sbStory(f.startsWith('point') ? pt : acc, k, f, b, s);
   // a ground-floor kitchen west of the door, over the slab's window in that bay: its big set shows Krasnograd's May Day
   // parade (Central Television, cutting between the wide shot and a zoom every few seconds: SBX.tv swaps the screen's UVs)
   { const [kx, ky] = SB.kitchen, dz = SB.door[1];
-    plate(acc, 'kitchenTV', kx, ky, dz, 1.6, 1.35, Math.PI, 0.03);
-    SBX.tv = { i0: acc.p.length / 3, n: 0, f: 0, a: null, b: null };
-    plate(acc, 'tvParade', kx - 0.25, ky + 0.017, dz, 0.68, 0.51, Math.PI, 0.036);
-    SBX.tv.n = acc.p.length / 3 - SBX.tv.i0;
-    sbox(acc, 'concrete', kx, ky - 0.75, dz - 0.06, 1.8, 0.14, 0.07, 0, { u: 1, v: 1 }); }
+    plate(pt, 'kitchenTV', kx, ky, dz, 1.6, 1.35, Math.PI, 0.03);
+    SBX.tv = { i0: pt.p.length / 3, n: 0, f: 0, a: null, b: null };
+    plate(pt, 'tvParade', kx - 0.25, ky + 0.017, dz, 0.68, 0.51, Math.PI, 0.036);
+    SBX.tv.n = pt.p.length / 3 - SBX.tv.i0;
+    sbox(pt, 'concrete', kx, ky - 0.75, dz - 0.06, 1.8, 0.14, 0.07, 0, { u: 1, v: 1 }); }
 }
 // ---- the courtyard (SBX.yard): a Brezhnev-era yard at night. The rocket climbing frame is the hero, in the cold white
 // of its own mercury lamp against the sodium; a carpet out on the beating rail, chalk on the path, a saloon with its
@@ -301,19 +304,21 @@ function sbSphere(acc) {
   for (let i = 0; i < P.length; i += 3) r = Math.max(r, Math.hypot(P[i] - c[0], P[i + 1] - c[1], P[i + 2] - c[2]));
   return { c, r };
 }
+// the distance rule (like src/rooms.js's userData.near): [x, z, R, H], within R m of (x, z) across the ground or above H
+const sbNear = (n, h = player.head) => h.y > n[3] || Math.hypot(h.x - n[0], h.z - n[1]) < n[2];
 const sbSeen = (m, h = player.head) => { const { c, r } = m.userData.sphere; return Math.hypot(h.x - c[0], h.y - c[1], h.z - c[2]) - r < CFG.street.fog.far; };
 // called from buildStreet(): three baked meshes on the street atlas
 function buildSuperblock() {
   SBX.lamps = [];
-  const base = new GeoAcc(), gate = new GeoAcc(), yard = new GeoAcc();
-  krasGate(gate); forecourt(gate); superblockShell(base); courtyard(yard);
+  const pt = new GeoAcc(), base = new GeoAcc(), gate = new GeoAcc(), yard = new GeoAcc();
+  krasGate(gate); forecourt(gate); superblockShell(base, pt); courtyard(yard);
   SBX.acc = base;
   const L = CFG.street.light, F = CFG.street.fog;
   const light = { ambient: L.ambient, sky: L.sky, lights: SBX.lamps.concat(ST.lamps.filter(l => l[0][2] > 50)) };
   const mk = (acc) => { const m = new THREE.Mesh(acc.geometry(light), makeMat('street', { baked: true })); m.matrixAutoUpdate = false; m.updateMatrix(); m.material.uniforms.uFogNear = { value: F.near }; m.material.uniforms.uFogFar = { value: F.far }; return m; };
-  const m = mk(base); m.frustumCulled = false; scene.add(m); SBX.mesh = m;
-  for (const [k, acc] of [['gate', gate], ['yard', yard]]) { const c = mk(acc); c.frustumCulled = true; c.userData.sphere = sbSphere(acc); m.add(c); c.updateMatrixWorld(true); SBX[k] = c; }
-  SBX.tris = { base: base.tris, gate: gate.tris, yard: yard.tris };
+  const m = mk(pt); m.frustumCulled = false; scene.add(m); SBX.mesh = m;
+  for (const [k, acc] of [['shell', base], ['gate', gate], ['yard', yard]]) { const c = mk(acc); c.frustumCulled = k !== 'shell'; c.userData.sphere = sbSphere(acc); m.add(c); c.updateMatrixWorld(true); SBX[k] = c; }
+  SBX.tris = { point: pt.tris, base: base.tris, gate: gate.tris, yard: yard.tris };
   sbTvSetup(m);
   for (const l of SBX.lamps) ST.lamps.push(l);
   // where you can walk once you're past the boom: the Ring Road, the gate, the forecourt, the arch, the courtyard
@@ -334,7 +339,7 @@ function sbTvSetup(m) {
   T.a = uv.array.slice(T.i0 * 2, (T.i0 + T.n) * 2); T.b = T.a.slice();
   for (let i = 0; i < T.b.length; i += 2) for (const j of [0, 1]) { const t = (T.a[i + j] - A[j]) / (A[j + 2] - A[j]); T.b[i + j] = A[j] + (Z[j] + t * (Z[j + 2] - Z[j])) * (A[j + 2] - A[j]); }
   m.onBeforeRender = () => {
-    SBX.gate.visible = sbSeen(SBX.gate); SBX.yard.visible = sbSeen(SBX.yard);
+    const near = sbNear(CFG.superblock.drawNear); SBX.shell.visible = near; SBX.gate.visible = near && sbSeen(SBX.gate); SBX.yard.visible = near && sbSeen(SBX.yard);
     const f = Math.floor(performance.now() / 1000 / SB.tvCut) % 2; if (f === T.f) return;
     T.f = f; uv.array.set(f ? T.b : T.a, T.i0 * 2);
     if (uv.updateRange) { uv.updateRange.offset = T.i0 * 2; uv.updateRange.count = T.n * 2; }

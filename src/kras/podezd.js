@@ -240,6 +240,7 @@ function buildPodezd() {
   const inLight = { ambient: CFG.podezd.light.inAmbient, lights: PZ.lamps }, outLight = { ambient: Lt.ambient, sky: Lt.sky, lights: PZ.outLamps.concat(SBX.lamps).concat(ST.lamps.filter(l => l[0][2] > 120)) };
   PZ.inMesh = mk(inAcc, inLight); PZ.upMesh = mk(upAcc, inLight, PZ.inMesh); PZ.inTris = inAcc.tris + upAcc.tris;
   PZ.outMesh = mk(outAcc, outLight); PZ.roofMesh = mk(roofAcc, outLight, PZ.outMesh); PZ.outTris = outAcc.tris + roofAcc.tris;
+  PZ.outMesh.userData.near = CFG.podezd.drawNear;   // (src/rooms.js)
   PZ.roofMesh.userData.sphere = sbSphere(roofAcc);
   PZ.parts = { lobby: inAcc.tris, up: upAcc.tris, bank: outAcc.tris, roof: roofAcc.tris };
   // the children's rules, kept as their parents are drawn (a change shows a frame later: the 7th is out of sight in the

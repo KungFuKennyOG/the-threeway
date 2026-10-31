@@ -34,8 +34,15 @@ step(3);
 try {
   // ---- the build: one baked mesh on the street atlas, nothing from the far city or skylines on top of it
   check('Superblock 14 is one mesh on the street atlas, light baked in', SBX.mesh && SBX.mesh.geometry.attributes.bake && SBX.mesh.material.uniforms.uBaked.value === 1);
-  check('its triangles stay within budget', SBX.acc.tris + SBX.tris.gate + SBX.tris.yard < 16000, `${SBX.acc.tris} shell + ${SBX.tris.gate} gate + ${SBX.tris.yard} yard`);
-  check('the shell, drawn from everywhere outside, stays lean (< 3200: it was 7270 with the ground and the yard in it)', SBX.tris.base < 3200 && SBX.tris.gate < 4000 && SBX.tris.yard < 4000, JSON.stringify(SBX.tris));
+  check('its triangles stay within budget', SBX.tris.point + SBX.tris.base + SBX.tris.gate + SBX.tris.yard < 16000, JSON.stringify(SBX.tris));
+  check('what\'s drawn from everywhere outside is just the point block (< 1200: the whole estate was 7270); the rest of the shell < 2400', SBX.tris.point < 1200 && SBX.tris.base < 2400 && SBX.tris.gate < 4000 && SBX.tris.yard < 4000, JSON.stringify(SBX.tris));
+  { const AW = run('ACT1_WEST'), W = (x, z) => AW.toWorld(x, z), near = (x, y, z) => run(`sbNear(CFG.superblock.drawNear, { x: ${x}, y: ${y}, z: ${z} })`);
+    const must = { 'Tripoint Square': [0, 1.7, 10], 'the Ring Road': [-3, 1.7, 62], 'the gate': [-4.6, 1.7, 75], 'the courtyard': [-20, 1.7, 105], 'the wing roof': [-30, 35.2, 121],
+      'the crossing': [-40, 1.7, 145], 'the boulevard\'s start': [-56, 1.7, 198], 'the cradle\'s foot': [-35, 1.7, 136] };
+    const must2 = { 'Parade Square': W(0, 250), 'Parade Square, back to the Palace': W(-40, 254.8), 'the Tower\'s apron': W(-40, 305) };
+    const miss = Object.entries(must).filter(([, p]) => !near(...p)).map(([k]) => k), seen = Object.entries(must2).filter(([, [x, z]]) => near(x, 1.7, z)).map(([k]) => k);
+    check('the estate\'s shell (all but the point block) is drawn from the street, the gate, the yard, the wing roof, the crossing and the boulevard, not from Parade Square or the Tower (stills match pixel for pixel)',
+      SBX.shell.parent === SBX.mesh && !miss.length && !seen.length, `missing ${miss.join(', ')} | seen from ${seen.join(', ')}`); }
   { const far = (x, y, z) => run(`sbSeen(SBX.yard, { x: ${x}, y: ${y}, z: ${z} }) || sbSeen(SBX.gate, { x: ${x}, y: ${y}, z: ${z} })`), near = (k, x, y, z) => run(`sbSeen(SBX.${k}, { x: ${x}, y: ${y}, z: ${z} })`);
     check('the gate and the yard are the shell\'s children, culled by three when out of view, and hidden past the fog (Parade Square, the Tower) but drawn from the street, the gate, the yard and the wing roof',
       SBX.gate.parent === SBX.mesh && SBX.yard.parent === SBX.mesh && SBX.gate.frustumCulled && SBX.yard.frustumCulled && !SBX.mesh.frustumCulled
@@ -44,6 +51,15 @@ try {
   { const P = TW.ST.skylineMesh.geometry.attributes.position.array, R = S.rect; let n = 0;
     for (let i = 0; i < P.length; i += 3) if (P[i + 1] > 0.5 && P[i] > R[0] && P[i] < R[1] && P[i + 2] > R[2] && P[i + 2] < R[3]) n++;
     check('no skyline slab or far-city block sits on the superblock', n === 0, n + ' vertices'); }
+  { const AW = run('ACT1_WEST'), TWR = run('TWR'), [cx, cz] = AW.toWorld(-40, 330), t = V(cx, TWR.cogY, cz), meshes = [SBX.mesh, SBX.shell, SBX.gate, SBX.yard];
+    const blocked = (o) => { let hit = 0; for (const m of meshes) { const a = m.geometry.attributes.position.array;
+      for (let i = 0; i < a.length; i += 9) { const e1 = [a[i + 3] - a[i], a[i + 4] - a[i + 1], a[i + 5] - a[i + 2]], e2 = [a[i + 6] - a[i], a[i + 7] - a[i + 1], a[i + 8] - a[i + 2]], d = [t.x - o.x, t.y - o.y, t.z - o.z];
+        const p = [d[1] * e2[2] - d[2] * e2[1], d[2] * e2[0] - d[0] * e2[2], d[0] * e2[1] - d[1] * e2[0]], det = e1[0] * p[0] + e1[1] * p[1] + e1[2] * p[2]; if (Math.abs(det) < 1e-9) continue;
+        const sv = [o.x - a[i], o.y - a[i + 1], o.z - a[i + 2]], u = (sv[0] * p[0] + sv[1] * p[1] + sv[2] * p[2]) / det; if (u < 0 || u > 1) continue;
+        const q = [sv[1] * e1[2] - sv[2] * e1[1], sv[2] * e1[0] - sv[0] * e1[2], sv[0] * e1[1] - sv[1] * e1[0]], v = (d[0] * q[0] + d[1] * q[1] + d[2] * q[2]) / det; if (v < 0 || u + v > 1) continue;
+        const tt = (e2[0] * q[0] + e2[1] * q[1] + e2[2] * q[2]) / det; if (tt > 1e-4 && tt < 0.999) hit++; } } return hit; };
+    const h = [blocked(V(2, 1.7, 7)), blocked(V(-3, 1.7, 62))];
+    check('the estate (the rooftop slogan and aerials too) keeps the Tower\'s cog in clear view from Tripoint Square and the gate', !h[0] && !h[1], h.join(' / ') + ' triangles in the way'); }
   check('every goon in every fight here is Krasnovian', C.encounters.every(E => E.spawn.every(s => KRAS.has(s[0]))), C.encounters.map(E => E.spawn.map(s => s[0]).join('+')).join(' | '));
 
   // ---- from the street, no cut: clear the street, walk through the boom, keep walking

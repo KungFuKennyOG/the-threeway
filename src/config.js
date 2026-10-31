@@ -233,7 +233,9 @@ const CFG = {
     ],
     props: [['bin', -15, 84.6], ['crate', -24, 84.4], ['crate', -24.8, 84.6], ['sign', -2.4, 82], ['bin', -9.4, 116.6], ['bin', -10.2, 116.8],
             ['crate', -32.6, 94], ['bottle', -31.6, 99.2], ['bottle', -11.2, 106.6], ['crate', -21.5, 116.6]],
-    light: { sodiumRadius: 14, sodiumK: 1.5, yardK: 2.2, floodRadius: 18, floodK: 1.4 },   // yardK: the courtyard's four posts, pools on the dark dirt
+    light: { sodiumRadius: 14, sodiumK: 1.5, yardK: 2.2, floodRadius: 18, floodK: 1.4 },
+    drawNear: [-25, 110, 150, 999],            // the estate (all but the point block) is drawn within 150 m of (-25, 110) (Tripoint Square, the gate, the crossing,
+                                               // Station Square), not from Parade Square or the Tower: the Palace and the slabs hide it (SBX.shell: src/superblock/build.js)   // yardK: the courtyard's four posts, pools on the dark dirt
   },
   // ---- Act 1: podezd 3, inside Superblock 14 (world positions; see src/kras/podezd.js). No stairs: lift A climbs from the
   // lobby and breaks at the 7th; cross into the north wing and down its corridor to lift B; up to the wing's roof; the
@@ -255,6 +257,7 @@ const CFG = {
     props: [['bin', -7.3, 123.8, 0], ['crate', -18.8, 121.8, 0], ['bottle', -29.9, 120.3, 20.4], ['bottle', -29.2, 120.5, 20.4], ['bin', -45, 123.2, 19.6],
             ['crate', -41, 119, 33.6], ['crate', -40.2, 119.2, 33.6], ['bin', -21, 128.8, 33.6]],
     light: { inAmbient: [0.1, 0.095, 0.1] },
+    drawNear: [-30, 135, 150, 999],            // the railway bank and the roof: drawn within 150 m of the cradle's foot, like Superblock 14 (src/rooms.js: userData.near)
     deadLight: [0.5, 0.26, 0.24],              // lift A's car once it's broken: its light dies to a dim red (a tint on the car)
   },
 
