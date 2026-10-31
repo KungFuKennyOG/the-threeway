@@ -124,9 +124,14 @@ const CFG = {
                  unarmedReach: 0.76, unarmedDmg: 8, unarmedWindup: 0.42, boss: true, scale: 0.9 },
     // the Chairman: no fighter (slow, light). signs: at 0 hp he kneels where he stands and signs (onLeaderSigned), no ragdoll
     chairman:  { hp: 120, poise: 120, speed: 0.8, reach: 0.8, windup: 1.2, dmg: 6, combo: 1, boss: true, signs: true, scale: 0.97 },
+    // ---- the bar's prologue: the three countries' officials, come to shut the place (and Rocco & Ivan, their bouncers)
+    harmony:   { hp: 40, poise: 40, speed: 1.3, reach: 0.78, windup: 0.75, dmg: 9, combo: 1, scale: 0.87 },   // Columbia's Civic Harmony officer: fodder
+    enforcer:  { hp: 60, poise: 58, speed: 1.65, reach: 0.74, windup: 0.46, dmg: 7, combo: 3, comboWindup: 0.26, highGuard: true, scale: 0.9 },   // a boxer in a fedora
+    aokiagent: { hp: 45, poise: 40, speed: 2.4, reach: 1.0, windup: 0.5, dmg: 8, combo: 2, comboWindup: 0.4, kicker: true, retreat: 2.6, scale: 0.88 },   // Aoki's man: kicks
   },
   boss: { tagCooldown: 4.0, benchRadius: 2.9, enrageSpeed: 1.25, enrageWindup: 0.75 },
-  waves: [ ['boso', 'kicker'], ['secguard', 'boxer', 'batboy'], ['cook', 'wrestler', 'kicker', 'batboy', 'boso'], ['rocco', 'ivan'] ],
+  // the bar's four rounds: the officials of the three countries (Columbia's Civic Harmony, Krasnovia's Ministry, Aoki's men), then their bouncers
+  waves: [ ['harmony', 'inspector'], ['secguard', 'enforcer', 'militia'], ['harmony', 'aokiagent', 'inspector', 'enforcer', 'militia'], ['rocco', 'ivan'] ],
   // Quest performance: auto quality steps physics down when the frame rate sags, back up when it recovers
   perf: { autoQuality: true, levels: [[120, 4], [90, 4], [90, 3], [72, 3], [60, 2]], targetVR: 72, targetDesktop: 55,
           dropAfter: 1.5, raiseAfter: 8, panelHz: 4 },

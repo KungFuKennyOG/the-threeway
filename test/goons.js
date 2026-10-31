@@ -105,8 +105,8 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
     check('the bandsman throws a cymbal at you', !!cym, bd.state);
     check('it flies flat and spinning, like a frisbee', cym && cym.spinAxis.y > 0.95 && spinMax - spin0 > 2, cym ? `axis y ${cym.spinAxis.y.toFixed(2)}, spun ${(spinMax - spin0).toFixed(1)} rad` : '');
     check('and it lands on your head if you stand there', lobMin < 0.3 && TW.player.hp < hpB, 'closest ' + lobMin.toFixed(2) + ' hp ' + hpB + ' -> ' + TW.player.hp);
-    bd.lobType = 'drumstick'; bd.throwCd = 0; bd.setState('keepaway'); let stick = null;
-    step(Math.ceil(3 / DT), () => { for (const q of TW.props) if (q.hostile && q.type === 'drumstick') stick = stick || q; });
+    bd.placeAt(0.6, -3.8, Math.PI); bd.setState('keepaway'); let stick = null;
+    step(Math.ceil(5 / DT), () => { if (!stick && !bd.carry) { bd.lobType = 'drumstick'; bd.throwCd = 0; } for (const q of TW.props) if (q.hostile && q.type === 'drumstick') stick = stick || q; });
     check('he throws drumsticks too (tumbling end over end)', stick && Math.abs(stick.spinAxis.x) > 0.9, stick ? 'axis ' + stick.spinAxis.x.toFixed(2) : bd.state);
     const flat = (type, aimFist) => run(`(() => { const T = 0.4, A = ${aimFist ? 'hands.right.fist.clone()' : 'player.head.clone()'}, S = new THREE.Vector3(A.x - 1.1, A.y - 0.2, A.z - 3.0);
       const p = new Prop('${type}', S); const v = new THREE.Vector3().subVectors(A, S).divideScalar(T); v.y -= 0.5 * CFG.physics.gravity * T;
@@ -126,10 +126,10 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
 
     // ---- the specialist slips a fast punch (when he rolls it), and eats it when he doesn't
     const jab = (e, speed) => {
-      let ch = e.zone('chest').pos.clone();
+      let ch = e.zone('belly').pos.clone();   // to the body, under his raised gloves
       ease(R, V(ch.x, ch.y, ch.z + 0.6), 60); step(5);
-      ch = e.zone('chest').pos.clone(); const sz = ch.z + 0.6, n = Math.ceil(0.7 / (speed * DT));
-      ease(R, V(ch.x, ch.y, sz), 8); step(3);
+      ch = e.zone('belly').pos.clone(); const sz = ch.z + 0.6, n = Math.ceil(0.7 / (speed * DT));
+      ease(R, V(ch.x, ch.y, sz), 8); step(3); TW.hands.right.cd.clear();   // easing in can brush his raised guard (a shove, and the hand's cooldown on him)
       let saw = false; for (let i = 0; i <= n; i++) { setGrip(R, ch.x, ch.y, sz - speed * DT * i); step(1); if (e.state === 'dodge') saw = true; }
       step(30, () => { if (e.state === 'dodge') saw = true; }); ease(R, V(0.25, 1.0, -0.2), 60); return saw;
     };
