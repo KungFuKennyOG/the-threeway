@@ -36,7 +36,7 @@ Desktop: mouse look, WASD, left/right click (or J/K) punch, Shift heavy, hold X 
 
 ## Menus
 
-- **Title (VR):** entering VR puts you in the empty bar facing an arcade-style title screen (attract loop: title, story, how to play). A inserts a coin, then START, STAGE SELECT (every stage, 1–7), OPTIONS (volume, snap turn 15–60°, move speed; saved in the browser), HOW TO PLAY, EXIT VR. START begins at the page's **Start at** pick.
+- **Title (VR):** entering VR puts you in the empty bar facing an arcade-style title screen (attract loop: title, story, how to play). A inserts a coin, then START, STAGE SELECT (every stage, 1–7), OPTIONS (volume, music volume, snap turn 15–60°, move speed; saved in the browser), HOW TO PLAY, EXIT VR. START begins at the page's **Start at** pick.
 - **Pause:** RESUME, RESTART STAGE, STAGE SELECT, OPTIONS, HOW TO PLAY, QUIT TO TITLE. The world freezes (goons, physics, the clock) and dims behind a panel in front of you. Stage changes fade through black.
 - **Desktop:** Esc pauses (an overlay); arrows/WASD pick, Enter chooses, Esc goes back. Code: `src/menu.js`.
 
@@ -128,6 +128,23 @@ Through the Tower's big front doors from Parade Square, no cut. Krasnovia's seat
 - **The Chairman's tribune, under the cog:** a marble balcony with a stone balustrade (no falling off) on corbels, flags, lamp standards, the gold wheel right overhead, the city below, the wind. The Chairman comes out of his office (oak, his desk with a snow globe of the Palace of the Union on it, his portrait) and the last fight is out there, with his two bodyguards from either side of his doors. Beat him and he kneels; once his bodyguards are down too he signs the permit to reopen The Threeway on the table set out for it: SIGNED · 1 OF 3, ACT 1 COMPLETE. (A leader goon with `signs: true` calls `onLeaderSigned(e)`; beating the last fight also counts as his signature.)
 - **Cost:** the outside is the shell (one baked mesh, ~6.6k triangles) and the glow (one 30-triangle additive mesh: the beams, the halos), drawn on every outdoor level. The beams move in the glow's own `onBeforeRender`, so they sweep wherever they're drawn and cost nothing where they aren't; there's no per-frame hook outside the level.
 
+## Music
+
+The four sector arrival themes (`tools/music/`, composed in code) play in game as seamless loops. Code: `src/music.js`.
+
+| Where | Track |
+| --- | --- |
+| The title screen (VR), the pause menu | The Threeway theme, quietly (`CFG.music.menuDb`): the title is an arcade cabinet in the empty bar, already beeping |
+| The bar, Tripoint Square and the road | The Threeway theme: the prologue, all in the Old Quarter, out the door with no cut |
+| The gate and Superblock 14, podezd 3, the Palace of Sport, Parade Square, the Tower of Labor | Krasnovia: it crossfades in as you walk past the checkpoint's boom |
+
+- **Levels flow, and so does the music.** On a level change the same track keeps playing (no restart); a different one crossfades (equal power, `CFG.music.fade` 2.5 s).
+- **The mix:** a fight dips the music 3 dB, a boss's intro (the boss sign and the roar) ducks it 14 dB for 2 s, then back to the fight level; a win or a loss brings it back up. All in `CFG.music` (top of `src/music.js`).
+- **Volume:** OPTIONS has a MUSIC bar (saved with the others), under the overall VOLUME.
+- **Starts with the click** that unlocks sound (Enter VR / Fight on desktop), on `AU`'s Web Audio context. Each track is one `AudioBufferSourceNode` looping between its loop points (no `<audio loop>`: it gaps). Tracks load lazily (fetch + decode), the current level's first; the next level's file is fetched ahead while you play. At most two decoded tracks are kept (Quest memory: ~27 MB each).
+- **A per-level track:** add it to `MUSIC.songs` (file and loop points) and point the level at it in `MUSIC.tracks` (by level name, as in `defineLevel`). A level with no entry is silent.
+- **The loops** (`assets/music/loop/`, Ogg Opus, ~0.9 MB each, 3.6 MB for all four; Columbia and Hinomoto are ready for later acts, and `python3 loops.py columbia_swing` makes the swing draft's when the diner wants it) are rendered by `tools/music/loops.py` with the generator's own `Song.render(loop_bars=...)` (the tail folded onto the head), with a quarter second of the loop's wrap on each side of the loop points so codec padding never lands on the seam. `python3 loops.py --check` verifies each seam (no click, no gap) and that the notes match the full renders in `assets/music/`.
+
 ## Goons: the style rule
 
 New or changed goons follow `docs/goon-style.md`. Each one is a character with one loud signature shape, pushed proportions, a distinct face, a dense hand-pixeled sheet and an idle pose with attitude. No uniform-only goons. Check every one in a lineup beside the originals.
@@ -162,6 +179,7 @@ node test/palace.js     # 43 checks: off the cradle through the fence gap (no cu
 node test/tower.js      # 60 checks: from the menu, the shell + glow + floors + budgets (the outside < 8000 + 100 triangles), MSU massing (outer < inner < centre, symmetrical, <= 260 m), the searchlights sweep (cheaply, on any level), the cog static, nothing from the skylines on its ground, the old distant tower gone and the beacon on the spire, its proportions and fog, Act 1 west (the frame round-trips, each place further west than the last, the Tower dead ahead down the boulevard, nothing from the far city on any level's ground, clear sightlines to the cog from the square, the gate, the wing roof, the crossing, the boulevard and Parade Square), every fight on one floor, the four fights in order (doors and lifts shut mid-fight), the three lifts (smooth: < 60 mm a frame; the glass lift opens once Orlova's down, outside halfway up, 150 m), respawn on the right floor, Orlova's enrage, the tribune (outside, flat, the balustrade holds you), the Chairman signs out there (the hook too), rooms (in his office the city shows through his doors only), in from Parade Square with no cut, physics cost
 node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street; --level=superblock: the gate and the courtyard; --level=road: the street, through the boom, on into Superblock 14)
 node test/vr.js        # 71 checks: the title screen (coin, START), pause (Y, a passed-through menu button, a blurred session; freezes the world; stick picks; B resumes; restart; quit to title; stage select), the laborer's pipe (disarm, pick up), the conscript, level 2 in VR (start outside, stick walking, held in by the stretch), tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
+node test/music.js     # 38 checks: every level maps to a track and every loop file is there, no audio (nothing throws, nothing plays), the bar's track first, bar -> street keeps the same source, street -> superblock crossfades (equal power; the next track fetched ahead), on through Krasnovia with no restart, fight dip, boss duck and back, win/lose, the bar's boss round, pause and title quiet, the MUSIC option, rapid changes (never more than two voices or decoded tracks), a track that won't load or decode
 node test/physics.js   # 47 checks: heights for all 9 goons, skinned mesh vs skeleton, one mesh per goon/stool, shove + recover, launch, get-up, dominoes, the cook's lob accuracy, Rocco & Ivan tag + enrage
 node test/bot.js 1 400 --mode=aggro    # a bot plays all four rounds (catches pots, throws them back); prints hits, losses, catches, tags, per-round times, errors
 ```
@@ -170,7 +188,7 @@ They check game logic only. Rendering, shaders and real WebXR need a browser or 
 
 ## Stack
 
-Three.js r149 from jsDelivr, WebXR, synthesized placeholder audio. Plain script files, no build step: `index.html` loads them in order and they share one global scope, so it runs straight off GitHub Pages or any static server (not from `file://`: browsers won't load the textures there).
+Three.js r149 from jsDelivr, WebXR, synthesized placeholder sound effects, Web Audio music. Plain script files, no build step: `index.html` loads them in order and they share one global scope, so it runs straight off GitHub Pages or any static server (not from `file://`: browsers won't load the textures there).
 
 | File | What's in it |
 | --- | --- |
@@ -187,6 +205,7 @@ Three.js r149 from jsDelivr, WebXR, synthesized placeholder audio. Plain script 
 | `src/rooms.js` | rooms + portals: what's drawn from where |
 | `src/characters.js` | goon bodies and poses, the player's hands |
 | `src/audio.js`, `src/fx.js` | placeholder sound, sprites and signs |
+| `src/music.js`, `assets/music/` | the music player (`MUSIC.tracks`: level -> track, crossfades, ducking, `CFG.music`); the themes and their game loops (`loop/`, from `tools/music/loops.py`) |
 | `src/player.js`, `src/locomotion.js` | the player, XR + desktop input, hand/head tracking, moving and turning |
 | `src/physics.js` | the particle ragdoll solver, walls, collisions |
 | `src/props.js` | bottles, stools, bats, kitchenware, crates, bins, signs; prop batches |

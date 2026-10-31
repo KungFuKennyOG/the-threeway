@@ -40,7 +40,7 @@ function updateGame(dt) {
   if (game.state === 'intro') {
     if (game.timer > 2.0) {
       game.state = 'fight'; game.timer = 0;
-      if (CFG.waves[game.wave].some(t => CFG.enemies[t].boss)) { showSign('boss', 2.2); AU.roar(); } else showSign('fight', 1.2);
+      if (CFG.waves[game.wave].some(t => CFG.enemies[t].boss)) { showSign('boss', 2.2); AU.roar(); MUSIC.cue('boss'); } else showSign('fight', 1.2);
     }
     return;
   }
