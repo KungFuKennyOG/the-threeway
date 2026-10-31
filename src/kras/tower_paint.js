@@ -4,19 +4,83 @@
 // mosaic, the Ministry's office floor, the archive, the Chairman's office. Painted into the street atlas like everything
 // else (no extra textures or draw calls). Faces and names are invented. Alpha 204 (EM) = the texel glows by itself.
 Object.assign(PAINT, {
-  // ---- the shell: pale stone piers, bays of tall office windows, a spandrel per floor (one repeat = 8 m x 8 m: 2 floors)
+  // ---- the shell: floodlit limestone. Strong pale piers carry the eye up (Moscow's high-rises), the bays between them
+  // are recessed with small deep windows, most of them dark at night: stone that the floodlights wash, not a lit grid.
+  // One repeat = 8 m x 8 m: 4 bays, 2 floors.
   towerFace() {
-    const p = new Pix(32, 32); p.fill('#8e826c');
+    const p = new Pix(32, 32); p.fill('#9a8c70');
+    for (let x = 0; x < 32; x += 8) p.rect(x + 2, 0, 6, 32, '#86785e');                         // the recessed bays
     for (let f = 0; f < 2; f++) {
-      const y = f * 16; p.rect(0, y, 32, 3, '#7a705c'); p.rect(0, y, 32, 1, '#b4a88e');
+      const y = f * 16; p.rect(0, y + 13, 32, 3, '#a4967a'); p.rect(0, y + 13, 32, 1, '#c4b698');   // a spandrel per floor
       for (let x = 0; x < 32; x += 8) {
-        const lit = prng() < 0.5, warm = prng() < 0.7;
-        p.rect(x + 3, y + 4, 4, 11, lit ? (warm ? '#ffbe6a' : '#ffe2a8') : '#241e1c', lit ? EM : 255);
-        p.rect(x + 3, y + 9, 4, 1, lit ? '#b07a44' : '#3a322a');
+        const lit = prng() < 0.28, warm = prng() < 0.75;
+        p.rect(x + 3, y + 3, 4, 8, '#3a3026'); p.rect(x + 4, y + 4, 2, 7, lit ? (warm ? '#ffc070' : '#ffe2a8') : '#1c1816', lit ? EM : 255);
+        if (lit) p.rect(x + 4, y + 7, 2, 1, '#a8703c', EM);
+        p.rect(x + 3, y + 11, 4, 1, '#c4b698');                                                   // the sill
       }
     }
-    for (let x = 0; x < 32; x += 8) { p.rect(x, 0, 2, 32, '#c8bca0'); p.rect(x + 2, 0, 1, 32, '#6a604e'); }
-    p.speck('#9a8e78', 14); return p;
+    for (let x = 0; x < 32; x += 8) { p.rect(x, 0, 2, 32, '#d8ccb0'); p.set(x + 1, 0, '#e8dcc0'); p.rect(x + 2, 0, 1, 32, '#5e5240'); }   // the piers
+    p.speck('#8e8268', 12); return p;
+  },
+  twTrim() { const p = new Pix(8, 8); p.fill('#c8bca0'); p.rect(0, 0, 8, 1, '#e2d6ba'); p.rect(0, 7, 8, 1, '#8e826a'); p.speck('#b4a88c', 4); return p; },   // plain floodlit stone (pinnacles, plinths, the tribune)
+  twGold() {   // the crown's gilt: brighter than any other gold in the city, self-lit (bands, ribs, the lantern's frame)
+    const p = new Pix(16, 8); p.fill('#ffd25a', EM); p.rect(0, 0, 16, 1, '#fff6c8', EM); p.rect(0, 7, 16, 1, '#c8902a', EM);
+    for (let x = 1; x < 16; x += 4) { p.rect(x, 2, 2, 4, '#ffe98a', EM); p.set(x + 2, 3, '#d8a03a', EM); } return p;
+  },
+  twLantern() {   // the crown's lantern: a ring of tall arched openings blazing gold between dark stone columns (one repeat = 4 m x 9 m)
+    const p = new Pix(16, 32); p.fill('#5e5240');
+    p.rect(3, 4, 10, 26, '#ffd870', EM); p.rect(4, 3, 8, 1, '#ffd870', EM); p.rect(5, 2, 6, 1, '#ffd870', EM);
+    p.rect(5, 6, 6, 22, '#fff2c0', EM); p.rect(7, 4, 2, 26, '#c8902a', EM);
+    p.rect(0, 0, 16, 1, '#ffd25a', EM); p.rect(0, 31, 16, 1, '#ffd25a', EM); p.rect(0, 0, 2, 32, '#7a6a52'); p.rect(14, 0, 2, 32, '#7a6a52'); return p;
+  },
+  twCog() {   // the gilded cog: twelve teeth, a rim, six spokes, the hub (self-lit: the brightest thing in the sky)
+    const p = new Pix(48, 48), c = 23.5;
+    for (let y = 0; y < 48; y++) for (let x = 0; x < 48; x++) {
+      const d = Math.hypot(x - c, y - c), a = Math.atan2(y - c, x - c), tooth = Math.cos(a * 12) > 0.15;
+      let col = null;
+      if (d < 23.5 && d >= 19 && tooth) col = d > 22.5 ? '#c8902a' : '#ffd25a';
+      else if (d < 19 && d >= 14.5) col = d > 18 ? '#fff2b0' : d < 15.5 ? '#c8902a' : '#ffcc4a';
+      else if (d < 14.5 && d >= 5.5 && Math.abs(Math.sin(a * 3)) < 0.16) col = '#ffd25a';
+      else if (d < 5.5) col = d < 2 ? '#fff6d0' : d > 4.5 ? '#c8902a' : '#ffdc6a';
+      if (col) p.set(x, y, col, EM);
+    }
+    return p;
+  },
+  twHalo() {   // drawn additively round the cog and the crown: a soft gold glow, dithered (black adds nothing)
+    const p = new Pix(32, 32);
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) { const d = Math.hypot(x - 15.5, y - 15.5) / 16; if (d < 1) { const k = Math.pow(1 - d, 2.2); p.set(x, y, [Math.round(255 * k), Math.round(190 * k), Math.round(80 * k)]); } }
+    return p;
+  },
+  twBeam() {   // a searchlight's beam, drawn additively: a bright core, soft edges (u across, v along; the fade along it is in the vertices)
+    const p = new Pix(16, 4);
+    for (let x = 0; x < 16; x++) { const k = Math.pow(1 - Math.abs(x - 7.5) / 8, 1.6); for (let y = 0; y < 4; y++) p.set(x, y, [Math.round(255 * k), Math.round(236 * k), Math.round(196 * k)]); }
+    return p;
+  },
+  twDoorsLit() {   // the Chairman's doors seen from far below: tall glazed bronze doors, the office blazing behind them (additive)
+    const p = new Pix(16, 12); p.fill('#5a3c18');
+    for (const x of [1, 9]) { p.rect(x, 1, 6, 11, '#ffc870'); p.rect(x + 1, 2, 4, 9, '#ffe2a0'); p.rect(x + 3, 1, 1, 11, '#8a6028'); }
+    p.rect(0, 5, 16, 1, '#8a6028'); return p;
+  },
+  twBannerTall() {   // the facade's giant banners: red, a gold field with the cog at the top, gold edges and fringe (16 x 64: 1 x 4)
+    const p = new Pix(16, 64); p.fill('#a81c18');
+    p.rect(0, 0, 16, 64, '#a81c18'); p.rect(1, 0, 1, 60, '#e8b84a', EM); p.rect(14, 0, 1, 60, '#e8b84a', EM);
+    p.rect(2, 2, 12, 13, '#7e1210');
+    for (let y = 0; y < 13; y++) for (let x = 0; x < 12; x++) { const d = Math.hypot(x - 5.5, y - 6), a = Math.atan2(y - 6, x - 5.5); if ((d < 4 && d > 2) || (d < 5.4 && d >= 4 && Math.cos(a * 8) > 0.2)) p.set(x + 2, y + 2, '#ffd25a', EM); }
+    for (let y = 20; y < 56; y += 6) p.rect(4, y, 8, 1, '#c82a24');
+    p.rect(3, 18, 10, 1, '#e8b84a', EM); p.rect(3, 57, 10, 1, '#e8b84a', EM);
+    for (let x = 0; x < 16; x += 2) p.rect(x, 60, 1, 4, '#e8b84a', EM);
+    return p;
+  },
+  twGlass() {   // the glass lift's panes: clear, with a few streaks of reflected light (the rest isn't drawn)
+    const p = new Pix(16, 16);
+    for (let k = 0; k < 3; k++) { const x0 = 2 + k * 5; for (let y = 0; y < 16; y++) { const x = x0 + Math.floor(y / 3); if (x < 16 && (y + k) % 4 !== 3) p.set(x, y, k === 1 ? '#c8e0e8' : '#8aa8b4', 230); } }
+    p.rect(0, 15, 16, 1, '#a8c0c8', 230); return p;
+  },
+  twStatue() { const p = new Pix(8, 8); p.fill('#c6bfae'); p.rect(0, 0, 8, 1, '#e4dccb'); p.rect(0, 7, 1, 1, '#8e8878'); p.speck('#b0a998', 5); p.speck('#d6cfbe', 3); return p; },   // the heroes: floodlit pale granite
+  twBalustrade() {   // the tribune's parapet: stone balusters under a rail (one repeat = 2 m x 1.1 m)
+    const p = new Pix(16, 9); p.fill('#c8bca0'); p.rect(0, 2, 16, 6, '#3a3026');
+    for (let x = 1; x < 16; x += 3) { p.rect(x, 2, 2, 6, '#b8ac90'); p.set(x, 4, '#d8ccb0'); p.set(x + 1, 6, '#8e826a'); }
+    p.rect(0, 0, 16, 2, '#d8ccb0'); p.rect(0, 8, 16, 1, '#8e826a'); return p;
   },
   litPanorama() {   // the Chairman's window seen from outside: a warm band with mullions
     const p = new Pix(32, 8); p.fill('#ffd28a', EM); for (let x = 0; x < 32; x += 4) p.rect(x, 0, 1, 8, '#4a3a2a'); p.rect(0, 0, 32, 1, '#4a3a2a'); p.rect(0, 7, 32, 1, '#4a3a2a');
@@ -148,5 +212,44 @@ Object.assign(PAINT, {
     for (let a = 0; a < 8; a++) { const t = a / 8 * Math.PI * 2; p.set(12 + Math.round(Math.cos(t) * 2), 4 + Math.round(Math.sin(t) * 2), '#b8231e'); }
     return p;
   },
+  // ---- the typing pool: the Chairman over everyone, the plan board, brass tubes, green lamps
+  portraitGiant() {   // the Chairman, eight metres wide over the typing pool (invented): grey hair, heavy brows, a gold cog pin, red drapes
+    const p = new Pix(48, 28); p.fill('#c9a04a'); p.rect(1, 1, 46, 26, '#8a6a2a'); p.rect(2, 2, 44, 24, '#7a1c18');
+    for (let x = 2; x < 46; x += 4) p.rect(x, 2, 1, 24, '#8e2420');
+    p.rect(16, 2, 16, 24, '#3a4a6a'); p.rect(15, 2, 1, 24, '#c9a04a'); p.rect(32, 2, 1, 24, '#c9a04a');
+    p.rect(20, 5, 8, 9, '#d8a888'); p.rect(19, 4, 10, 2, '#c8c8c0'); p.rect(19, 6, 1, 4, '#c8c8c0'); p.rect(28, 6, 1, 4, '#c8c8c0');
+    p.rect(21, 8, 2, 1, '#3a3a3a'); p.rect(25, 8, 2, 1, '#3a3a3a'); p.set(22, 9, '#1e1414'); p.set(25, 9, '#1e1414'); p.rect(23, 10, 2, 1, '#b88868'); p.rect(22, 12, 4, 1, '#8a5a4a');
+    p.rect(17, 14, 14, 12, '#2a2e3a'); p.rect(22, 14, 4, 6, '#e6e2d6'); p.rect(23, 15, 2, 5, '#8a1c18'); p.set(19, 17, '#f2c14e'); p.set(20, 18, '#f2c14e'); p.set(28, 17, '#e8352b');
+    for (const x of [6, 39]) { for (let a = 0; a < 8; a++) { const t = a / 8 * Math.PI * 2; p.set(x + Math.round(Math.cos(t) * 3), 12 + Math.round(Math.sin(t) * 3), '#f2c14e'); } p.set(x, 12, '#f2c14e'); }
+    return p;
+  },
+  planBoard() {   // the plan board: rows of lit figures, the month's fulfilment in red
+    const p = new Pix(48, 16); p.fill('#1a1e1a'); p.rect(0, 0, 48, 1, '#c9a04a'); p.rect(0, 15, 48, 1, '#c9a04a');
+    p.text('PLAN', 2, 2, '#f2c14e', EM); p.text('104', 28, 2, '#ff4030', EM);
+    for (let y = 10; y < 14; y += 2) for (let x = 2; x < 46; x += 3) p.rect(x, y, 2, 1, prng() < 0.7 ? '#9ae0a0' : '#2a3a2a', prng() < 0.7 ? EM : 255);
+    return p;
+  },
+  tubeExchange() {   // the pneumatic post's exchange: brass pipes into a bank of hatches and gauges
+    const p = new Pix(32, 16); p.fill('#3a2e22');
+    for (let x = 1; x < 32; x += 4) { p.rect(x, 0, 2, 9, '#c9a04a'); p.rect(x, 0, 1, 9, '#f2d68a'); p.rect(x - 1, 9, 4, 3, '#6a5030'); p.set(x, 10, '#1a1410'); }
+    for (let x = 3; x < 32; x += 8) { p.rect(x, 13, 3, 2, '#e6e2d6'); p.set(x + 1, 13, '#8a1c18'); }
+    return p;
+  },
+  greenShade() { const p = new Pix(8, 4); p.fill('#2e7a4a'); p.rect(0, 0, 8, 1, '#5aa874'); p.rect(0, 3, 8, 1, '#ffe8a0', EM); return p; },   // a bankers' lamp's shade, glowing on its underside
+  // ---- the archive canyon
+  archiveTall() {   // floor-to-ceiling steel shelving: eight shelves of boxes and ledgers (one repeat = 2 m x 4 m: half the height)
+    const p = new Pix(16, 32); p.fill('#1c1a16');
+    for (let s = 0; s < 8; s++) {
+      const y = s * 4; p.rect(0, y + 3, 16, 1, '#7a7a72');
+      for (let x = 0; x < 15; x += 2) { if (prng() < 0.1) continue; const c = ['#b89a6a', '#a88a5a', '#c4a676', '#5a6a8a', '#7a5a3a', '#8a3a2a'][Math.floor(prng() * 6)]; p.rect(x, y, 2, 3, c); p.set(x, y + 1, '#ece4cc'); }
+    }
+    p.rect(15, 0, 1, 32, '#6a6a62'); return p;
+  },
+  cardWall() {   // the card index as a wall: hundreds of little oak drawers, brass pulls, white labels (one repeat = 1.6 m x 1.6 m)
+    const p = new Pix(16, 16); p.fill('#3e2414');
+    for (let y = 0; y < 16; y += 4) for (let x = 0; x < 16; x += 4) { p.rect(x, y, 4, 4, '#6a4024'); p.rect(x, y, 4, 1, '#7a5030'); p.rect(x, y, 1, 4, '#5a361e'); p.set(x + 1, y + 2, '#e6dac0'); p.set(x + 2, y + 2, '#c9a04a'); }
+    return p;
+  },
+  twBulb() { const p = new Pix(4, 4); p.fill('#fff4c8', EM); p.set(1, 1, '#ffffff', EM); return p; },
   phone() { const p = new Pix(8, 8); p.fill('#1a1a1e'); p.rect(1, 1, 6, 2, '#2e2e34'); p.rect(2, 4, 4, 3, '#c8c4b8'); p.set(3, 5, '#1a1a1e'); p.set(5, 5, '#1a1a1e'); return p; },
 });

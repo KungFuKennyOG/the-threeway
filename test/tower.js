@@ -1,6 +1,7 @@
 // Headless checks for the Tower of Labor (the end of Act 1): no stairs. Started from the menu, walked into from Parade
-// Square, the lobby, lift 1 to the Ministry's office floor, lift 2 to
-// the archive (Inspector Orlova), lift 3 to the Chairman's office; he signs and Act 1 is complete.
+// Square, the lobby, lift 1 to the Ministry's typing pool, lift 2 to the archive (Inspector Orlova), the glass lift up the
+// outside of the south face to the Chairman's tribune; he signs out there and Act 1 is complete. Also the MSU massing,
+// the searchlights (the glow mesh) and the budgets the shell pays on every outdoor level.
 'use strict';
 const vm = require('vm');
 const THREE = require('./three_stub.js');
@@ -45,10 +46,15 @@ const walkTo = (lx, lz, sp = 0.035) => {   // walk in small steps (the walk rect
 const until = (f, n = 3000) => { for (let i = 0; i < n && !f(); i++) frame(); return f(); };
 const fightClear = () => { until(() => TW.game.state === 'fight' && !TW.game.queue.length, 900); kill(); until(() => TW.game.state === 'walk', 600); };
 const onFloor = (y) => TW.enemies.length > 0 && TW.enemies.every(e => Math.abs(e.pos.y - y) < 0.1);
-const carMid = (Li) => [(Li.car[0] + Li.car[1]) / 2, (Li.car[2] + Li.car[3]) / 2 + 0.3];
-const ride = (Li, F) => {   // step into a lift and ride it to the top of its run; returns the worst per-frame jump
-  const [cx, cz] = carMid(Li); walkTo(cx, TWR.wallZ - 0.8); walkTo(cx, cz); maxJump = 0;
-  until(() => Li.stop === 1 && Li.phase === 'open', 2400);
+const carMid = (Li) => [(Li.car[0] + Li.car[1]) / 2, (Li.car[2] + Li.car[3]) / 2 + (Li.glass ? -0.3 : 0.3)];
+let midRide = null;   // what the glass lift's ride looked like halfway up
+const ride = (Li) => {   // step into a lift and ride it to the top of its run; returns the worst per-frame jump
+  const [cx, cz] = carMid(Li); walkTo(cx, Li.glass ? Li.car[3] + 0.8 : TWR.wallZ - 0.8); walkTo(cx, cz); maxJump = 0;
+  const mid = (Li.stops[0] + Li.stops[1]) / 2;
+  until(() => {
+    if (Li.glass && !midRide && Li.y > mid) { face(0, -0.5); frame(); midRide = { room: TW.roomState.cur, sky: TW.ST.skylineMesh.visible, shell: TWR.shell.visible, glow: TWR.glow.visible, inCar: run('twInCar(TLIFTS[2])'), y: +Li.y.toFixed(1) }; }
+    return Li.stop === 1 && Li.phase === 'open';
+  }, 4800);
   return maxJump;
 };
 const inside = (x, z, [x0, x1, z0, z1], m = 0) => x > x0 + m && x < x1 - m && z > z0 + m && z < z1 - m;
@@ -62,12 +68,30 @@ try {
   check('starting it from the menu puts you just inside the south doors, on the ground floor', TW.level.name === 'tower' && Math.abs(RL().z - C.start[1]) < 0.3 && Math.abs(TW.player.floorY) < 0.01, `${TW.level.name} z ${RL().z.toFixed(2)}`);
 
   // ---- the build
-  check('the tower is a baked shell (outside, fogged like the skylines but less) + two baked meshes for its four floors + three lift cars + the permit',
+  check('the tower is a baked shell (outside, fogged like the skylines but less) + one small additive glow + two baked meshes for its four floors + three lift cars + the permit',
     ['low', 'high'].every(k => M[k] && M[k].geometry.attributes.bake) && TWR.shell.geometry.attributes.bake && TWR.shell.material.uniforms.uFogOn.value === C.shellFog
-    && L.length === 3 && L.every(Li => Li.group && Li.leaves.length === 2) && TWR.permit && !TWR.permit.visible);
+    && TWR.glow && TWR.glow.material.transparent && TWR.glow.material.depthWrite === false && TWR.glow.material.uniforms.uFogOn.value < C.shellFog
+    && L.length === 3 && L.every(Li => Li.group && Li.leaves.length === 2) && L[2].glass && TWR.permit && !TWR.permit.visible);
   const T = TWR.tris, inTris = T.lobby + T.office + T.archive + T.top;
   check('each floor keeps its triangles modest', ['lobby', 'office', 'archive', 'top'].every(k => T[k] < 6000), ['lobby', 'office', 'archive', 'top'].map(k => k + ' ' + T[k]).join(', '));
-  check('the shell stays cheap for something seen from across the city', T.shell < 8000, T.shell + ' shell tris');
+  check('the outside (paid on every outdoor level) stays cheap: shell < 8000 triangles, the glow < 100, two meshes (+ the glass car)',
+    T.shell < 8000 && T.glow < 100 && TW.LEVELS.tower.outside().length === 3, T.shell + ' shell + ' + T.glow + ' glow tris');
+  { const sym = (x) => -80 - x, P = TWR.shell.geometry.attributes.position.array;
+    const topAt = (x0, x1) => { let m = 0; for (let i = 0; i < P.length; i += 3) if (P[i] > x0 && P[i] < x1 && P[i + 2] > 300 && P[i + 2] < 352) m = Math.max(m, P[i + 1]); return m; };
+    const inner = [topAt(-2, 2), topAt(sym(2), sym(-2))], outer = [topAt(22, 26), topAt(sym(26), sym(22))], centre = topAt(-41, -39);
+    check('MSU massing: the central tower between four wing towers stepping up to it, symmetrical (outer < inner < centre), no taller than ~260 m',
+      Math.abs(inner[0] - inner[1]) < 0.01 && Math.abs(outer[0] - outer[1]) < 0.01 && outer[0] > 40 && outer[0] < inner[0] && inner[0] < TWR.tiers[4][5] && centre === TWR.spire && centre <= 260,
+      `outer ${outer[0].toFixed(0)} m, inner ${inner[0].toFixed(0)} m, centre ${centre.toFixed(0)} m`); }
+  { const g = TWR.glow, P = g.geometry.attributes.position.array, eye = W(-40, 1.7, 256), E = [eye.x, eye.y, eye.z].join(',');
+    run('twGlowTick(0, new V3(' + E + '))'); const a = Array.from(P);
+    run('twGlowTick(4, new V3(' + E + '))'); const b = Array.from(P);
+    let moved = 0, n = 0; for (let v = 18; v < a.length / 3; v++) { if ((v - 18) % 12 < 6) continue; const i = v * 3; n++; if (Math.hypot(a[i] - b[i], a[i + 1] - b[i + 1], a[i + 2] - b[i + 2]) > 1) moved++; }   // the far half of each beam
+    const up = C.search.every((s, k) => { const d = run(`twBeamDir(${k}, 7.3, new V3())`); return d.y > 0.5 && Math.abs(Math.hypot(d.x, d.y, d.z) - 1) < 1e-6; });
+    const t0 = process.hrtime.bigint(); run(`{ const c = new V3(${E}); for (let i = 0; i < 1000; i++) twGlowTick(i / 72, c); }`); const us = Number(process.hrtime.bigint() - t0) / 1e3 / 1000;
+    check('six searchlights sweep the sky (their beams move, always upward), in one small mesh moved as it\'s drawn (so on any level), cheaply',
+      C.search.length === 6 && moved > n * 0.8 && a.every(Number.isFinite) && up && typeof g.onBeforeRender === 'function' && us < 200, `${moved}/${n} vertices moved in 4 s, ${us.toFixed(1)} us a tick`);
+    const cogTex = TW.ST.atlas.rect.twCog;
+    check('the gilded cog is static (nothing turns it): two crossed self-lit plates on the spire, haloed in the glow', !!cogTex && TWR.cogY === 226 && run('typeof TWR.cog') === 'undefined', ''); }
   { const P = TW.ST.skylineMesh.geometry.attributes.position.array, R = AW.rect(TWR.rect); let n = 0;
     for (let i = 0; i < P.length; i += 3) if (P[i + 1] > 0.5 && P[i] > R[0] && P[i] < R[1] && P[i + 2] > R[2] && P[i + 2] < R[3]) n++;
     check('no skyline slab, TV tower or far-city block stands on the tower\'s ground', n === 0, n + ' vertices'); }
@@ -91,9 +115,10 @@ try {
     const crossing = [PL.gap[0], PL.gap[1]], square = PL.square, palace = AW.rect(PL.rect), parade = R(Lv.parade)[0], tower = R(Lv.tower)[0];
     const seq = [['the crossing', crossing], ['Station Square', square], ['the Palace', palace], ['Parade Square', parade], ['the Tower', tower]];
     const mid = (r) => (r[0] + r[1]) / 2;   // each reaches further west, and from the square on each one's middle is west of the last's
+    // (all north of the tracks' line, z 151.4; the Tower's wings spread both ways off its axis, west of where the tracks end at x -178, so for it, its middle)
     const west = seq.every(([, r], i) => i === 0 || (r[0] < seq[i - 1][1][0] && (i < 2 || mid(r) < mid(seq[i - 1][1]))));
     check('each place on the way is further west (-x, into Krasnovia) than the last: crossing, Station Square, Palace, Parade Square, Tower',
-      west && [palace, parade, tower].every(r => r[1] < -50 && r[2] > 151.4), seq.map(([n, r]) => `${n} x ${r[0].toFixed(0)}..${r[1].toFixed(0)}`).join(', '));
+      west && [palace, parade, tower].every(r => r[1] < -50 && (r === tower ? (r[2] + r[3]) / 2 : r[2]) > 151.4), seq.map(([n, r]) => `${n} x ${r[0].toFixed(0)}..${r[1].toFixed(0)}`).join(', '));
     const all = Object.values(Lv).flatMap(D => (R(D) || []).map(r => [D.name, r])), P = TW.ST.skylineMesh.geometry.attributes.position.array, hit = {};
     for (let i = 0; i < P.length; i += 3) if (P[i + 1] > 0.5) for (const [n, r] of all) if (P[i] > r[0] && P[i] < r[1] && P[i + 2] > r[2] && P[i + 2] < r[3]) hit[n] = (hit[n] || 0) + 1;
     check('nothing from the far city (skyline slabs, the TV tower, far-field blocks) stands on any level\'s ground', !Object.keys(hit).length, JSON.stringify(hit) + ` (${all.length} rects)`); }
@@ -169,37 +194,49 @@ try {
   check('going down in the archive puts you back in the archive, the fight restarted', TW.level.encounter === 2 && Math.abs(TW.player.floorY - TWR.archive.y) < 0.05 && ['intro', 'fight'].includes(TW.game.state), `y ${TW.player.floorY.toFixed(2)} ${TW.game.state}`);
   fightClear();
 
-  // ---- lift 3 to the Chairman's office
+  // ---- the glass lift up the outside of the tower to the Chairman's tribune
+  until(() => TW.game.state === 'walk', 300);
+  check('once Orlova\'s down, the glass lift\'s doors open on the night', ['opening', 'open'].includes(L[2].phase) || (step(90), L[2].phase === 'open'), L[2].phase);
+  until(() => L[2].phase === 'open', 200);
   jump = ride(L[2]);
-  check('lift 3 takes you up to the Chairman\'s office under the cog', L[2].stop === 1 && Math.abs(TW.player.floorY - TWR.top.y) < 0.05 && TWR.cogY > TWR.top.y + TWR.top.h, `y ${TW.player.floorY.toFixed(2)}`);
-  check('smoothly, all 40 m of it', jump < comfort, (jump * 1000).toFixed(1) + ' mm');
-  walkTo(-40, 331.5);
+  check('the glass lift takes you up the outside of the south face to the tribune, right under the cog', L[2].stop === 1 && Math.abs(TW.player.floorY - TWR.top.y) < 0.05
+    && L[2].car[3] <= TWR.tiers[1][2] && TWR.cogY - TWR.cogD / 2 > TWR.top.y + 20 && TWR.cogY - TWR.cogD / 2 < TWR.top.y + 45, `y ${TW.player.floorY.toFixed(2)}`);
+  check('smoothly, all 138 m of it', jump < comfort, (jump * 1000).toFixed(1) + ' mm');
+  check('halfway up you\'re outside, in the enclosed glass car: the city, the tower and the searchlights are drawn', !!midRide && midRide.room === 'outside' && midRide.sky && midRide.shell && midRide.glow && midRide.inCar, JSON.stringify(midRide));
+  walkTo(-40, 318.5);
   until(() => TW.level.encounter === 3, 60);
   until(() => TW.game.state === 'fight' && !TW.game.queue.length, 900);
   const chair = TW.game.bosses[0];
   check('the Chairman has a boss bar, on his own floor, lift 3 shut', chair && TW.bossBars.length === 1 && onFloor(TWR.top.y) && TW.LOCKED.has('twLift3'), TW.enemies.map(e => e.type + '@' + e.pos.y.toFixed(1)).join(','));
   chair.hp = chair.maxHp * 0.3; step(2);
   check('he doesn\'t enrage (he\'s no fighter)', !chair.enraged);
-  // rooms, up here: facing the window you see the night city; facing in, only the office
-  run('level.encounter = 99'); face(0, -0.15); step(3);   // (fights paused while we look round)
-  check('facing the window: the office and, through it, the city (skylines, the tower\'s own shell) are drawn; nothing from the floors below',
+  // the tribune: outside, flat, held in by its balustrade
+  run('level.encounter = 99'); face(Math.PI); step(3);   // (fights paused while we look round)
+  check('on the tribune you\'re outside: the city, the shell, the glow are drawn, and through his doors his office', TW.roomState.cur === 'outside' && TW.ST.skylineMesh.visible && TWR.shell.visible && TWR.glow.visible && M.high.visible, TW.roomState.cur);
+  { const pts = [[-49.5, 316.1], [-30.5, 316.1], [-49.5, 324.8], [-30.5, 324.8], [-44, 322]].map(([x, z]) => { const w = W(x, 0, z); return run(`floorAt(${w.x}, ${w.z}, ${TWR.top.y + 0.5})`); });
+    walkTo(-40.6, 312); const front = LH().z; walkTo(-55, 320); const side = LH().x; walkTo(-40, 318.5);
+    check('the tribune is flat and walkable, and its balustrade holds you (no falling off)', pts.every(y => Math.abs(y - TWR.top.y) < 0.01) && front > TWR.tribune[2] && side > TWR.tribune[0] && Math.abs(TW.player.floorY - TWR.top.y) < 0.01,
+      `floors ${pts.map(y => (+y).toFixed(2)).join(',')}, held at z ${front.toFixed(2)}, x ${side.toFixed(2)}`); }
+  setL(-40, TWR.top.y, 330); face(0, -0.1); step(3);
+  check('in his office facing the doors: the office and, through them, the city (skylines, the tower\'s own shell) are drawn; nothing from the floors below',
     TW.roomState.cur === 'twTop' && M.high.visible && TW.ST.skylineMesh.visible && TWR.shell.visible && !M.low.visible, TW.roomState.cur);
   face(Math.PI); step(3);
   check('facing in, the city isn\'t drawn', M.high.visible && !TW.ST.skylineMesh.visible && !TWR.shell.visible);
+  setL(-40, TWR.top.y, 318.5); step(2);
   run('level.encounter = 3');
   // he's beaten: he signs
   kill(); until(() => TW.game.state === 'won', 120);
   check('beating the Chairman: he signs, the level is won', TW.game.state === 'won' && run('SIGNED.has("chairman")') && TWR.signed, TW.game.state);
   check('"SIGNED · 1 OF 3"', run('bigSign && bigSign.mesh ? 1 : 1') && run('SIGN_TEXT.signed1[0]') === 'SIGNED · 1 OF 3');
   step(3);
-  check('the signed permit lies on his desk', TWR.permit.visible);
+  check('the signed permit lies on the signing table out on the tribune', TWR.permit.visible);
   step(Math.ceil((C.signPause + 0.3) / DT));
   check('then "ACT 1 COMPLETE"', TWR.act1 && run('SIGN_TEXT.act1[0]') === 'ACT 1 COMPLETE' && /Act 1 complete/.test(els.info.textContent), els.info.textContent.slice(0, 60));
 
   // ---- the leader hook: his own goon (signs: true) kneels and calls onLeaderSigned
   run('LEVELS.tower.start(false); level.encounter = 99'); step(2);
-  run('resetTowerLifts(3); clearEnemies(); level.encounter = 3; game.state = "fight"; game.queue = []; { const e = new Enemy(enemyType("chairman")); e.placeAt(...ACT1_WEST.toWorld(-43, 325), 0, 80); e.cooldown = 1e9; enemies.push(e); }');
-  setL(-40, TWR.top.y, 331); step(3);
+  run('resetTowerLifts(3); clearEnemies(); level.encounter = 3; game.state = "fight"; game.queue = []; { const e = new Enemy(enemyType("chairman")); e.placeAt(...ACT1_WEST.toWorld(-43, 321), 0, TWR.top.y); e.cooldown = 1e9; enemies.push(e); }');
+  setL(-40, TWR.top.y, 318); step(3);
   run('onLeaderSigned({ type: "bodyguard", cfg: {} })'); step(1);
   check('the hook ignores goons who don\'t sign', !TWR.signed && TW.game.state === 'fight');
   run('onLeaderSigned({ type: "chairman", cfg: { signs: true }, alive: false })'); step(1);
