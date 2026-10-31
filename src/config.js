@@ -207,6 +207,7 @@ const CFG = {
     atlasGutter: 8,                            // px of wrapped border per street texture, so the atlas can be mipmapped
     farField: { radius: 430, pitch: 30, block: 22, oldRadius: 140, lampRadius: 16, lampK: 1.3, fineGround: [-170, 170, -150, 250], tile: 240 },   // LOD stand-ins: a street grid of lit boxes from the street's edge out to radius (m), a street light per block; drawn in tiles (m square) culled out of view
     portalDeg: 72,                             // the bar and the street only draw each other when the door is open and in view
+    nearDraw: [0, 30, 62, 1e9],                // the street's close detail (cornices, balconies, signs, the tram) is drawn only with your eye within 62 m of (0, 30) (src/street/build.js)
     boomNear: [0, 30, 120, 20],                // the checkpoint's boom is drawn within 120 m of (0, 30) or from over 20 m up (src/rooms.js: userData.near)
     portalFar: 150,                            // and no doorway is looked through from further than this (m): the Palace's foyer from Tripoint Square, the bar from Parade Square
     beaconBlink: 1.6,                          // s per on/off cycle of the towers' red beacons

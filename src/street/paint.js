@@ -303,3 +303,259 @@ function paintAtlas() {
   t.magFilter = THREE.NearestFilter; t.minFilter = THREE.NearestMipmapLinearFilter; t.generateMipmaps = true; t.flipY = false; t.needsUpdate = true;
   return { tex: t, rect, W, H, size: (k) => [imgs[k].w, imgs[k].h] };
 }
+// ============================== Tripoint Square, the polish pass ==============================
+// The square's signatures (the Brass Clock, Tripoint Station's pavilion, the Threeway's hero front), the old road
+// (the dead tram line, posters from all three sides, shuttered shops), the barricades and the checkpoint's set piece.
+// Signs are in the city's three scripts: Latin, Krasnovian (Cyrillic, below) and Hinomoto brush marks (BRUSH).
+const CYR = {
+  Б: '11111100001000011110100011000111110', Г: '11111100001000010000100001000010000', Д: '00110010100101001010010101111110001',
+  Ж: '10101101010111000100011101010110101', З: '01110100010000100110000011000101110', И: '10001100011001110101110011000110001',
+  Й: '00100100011001110101110011000110001', Л: '00111010010100101001010010100110001', П: '11111100011000110001100011000110001',
+  У: '10001100011000101111000010000101110', Ф: '00100011101010110101011100010000100', Ц: '10010100101001010010100101111100001',
+  Ч: '10001100011000101111000010000100001', Ш: '10101101011010110101101011010111111', Ы: '10001100011000111101100111001111101',
+  Ь: '10000100001000011110100011000111110', Э: '01110100010000100111000011000101110', Ю: '10010101011010111101101011010110010',
+  Я: '01111100011000101111001010100110001', Щ: '10101101011010110101101011111100001',
+};
+const CYR_LAT = { А: 'A', В: 'B', Е: 'E', Ё: 'E', К: 'K', М: 'M', Н: 'H', О: 'O', Р: 'P', С: 'C', Т: 'T', Х: 'X' };
+function say(p, s, x, y, col, a = 255, k = 1) {   // Latin or Krasnovian in the 5x7 font, k px per dot
+  let cx = x;
+  for (const ch of String(s).toUpperCase()) {
+    const g = CYR[ch] || GLYPHS[CYR_LAT[ch] || ch];
+    if (g) for (let i = 0; i < 35; i++) if (g[i] === '1') p.rect(cx + (i % 5) * k, y + Math.floor(i / 5) * k, k, k, col, a);
+    cx += 6 * k;
+  }
+}
+const sayW = (s, k = 1) => String(s).length * 6 * k - k;
+const sayC = (p, s, cx, y, col, a = 255, k = 1) => say(p, s, Math.round(cx - sayW(s, k) / 2), y, col, a, k);
+const brushRow = (p, n, g0, cx, y, col, a = 255) => { const x = Math.round(cx - (n * 6 - 1) / 2); for (let i = 0; i < n; i++) p.glyph(g0 + i, x + i * 6, y, col, a); };
+const disc = (p, cx, cy, r, col, a = 255) => { for (let y = Math.floor(cy - r); y <= cy + r; y++) for (let x = Math.floor(cx - r); x <= cx + r; x++) if (Math.hypot(x - cx, y - cy) <= r) p.set(x, y, col, a); };
+const ring = (p, cx, cy, r0, r1, col, a = 255) => { for (let y = Math.floor(cy - r1); y <= cy + r1; y++) for (let x = Math.floor(cx - r1); x <= cx + r1; x++) { const d = Math.hypot(x - cx, y - cy); if (d <= r1 && d >= r0) p.set(x, y, col, a); } };
+function cogAt(p, cx, cy, r, col, a = 255) { for (let y = Math.floor(cy - r - 2); y <= cy + r + 2; y++) for (let x = Math.floor(cx - r - 2); x <= cx + r + 2; x++) { const d = Math.hypot(x - cx, y - cy), t = Math.atan2(y - cy, x - cx); if ((d <= r && d >= r * 0.5) || (d > r && d <= r + 2 && Math.cos(t * 8) > 0.3)) p.set(x, y, col, a); } }
+// three posters from the three sides, 32 x 48 each, drawn anywhere (clipped): Krasnovia's, Columbia Cola, Aoki Development
+function posterK(p, x, y) {
+  p.rect(x, y, 32, 48, '#b8231e'); p.rect(x, y, 32, 10, '#e6dac0'); sayC(p, 'МИР', x + 16, y + 2, '#b8231e');
+  cogAt(p, x + 19, y + 23, 6, '#f2c14e');
+  disc(p, x + 9, y + 27, 4, '#1a0a0a'); p.rect(x + 3, y + 32, 13, 12, '#1a0a0a'); p.rect(x + 13, y + 30, 3, 6, '#1a0a0a');   // a worker's head and shoulders
+  p.rect(x, y + 44, 32, 4, '#5a1010'); sayC(p, 'ТРУД', x + 16, y + 38, '#f2c14e');
+}
+function posterC(p, x, y) {
+  p.rect(x, y, 32, 48, '#f0e6cc'); p.rect(x, y, 32, 1, '#c9a04a'); p.rect(x, y + 47, 32, 1, '#c9a04a');
+  sayC(p, 'DRINK', x + 16, y + 2, '#1a2a5a'); disc(p, x + 16, y + 25, 10, '#c8202c');
+  p.rect(x + 15, y + 13, 3, 2, '#c9a04a'); p.rect(x + 15, y + 15, 3, 5, '#3a1a10'); p.rect(x + 13, y + 20, 7, 15, '#3a1a10'); p.rect(x + 14, y + 25, 5, 3, '#f0e6cc');   // the bottle
+  sayC(p, 'COLA', x + 16, y + 38, '#c8202c');
+}
+function posterH(p, x, y) {
+  p.rect(x, y, 32, 48, '#120812'); p.rect(x, y, 8, 48, '#d81e18');
+  for (let i = 0; i < 4; i++) p.glyph(i + 1, x + 15, y + 4 + i * 8, '#ff4fb0');
+  p.glyph(4, x + 1, y + 10, '#ffffff'); p.glyph(5, x + 1, y + 22, '#ffffff');
+  sayC(p, 'AOKI', x + 18, y + 39, '#ffffff'); p.rect(x + 8, y, 24, 1, '#3ff0ff'); p.rect(x + 8, y + 47, 24, 1, '#3ff0ff');
+}
+Object.assign(PAINT, {
+  stMedallion() {   // the brass roundel in the setts where the three lines meet: the three sectors, the lines between
+    const p = new Pix(32, 32), c = 15.5, cuts = [27, 90, 145];
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+      const d = Math.hypot(x - c, y - c); if (d > 15.6) continue;
+      if (d > 13.4) { p.set(x, y, d > 14.6 ? '#7a5a22' : PC.brass); continue; }
+      const a = (Math.atan2(y - c, x - c) * 180 / Math.PI + 360) % 360;
+      const onCut = cuts.some(k => Math.abs(((a - k + 540) % 360) - 180) * Math.PI / 180 * d < 0.9);
+      p.set(x, y, d < 2.4 || onCut ? '#ffe7a0' : a > 27 && a < 90 ? '#1a2a5a' : a >= 90 && a < 145 ? '#b8231e' : '#e6e6e0');
+    }
+    sayC(p, '1962', 16, 2, '#7a5a22');
+    cogAt(p, 11, 21, 2, '#f2c14e'); disc(p, 22, 21, 2.2, '#f2c14e'); disc(p, 16, 8, 2.4, '#d81e18');
+    return p;
+  },
+  stClockFace() {   // 24 px: a lit opal face in a brass ring, twelve ticks, ten to midnight
+    const p = new Pix(24, 24); p.fill('#22262a'); const c = 11.5;
+    for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) { const d = Math.hypot(x - c, y - c); if (d < 10.2) p.set(x, y, '#f4ead0', EM); else if (d < 11.6) p.set(x, y, d < 10.9 ? '#ffe7a0' : PC.brass); }
+    for (let h = 0; h < 12; h++) { const t = h / 12 * Math.PI * 2; for (let r = 8.2; r < 9.8; r += 0.5) p.set(c + Math.sin(t) * r, c - Math.cos(t) * r, '#2a1a0a', EM); }
+    const hand = (deg, len, col) => { const t = deg * Math.PI / 180; for (let r = 0; r < len; r += 0.4) p.set(c + Math.sin(t) * r, c - Math.cos(t) * r, col, EM); };
+    hand(-5, 5.5, '#1a1008'); hand(-60, 8, '#1a1008'); p.set(12, 12, '#b8231e', EM); p.set(11, 11, '#b8231e', EM);
+    return p;
+  },
+  stPlaque1888() { const p = new Pix(32, 10); p.fill(PC.brass); p.rect(0, 0, 32, 1, '#ffe7a0'); p.rect(0, 9, 32, 1, '#7a5a22'); sayC(p, '1888', 16, 2, '#3a2a10'); return p; },
+  stIronGreen() { const p = new Pix(8, 8); p.fill('#2e5a46'); p.rect(0, 0, 8, 1, '#4a8a6a'); p.rect(0, 7, 8, 1, '#1e3a2e'); return p; },
+  stMarble() {   // Secession panel: white marble, a gilt rule and a gilt sunflower
+    const p = new Pix(16, 16); p.fill('#e2ded2'); p.speck('#cfcabc', 14); p.speck('#f0ece2', 8);
+    for (let k = 0; k < 6; k++) p.set(3 + k * 2, 2 + k, '#c4beb0');
+    p.rect(0, 0, 16, 1, '#2e5a46'); p.rect(0, 15, 16, 1, '#2e5a46'); p.rect(1, 1, 14, 1, PC.gold); p.rect(1, 14, 14, 1, PC.gold);
+    ring(p, 7.5, 8, 2.5, 3.6, PC.gold); disc(p, 7.5, 8, 1.4, '#9a7420'); return p;
+  },
+  stCanopy() { const p = new Pix(16, 16); p.fill('#1a2826'); for (let x = 0; x < 16; x += 8) p.rect(x, 0, 1, 16, '#3a6a54'); p.rect(0, 0, 16, 1, '#3a6a54'); p.rect(0, 8, 16, 1, '#2e5a46'); p.set(3, 4, '#5a7a74'); p.set(11, 12, '#5a7a74'); p.set(12, 3, '#3a4a48'); return p; },
+  stStationSign() {   // the pavilion's front: METRO over TRIPOINT, Wagner green and gold, sunflowers either end
+    const p = new Pix(112, 28); p.fill('#2e5a46'); p.rect(0, 0, 112, 2, PC.gold); p.rect(0, 26, 112, 2, PC.gold); p.rect(0, 0, 2, 28, PC.gold); p.rect(110, 0, 2, 28, PC.gold);
+    p.rect(4, 4, 104, 20, '#e8e2d0'); p.rect(5, 5, 102, 18, '#1e3a2e');
+    sayC(p, 'METRO', 56, 6, PC.gold); say(p, 'TRIPOINT', 9, 13, '#f4ead0', 255, 2);   // 8 chars at 2 px: 95 px from x 9
+    for (const sx of [7, 104]) { ring(p, sx, 9, 1.4, 2.6, PC.gold); disc(p, sx, 9, 0.9, '#c8342a'); }
+    return p;
+  },
+  stGrille() {   // the welded grille across the stairs, chained and padlocked (gaps cut out)
+    const p = new Pix(32, 32);
+    for (let x = 1; x < 32; x += 4) p.rect(x, 0, 2, 32, '#2a3a32'); for (const y of [0, 1, 15, 30, 31]) p.rect(0, y, 32, 1, '#3a4a42');
+    for (let k = 0; k < 32; k++) { const y = Math.round(10 + k * 0.4 + Math.sin(k * 0.5)); if (k % 3 !== 2) { p.set(k, y, '#9aa0a8'); p.set(k, y + 1, '#5a6068'); } }   // the chain
+    p.rect(14, 15, 5, 5, PC.brass); p.rect(15, 13, 3, 2, '#9aa0a8'); p.set(16, 17, '#3a2a10');   // the padlock
+    p.rect(0, 22, 32, 2, '#6a3a2a'); for (let x = 2; x < 32; x += 6) p.set(x, 22, '#c86a4a');   // a rusted weld seam
+    return p;
+  },
+  stStairs() {   // the stairs going down under the square, into the dark
+    const p = new Pix(16, 16); p.fill('#0a0608');
+    for (let y = 0; y < 16; y += 2) { const k = Math.max(0, 1 - y / 12); p.rect(0, y, 16, 1, [Math.round(90 * k), Math.round(84 * k), Math.round(80 * k)]); p.rect(0, y + 1, 16, 1, [Math.round(50 * k), Math.round(46 * k), Math.round(48 * k)]); }
+    p.rect(0, 0, 1, 16, '#2e5a46'); p.rect(15, 0, 1, 16, '#2e5a46'); return p;
+  },
+  stNotice() {   // nailed to the grille: closed by the Accords, in the three scripts
+    const p = new Pix(104, 56); p.fill('#e8dcc0'); p.speck('#d8c8a4', 60); p.speck('#c8b48c', 20);
+    p.rect(0, 0, 104, 11, PC.militia); sayC(p, 'VOSTBURG ACCORDS', 52, 2, '#f2ede4');
+    sayC(p, 'STATION CLOSED', 52, 14, '#9a1a16'); sayC(p, 'СТАНЦИЯ ЗАКРЫТА', 52, 24, '#2a1a14'); brushRow(p, 8, 0, 52, 34, '#2a1a14');
+    sayC(p, '· 1962 ·', 52, 45, PC.militia);
+    for (const [x, y] of [[2, 13], [101, 13], [2, 53], [101, 53]]) p.set(x, y, '#3a3a40');
+    for (let k = 0; k < 7; k++) p.rect(97 + k, 49 + k, 7 - k, 1, '#000000', 0);   // a torn corner (cut out)
+    return p;
+  },
+  stLines() {   // the three lines that met under the square
+    const p = new Pix(36, 12); p.fill('#f2ede4'); p.rect(0, 0, 36, 1, '#2e5a46'); p.rect(0, 11, 36, 1, '#2e5a46');
+    [['#b8231e', '1'], ['#1a3a7a', '2'], ['#d8a020', '3']].forEach(([c, n], i) => { disc(p, 6 + i * 12, 6, 4.6, c); p.text(n, 4 + i * 12, 3 - 1 + 1, '#ffffff'); });
+    return p;
+  },
+  stBunting() {   // pennants on a string (cut out): Krasnovian red, Columbian navy, Hinomoto white, Free City brass
+    const p = new Pix(32, 8); p.rect(0, 0, 32, 1, '#1a1014'); const cols = ['#c8261e', '#1e2e6a', '#eef3f8', '#d8aa50'];
+    for (let k = 0; k < 4; k++) for (let j = 1; j < 8; j++) for (let i = 0; i < 6; i++) if (Math.abs(i - 2.5) <= (7.5 - j) / 2.2) p.set(k * 8 + 1 + i, j, cols[k]);
+    return p;
+  },
+  stSigns() {   // shop signs, 64 x 16 a row: the pharmacy, the tobacconist, the bakery, the diner, books, radio repairs
+    const p = new Pix(64, 96);
+    const row = (r, bg, edge, a, b, ca, cb) => { const y = r * 16; p.rect(0, y, 64, 16, bg); p.rect(0, y, 64, 1, edge); p.rect(0, y + 15, 64, 1, edge); p.rect(0, y, 1, 16, edge); p.rect(63, y, 1, 16, edge); sayC(p, a, 32, y + 1 + (b ? 0 : 4), ca); if (b) sayC(p, b, 32, y + 8, cb); };
+    row(0, '#1e5a3a', PC.gold, 'APOTHEKE', 'АПТЕКА', '#f4ead0', '#f4ead0'); p.rect(2, 4, 5, 1, '#e8f2d0'); p.rect(4, 2, 1, 5, '#e8f2d0'); p.rect(57, 4, 5, 1, '#e8f2d0'); p.rect(59, 2, 1, 5, '#e8f2d0');
+    row(1, '#3a2418', PC.gold, 'TABAK', null, PC.gold);
+    row(2, '#b8231e', '#f2c14e', 'БУЛОЧНАЯ', null, '#f4ead0');
+    row(3, '#1a2a5a', PC.gold, 'DINER', 'LUNCH 24H', '#fff0b0', '#ff9a3c');
+    row(4, '#e6dac0', '#4a3020', 'КНИГИ', 'BOOKS', '#3a2418', '#3a2418');
+    row(5, '#103a3a', '#3ff0ff', 'RADIO', 'TV · РАДИО', '#3ff0ff', '#f4ead0');
+    return p;
+  },
+  stBladeH() {   // Hinomoto blade signs, 16 x 48 each: red lacquer, black with pink neon
+    const p = new Pix(32, 48);
+    p.rect(0, 0, 16, 48, '#c8261e', EM); p.rect(0, 0, 16, 2, PC.gold, EM); p.rect(0, 46, 16, 2, PC.gold, EM); for (let i = 0; i < 5; i++) p.glyph(i, 5, 4 + i * 8, '#ffffff', EM);
+    p.rect(16, 0, 16, 48, '#120812', EM); p.rect(16, 0, 1, 48, '#ff3fb0', EM); p.rect(31, 0, 1, 48, '#ff3fb0', EM); for (let i = 0; i < 5; i++) p.glyph(i + 3, 21, 4 + i * 8, '#ff7fd0', EM);
+    return p;
+  },
+  stBladeBar() {   // the Threeway's own blade: BAR in pink neon, БАР under it
+    const p = new Pix(20, 64); p.fill('#1a0a14', EM); p.rect(0, 0, 20, 1, PC.pink, EM); p.rect(0, 63, 20, 1, PC.pink, EM); p.rect(0, 0, 1, 64, PC.pink, EM); p.rect(19, 0, 1, 64, PC.pink, EM);
+    ['B', 'A', 'R'].forEach((ch, i) => { say(p, ch, 6, 4 + i * 16, '#6a1838', EM, 2); say(p, ch, 5, 3 + i * 16, PC.pink, EM, 2); });
+    say(p, 'БАР', 2, 52, '#33e0d0', EM); return p;
+  },
+  stTravel() {   // TRIPOINT TRAVEL: the routes home, all suspended
+    const p = new Pix(96, 48); p.fill('#1a2a5a'); p.rect(0, 0, 96, 1, PC.gold); p.rect(0, 11, 96, 2, PC.gold);
+    sayC(p, 'TRIPOINT TRAVEL', 48, 3, '#fff0b0');
+    p.rect(2, 14, 92, 32, '#d8a868', EM); p.rect(2, 14, 92, 1, '#ffe0b0', EM); p.rect(47, 14, 2, 32, '#1a2a5a');
+    const mini = (x, bg, f) => { p.rect(x, 17, 16, 20, bg, EM); f(x); };
+    mini(8, '#b8231e', (x) => cogAt(p, x + 8, 25, 3, '#f2c14e', EM));
+    mini(40 - 1, '#1a2a5a', (x) => { p.rect(x + 3, 24, 10, 4, '#e6dac0', EM); p.rect(x + 6, 28, 4, 1, '#c9a04a', EM); for (let k = 0; k < 6; k++) p.set(x + 2 + k * 2, 20, '#f2c14e', EM); });
+    mini(72, '#eef3f8', (x) => disc(p, x + 8, 26, 4, '#d81e18', EM));
+    [['KRG', 8], ['HAL', 39], ['OKY', 72]].forEach(([s, x]) => sayC(p, s, x + 8, 38, '#1a1008', EM));
+    for (let k = 0; k < 92; k++) { const y = Math.round(36 - k * 0.22); p.rect(2 + k, y, 1, 7, '#c8202c', EM); }   // the strip pasted across the window
+    for (let k = 0; k < 9; k++) { const g = GLYPHS['SUSPENDED'[k]], x0 = 22 + k * 6, y0 = Math.round(36 - (x0 - 2) * 0.22); for (let i = 0; i < 35; i++) if (g[i] === '1') p.set(x0 + (i % 5), y0 + Math.floor(i / 5), '#ffffff', EM); }
+    return p;
+  },
+  stPosters() { const p = new Pix(96, 48); posterK(p, 0, 0); posterC(p, 32, 0); posterH(p, 64, 0); return p; },
+  stPosterWall() {   // posters from all three sides pasted over each other, torn, and the militia's notice on top
+    const p = new Pix(64, 48); p.fill('#8a8070'); p.speck('#7a7062', 30);
+    posterH(p, -10, 6); posterC(p, 14, -6); posterK(p, 36, 4); posterC(p, -20, 30);
+    for (let k = 0; k < 9; k++) { const x = Math.floor(prng() * 60), y = Math.floor(prng() * 44), w = 2 + Math.floor(prng() * 6), h = 2 + Math.floor(prng() * 5); p.rect(x, y, w, h, prng() < 0.5 ? '#d8c8a0' : '#8a8070'); p.set(x + w, y + 1, '#d8c8a0'); }
+    p.rect(40, 28, 20, 14, '#eee6d4'); p.rect(40, 28, 20, 3, PC.militia); for (let y = 33; y < 41; y += 2) p.rect(42, y, 10 + Math.floor(prng() * 6), 1, '#3a2a2a');
+    for (let k = 0; k < 6; k++) p.set(30 + k * 5, 47 - (k % 2), '#5a5248');
+    return p;
+  },
+  stShutters() {   // the old road's shops: roller shutters down, signboards faded, a tag or two
+    const p = new Pix(64, 16); p.fill('#3a2a20');
+    for (let k = 0; k < 4; k++) {
+      const x = k * 16; p.rect(x + 1, 1, 14, 4, ['#a89a7a', '#8a7a62', '#9a8a70', '#b0a080'][k]); p.rect(x + 3, 2, 6 + (k * 3) % 5, 1, '#6a5a48'); p.rect(x + 3, 4, 4, 1, '#6a5a48');
+      p.rect(x + 1, 6, 14, 10, '#6a6a70'); for (let y = 7; y < 16; y += 2) p.rect(x + 1, y, 14, 1, '#56565e');
+      if (k === 1) { p.rect(x + 3, 10, 6, 2, '#ff4f9a'); p.rect(x + 6, 9, 2, 4, '#ff4f9a'); }
+      if (k === 3) { p.rect(x + 4, 12, 7, 1, '#33e0d0'); p.rect(x + 4, 11, 1, 2, '#33e0d0'); p.rect(x + 1, 15, 14, 1, '#d8955a', EM); }   // a light under one
+      p.rect(x, 0, 1, 16, '#2a1a12'); p.rect(x + 15, 0, 1, 16, '#2a1a12');
+    }
+    return p;
+  },
+  stWindows() {   // life in the windows, 8 x 12 each: someone looking out, a TV's blue, a lamp and a radio's dial
+    const p = new Pix(24, 12);
+    p.rect(0, 0, 8, 12, '#ffcf86', EM); disc(p, 4, 4, 1.6, '#3a2018', EM); p.rect(2, 6, 5, 6, '#3a2018', EM); p.rect(0, 0, 1, 12, '#c88a52', EM);
+    p.rect(8, 0, 8, 12, '#4a7ab8', EM); p.rect(9, 1, 6, 5, '#9ad0ff', EM); p.rect(8, 0, 2, 12, '#c8a070', EM); p.rect(14, 0, 2, 12, '#c8a070', EM);
+    p.rect(16, 0, 8, 12, '#e8a868', EM); p.rect(19, 0, 1, 3, '#3a2a1a', EM); p.rect(18, 3, 3, 2, '#fff0c0', EM); p.rect(17, 9, 6, 3, '#5a3020', EM); p.set(19, 10, '#ffcc40', EM);
+    for (let k = 0; k < 3; k++) { p.rect(k * 8 + 3, 0, 1, 12, '#3a3036', EM); p.rect(k * 8, 6, 8, 1, '#3a3036', EM); }
+    return p;
+  },
+  stAwning() {   // striped canvas awnings, scalloped edge cut out: green and cream, red and cream
+    const p = new Pix(32, 8);
+    for (let x = 0; x < 32; x++) for (let y = 0; y < 8; y++) { if (y === 7 && x % 4 > 1) continue; p.set(x, y, Math.floor(x / 2) % 2 ? '#e6dac0' : (x < 16 ? '#2a6a4a' : '#a8241e')); }
+    p.rect(0, 0, 32, 1, '#3a2a1a'); return p;
+  },
+  stBalcony() {   // a wrought-iron balcony rail (cut out)
+    const p = new Pix(16, 8); p.rect(0, 0, 16, 1, '#2a2e30'); p.rect(0, 7, 16, 1, '#2a2e30');
+    for (let x = 0; x < 16; x += 2) p.rect(x, 1, 1, 6, '#22262a'); p.set(3, 3, '#3e4448'); p.set(4, 2, '#3e4448'); p.set(11, 3, '#3e4448'); p.set(12, 2, '#3e4448'); p.set(7, 4, PC.brass); return p;
+  },
+  stCornice() {   // a plaster cornice: a lit top, dentils, the shadow under (the plaster colour comes from the vertex tint)
+    const p = new Pix(16, 8); p.fill('#d8d0c4'); p.rect(0, 0, 16, 1, '#f2ece2'); p.rect(0, 2, 16, 1, '#b8b0a4');
+    for (let x = 0; x < 16; x += 3) p.rect(x, 4, 2, 2, '#efe8dc'); p.rect(0, 6, 16, 1, '#a8a094'); p.rect(0, 7, 16, 1, '#7a7268'); return p;
+  },
+  stFrieze() {   // under the cornice: Jugendstil garlands between rosettes
+    const p = new Pix(32, 8); p.fill('#d0c8bc'); p.rect(0, 0, 32, 1, '#b8b0a4'); p.rect(0, 7, 32, 1, '#b8b0a4');
+    for (let x = 0; x < 32; x++) p.set(x, Math.round(3 + 1.6 * Math.sin((x % 16) / 16 * Math.PI)), '#9a9080');
+    for (const x of [0, 16]) { disc(p, x + 0.5, 3.5, 1.6, '#b8a46a'); p.set(x, 3, '#efe6d0'); }
+    p.set(8, 5, '#2a8a7a'); p.set(24, 5, '#b8231e'); return p;
+  },
+  stRail() { const p = new Pix(8, 4); p.fill('#1a1618'); p.rect(2, 0, 2, 4, '#9aa2ae'); p.rect(4, 0, 1, 4, '#5a6068'); p.rect(5, 0, 2, 4, '#2a2628'); return p; },
+  stWire() {   // barbed-wire coils (cut out)
+    const p = new Pix(16, 8);
+    for (let k = 0; k < 64; k++) { const t = k / 64 * Math.PI * 4; p.set(Math.round(k / 4), Math.round(3.5 + Math.sin(t) * 3.2), '#8a8e94'); }
+    for (let x = 1; x < 16; x += 3) { p.set(x, 1, '#c0c4c8'); p.set(x, 6, '#c0c4c8'); } return p;
+  },
+  stClosed3() {   // ROAD CLOSED, in the three scripts
+    const p = new Pix(84, 40); p.fill('#f2ede4'); p.rect(0, 0, 84, 2, PC.militia); p.rect(0, 38, 84, 2, PC.militia);
+    sayC(p, 'ROAD CLOSED', 42, 4, '#b8231e'); sayC(p, 'ПРОЕЗД ЗАКРЫТ', 42, 13, PC.militia); brushRow(p, 6, 2, 42, 22, PC.militia);
+    for (let x = 0; x < 84; x++) p.rect(x, 31, 1, 6, Math.floor((x + 2) / 6) % 2 ? '#b8231e' : '#f2ede4');
+    return p;
+  },
+  stCheckL() {   // the big sign at the checkpoint: you are leaving the Old Quarter (three scripts)
+    const p = new Pix(192, 56); p.fill('#f4f1ea'); p.rect(0, 0, 192, 2, PC.militia); p.rect(0, 54, 192, 2, PC.militia); p.rect(0, 0, 2, 56, PC.militia); p.rect(190, 0, 2, 56, PC.militia);
+    sayC(p, 'YOU ARE LEAVING', 96, 4, '#141010', 255, 2); sayC(p, 'THE OLD QUARTER', 96, 20, '#141010', 255, 2);
+    sayC(p, 'ВЫ ПОКИДАЕТЕ СТАРЫЙ ГОРОД', 96, 36, '#141010'); brushRow(p, 10, 0, 96, 45, '#141010');
+    return p;
+  },
+  stCheckR() {   // and the other: firearms are banned in the city by the Vostburg Accords, a crossed-out pistol
+    const p = new Pix(192, 56); p.fill('#f4f1ea'); p.rect(0, 0, 192, 2, PC.militia); p.rect(0, 54, 192, 2, PC.militia); p.rect(0, 0, 2, 56, PC.militia); p.rect(190, 0, 2, 56, PC.militia);
+    ring(p, 25, 28, 17, 21, '#c8202c'); p.rect(12, 24, 22, 5, '#141010'); p.rect(14, 29, 5, 10, '#141010'); p.rect(19, 29, 4, 2, '#141010'); p.rect(32, 22, 2, 2, '#141010');   // the pistol
+    for (let k = -14; k <= 14; k++) { p.rect(25 + k - 1, 28 + k - 1, 3, 3, '#c8202c'); }
+    say(p, 'FIREARMS', 52, 4, '#141010', 255, 2); say(p, 'ARE BANNED', 52, 20, '#c8202c', 255, 2);
+    say(p, 'VOSTBURG ACCORDS 1962', 52, 36, '#141010'); say(p, 'ОРУЖИЕ ЗАПРЕЩЕНО', 52, 45, '#141010'); brushRow(p, 4, 3, 166, 45, '#141010');
+    return p;
+  },
+  stBoothSign() { const p = new Pix(48, 20); p.fill(PC.militia, EM); p.rect(0, 0, 48, 1, PC.brass, EM); p.rect(0, 19, 48, 1, PC.brass, EM); sayC(p, 'MILITIA', 24, 2, '#f2ede4', EM); sayC(p, 'МИЛИЦИЯ', 24, 11, '#e8c070', EM); return p; },
+  stTramStop() {   // the dead tram stop: TRAM 3, struck through
+    const p = new Pix(24, 32); p.fill('#f2ede4'); p.rect(0, 0, 24, 2, '#1e3a6a'); p.rect(0, 30, 24, 2, '#1e3a6a');
+    sayC(p, 'TRAM', 12, 3, '#1e3a6a'); say(p, '3', 7, 12, '#d8a020', 255, 2);
+    for (let k = 0; k < 24; k++) p.rect(k, Math.round(26 - k * 0.8), 1, 3, '#c8202c');
+    return p;
+  },
+  stAhead() { const p = new Pix(108, 32); p.fill('#f2ede4'); p.rect(0, 0, 108, 2, PC.militia); p.rect(0, 30, 108, 2, PC.militia); sayC(p, 'CHECKPOINT 30 M', 54, 3, PC.militia); sayC(p, 'КОНТРОЛЬНЫЙ ПУНКТ', 54, 12, '#2a1a14'); brushRow(p, 7, 1, 54, 21, '#2a1a14'); return p; },
+  stTransom() { const p = new Pix(16, 8); p.fill('#ffc890', EM); for (let k = -3; k <= 3; k++) for (let r = 0; r < 8; r++) p.set(7.5 + k * r * 0.33, 7 - r, '#3a2418', EM); p.rect(0, 7, 16, 1, '#3a2418', EM); disc(p, 7.5, 7, 2, '#ff6aa8', EM); return p; },
+  stPlaque() { const p = new Pix(76, 26); p.fill(PC.brass); p.rect(0, 0, 76, 1, '#ffe7a0'); p.rect(0, 25, 76, 1, '#7a5a22'); sayC(p, 'THE THREEWAY', 38, 2, '#3a2a10'); sayC(p, 'ТРИ ДОРОГИ', 38, 10, '#3a2a10'); brushRow(p, 5, 3, 38, 18, '#3a2a10'); return p; },
+  stBrick() { const p = new Pix(8, 8); p.fill('#6a3a2e'); for (let y = 0; y < 8; y += 2) { p.rect(0, y, 8, 1, '#4a2a22'); p.set((y * 2) % 8, y + 1, '#4a2a22'); } p.speck('#7a4a3a', 4); return p; },
+  stOnionGold() {   // floodlit gilding: it glows by itself (the floods below), darker scales between
+    const p = new Pix(16, 16); p.fill('#c89a34', EM); for (let y = 0; y < 16; y += 4) for (let x = (y >> 2 & 1) * 2; x < 16; x += 4) { p.rect(x, y, 2, 2, '#7a5a1c', EM); }
+    p.rect(3, 1, 1, 6, '#fff0b0', EM); p.rect(11, 9, 1, 5, '#fff0b0', EM); return p;
+  },
+  stCathedral() {   // St. Vost's walls: cream stone, tall arched windows with vigil lights, pilasters
+    const p = new Pix(32, 32); p.fill('#d8ccb0'); p.rect(0, 0, 32, 2, '#efe4c8'); p.rect(0, 30, 32, 2, '#b8aa8c');
+    for (const x of [0, 15]) p.rect(x, 0, 2, 32, '#c4b698');
+    for (const x of [5, 20]) { p.rect(x, 9, 6, 16, '#3a2a24'); p.rect(x + 1, 8, 4, 1, '#3a2a24'); p.rect(x + 1, 11, 4, 13, prng() < 0.6 ? '#e8a050' : '#2a1e22', EM); p.rect(x + 3, 11, 1, 13, '#3a2a24'); p.rect(x - 1, 25, 8, 1, '#efe4c8'); }
+    return p;
+  },
+});
+Object.assign(PAINT, {
+  stTram() {   // tram 3's side, in the old municipal livery (cream over plum, a brass line), stranded since 1962: dark, dusty, pasted over
+    const p = new Pix(64, 16); p.fill('#e0d4b8'); p.rect(0, 10, 64, 6, '#4a2440'); p.rect(0, 10, 64, 1, PC.brass); p.rect(0, 15, 64, 1, '#1a1014');
+    for (let x = 2; x < 64; x += 8) { p.rect(x, 2, 6, 6, '#1e1a22'); p.rect(x, 2, 6, 1, '#3a3036'); p.set(x + 1, 3, '#5a5a6a'); }
+    p.rect(24, 2, 6, 6, '#3a2a40'); p.rect(25, 3, 4, 4, '#d8c8a0'); p.rect(25, 3, 4, 1, '#b8231e');   // a notice pasted on a window
+    p.speck('#b8ac90', 30); p.speck('#2a1a24', 10); say(p, 'VOSTBURG', 8, 9 - 0, PC.brass); return p;
+  },
+  stTramEnd() { const p = new Pix(16, 16); p.fill('#e0d4b8'); p.rect(0, 10, 16, 6, '#4a2440'); p.rect(0, 10, 16, 1, PC.brass); p.rect(2, 3, 12, 6, '#1e1a22'); p.rect(4, 0, 8, 3, '#1a1014'); p.text('3', 6, -2, '#d8a020'); p.rect(2, 12, 3, 2, '#6a6040'); p.rect(11, 12, 3, 2, '#6a6040'); p.speck('#b8ac90', 8); return p; },
+});
