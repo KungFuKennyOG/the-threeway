@@ -405,9 +405,10 @@ def specialist():
     hr = S.at('X2'); hr.fill(K)   # the hair: swept back, glossy
     for y in (2, 5, 8, 11, 14): hr.hl(0, y, 16, Kd); hr.hl((y * 5) % 7, y - 1, 8, Kh)
     swatch(S, 0, K); S.rect(49, 113, 2, 1, Kh)
-    av = S.at('X3'); av.fill(G)   # the aviators: two mirrored lenses on a gold frame (gold arms down the sides)
-    av.map([' aaaaa  aaaaa  ', 'aaaaaaa aaaaaaa', 'bbbbbbb bbbbbbb', 'bbbbbbb bbbbbbb', ' bbbbb   bbbbb '], {'a': M1, 'b': M2}, 0, 3)
-    av.rect(0, 0, 16, 2, Gd); av.px(2, 4, M3); av.px(10, 4, M3); av.rect(0, 14, 16, 2, Gd)
+    av = S.at('X3'); av.fill(G)   # the aviators: two big mirrored lenses (sky over sunset) on a thin gold frame
+    av.map(['aaaaaaa  aaaaaaa', 'aaaaaaa  aaaaaaa', 'aaaaaaa  aaaaaaa', 'aaaaaaa  aaaaaaa', 'aaaaaaa  aaaaaaa', 'ccccccc  ccccccc', 'bbbbbbb  bbbbbbb', 'bbbbbbb  bbbbbbb',
+            'bbbbbbb  bbbbbbb', 'bbbbbbb  bbbbbbb', ' bbbbbb  bbbbbb ', '  bbbb    bbbb  '], {'a': M1, 'b': M2, 'c': M3}, 0, 2)
+    av.hl(0, 0, 16, Gd); av.px(1, 3, '#ffffff'); av.px(10, 3, '#ffffff'); av.hl(7, 3, 2, G)
     co = S.at('X1'); co.fill(L); co.vl(0, 0, 16, Lh); co.vl(15, 0, 16, Lh); co.hl(0, 0, 16, Lh); co.stitch(1, 2, 14, Lm); co.grain(L, Lm, 0.15, 3)   # the collar, up
     co.rect(3, 4, 10, 12, Rd); co.grain(Rd, R, 0.3, 4)   # its red satin lining showing
     t = S.at('TA'); t.fill(L); t.grain(L, Lm, 0.12, 5)   # the open jacket: wide lapels, a red shirt open on the chest, a gold chain

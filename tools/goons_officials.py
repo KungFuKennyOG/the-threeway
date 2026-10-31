@@ -166,18 +166,18 @@ def aokiagent():
     def suit(P, k):
         P.fill(Su); P.grain(Su, '#22222a', 0.15, k)
     t = S.at('TA'); suit(t, 2)   # a narrow black suit: a sliver of white shirt, a black tie, red-piped lapels
-    t.map(['SSSSSSWWWWSSSSSS', 'SSSSSrWKKWrSSSSS', 'SSSSrhSWKKWShrSSS'[:16], 'SSSrhSSKKSShrSSS', 'SSrhSSSKKSSShrSS', 'SSSSSSSKKSSSSSSS', 'SSSSSSSKKSSSSSSS', 'SSSSSSSSSSSSSSSS'],
-          {'S': None, 'W': W_, 'K': K, 'r': R, 'h': Sh}, 0, 0)
+    t.map(['SSSSWWWWWWWWSSSS', 'SSSSrWWRRWWrSSSS', 'SSSrhWWRRWWhrSSS', 'SSrhSSWRRWShrSSS', 'SrhSSSWRRWSSShrS', 'rhSSSSSRRSSSSShr', 'SSSSSSSRRSSSSSSS', 'SSSSSSSRRSSSSSSS'],
+          {'S': None, 'W': W_, 'K': K, 'R': R, 'r': R, 'h': Sh}, 0, 0)
     t.px(7, 9, Sh); t.px(7, 12, Sh); t.vl(7, 8, 8, Sd); t.hl(11, 5, 3, R)   # buttons, a red pocket square's edge
     b = S.at('TA_B'); suit(b, 3); b.vl(7, 0, 16, R); b.hl(0, 0, 16, Sh); b.disc(7.5, 4.5, 2.2, Rd); b.disc(7.5, 4.5, 1.3, R)   # a red seam down the spine, the company's mark
     s_ = S.at('TA_S'); suit(s_, 4); s_.vl(7, 0, 16, Sh)
     sk_ = S.at('X12'); suit(sk_, 5); sk_.vl(7, 4, 12, Rd); sk_.vl(8, 4, 12, Sd); sk_.hl(1, 3, 4, Sh); sk_.hl(11, 3, 4, Sh); sk_.vl(0, 0, 16, Sh); sk_.vl(15, 0, 16, Sh)
     tb = S.at('TB'); suit(tb, 6)
-    u = S.at('X6'); limb(u, Su, Sh, Sd)
-    f = S.at('X7'); limb(f, Su, Sh, Sd); f.rect(0, 12, 16, 2, W_); f.px(11, 12, R)
+    u = S.at('X6'); limb(u, Su, Sh, Sd); u.vl(0, 0, 16, R); u.vl(1, 0, 16, Rh)   # red neon piping down the sleeves
+    f = S.at('X7'); limb(f, Su, Sh, Sd); f.vl(0, 0, 16, R); f.vl(1, 0, 16, Rh); f.rect(0, 12, 16, 2, W_); f.px(11, 12, R)
     hn = S.at('X8'); bare_hand(hn, Sd, '#2a2a34', '#000000', Sh)   # black gloves
-    th = S.at('X9'); limb(th, Su, Sh, Sd); th.vl(7, 0, 16, Sh)
-    sn = S.at('X10'); limb(sn, Su, Sh, Sd); sn.vl(7, 0, 13, Sh); sn.rect(0, 13, 16, 3, K)
+    th = S.at('X9'); limb(th, Su, Sh, Sd); th.vl(7, 0, 16, R); th.vl(8, 0, 16, Rh)   # and down the trousers
+    sn = S.at('X10'); limb(sn, Su, Sh, Sd); sn.vl(7, 0, 13, R); sn.vl(8, 0, 13, Rh); sn.rect(0, 13, 16, 3, K)
     fo = S.at('X11'); shoe(fo, K, '#6a7488', '#000000', Rd)   # red soles
     swatch(S, 15, sk)
     return S.save('assets/tex/sheet_aokiagent.png', 32)

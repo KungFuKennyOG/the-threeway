@@ -157,7 +157,7 @@ const BODIES = {
     bx(r, 'hips', -0.04, 0.16, 0.62, 0.48, 0.62, 0.48, { '*': X1 }, { faces: 'fblr' });   // its hem below the waist
     bx(r, 'torso', 0.44, 0.58, 0.42, 0.36, 0.38, 0.32, { '*': X2 }, { z: 0.01, faces: 'fblrt' });   // the scarf, wound round
     bx(r, 'torso', 0.5, 0.16, 0.08, 0.03, 0.1, 0.03, { '*': X2 }, { x: -0.12, z: 0.25, x1: -0.06, faces: 'fblr' });   // its tail
-    bx(r, 'head', 0.21, 0.38, 0.27, 0.29, 0.25, 0.27, { '*': X3, t: SW(0) }, { z: -0.005, faces: 'fblrt' });   // the knit cap
+    bx(r, 'head', 0.21, 0.35, 0.27, 0.29, 0.25, 0.27, { '*': X3, t: SW(0) }, { z: -0.005, faces: 'fblrt' });   // the knit cap
     bx(r, 'head', 0.06, 0.08, 0.1, 0.02, 0.1, 0.02, { '*': SW(1) }, { x: 0.09, z: 0.17 });   // a cigarette on his lip
     return r;
   },
@@ -194,7 +194,7 @@ const BODIES = {
     return r;
   },
   lifter() {   // SIGNATURE: arms like hams and a huge waxed handlebar moustache. Chest and belly on short bowed legs, chalked hands, a cog on the singlet
-    const r = goon({ shoulder: 0.84, chestD: 0.5, waist: 0.6, neck: -0.05, head: [0.26, 0.28, 0.27], thighW: 0.27, neckW: 0.22,
+    const r = goon({ shoulder: 0.84, chestD: 0.5, waist: 0.6, neck: -0.02, head: [0.26, 0.28, 0.27], thighW: 0.27, neckW: 0.22,
       armK: 1.6, farmK: 1.55, handK: 1.3, legK: 1.25, shinK: 1.25 });
     bx(r, 'torso', 0.2, 0.5, 0.74, 0.52, 0.94, 0.52, chest(TA), { z: 0.02, faces: 'fblr' });   // the chest
     bx(r, 'torso', -0.04, 0.24, 0.66, 0.54, 0.74, 0.56, { f: X2, '*': X3 }, { z: 0.03, faces: 'fblr' });   // the belly
@@ -226,9 +226,9 @@ const BODIES = {
   specialist() {   // SIGNATURE: mirrored aviators under slicked-back hair, the leather collar up. A gold chain, a scar, a gold tooth, guard high
     const r = goon({ shoulder: 0.64, chestD: 0.33, waist: 0.38, head: [0.23, 0.29, 0.25], neckW: 0.13 });
     bx(r, 'torso', 0.4, 0.68, 0.44, 0.32, 0.58, 0.4, { '*': X1 }, { z: -0.02, faces: 'blr' });   // the collar, turned up and flared
-    bx(r, 'head', 0.23, 0.37, 0.245, 0.27, 0.23, 0.25, { '*': X2, t: SW(0) }, { z: -0.01, z1: -0.03, faces: 'fblrt' });   // slicked-back hair
+    bx(r, 'head', 0.24, 0.33, 0.245, 0.26, 0.22, 0.25, { '*': X2, t: SW(0) }, { z: -0.015, z1: -0.04, faces: 'fblrt' });   // slicked-back hair
     bx(r, 'head', 0.1, 0.27, 0.17, 0.08, 0.21, 0.06, { '*': X2 }, { z: -0.14, z1: -0.04, faces: 'blrtd' });   // the ducktail
-    bx(r, 'head', 0.13, 0.185, 0.25, 0.03, 0.25, 0.03, { '*': X3 }, { z: 0.125 });   // mirrored aviators
+    bx(r, 'head', 0.125, 0.19, 0.26, 0.03, 0.26, 0.03, { '*': X3 }, { z: 0.125 });   // mirrored aviators
     bx(r, 'hips', 0.0, 0.14, 0.44, 0.31, 0.44, 0.31, { '*': X4 }, { faces: 'fblr' });   // jacket hem
     for (const s of [-1, 1]) bx(r, 'torso', 0.4, 0.5, 0.18, 0.3, 0.2, 0.3, { '*': X5 }, { x: s * 0.27, faces: 'fblrt' });   // padded shoulders
     return r;
@@ -254,7 +254,7 @@ const BODIES = {
   },
   clerk() {    // SIGNATURE: a tower of files hugged to his belly and a giant rubber stamp raised like a hammer. A green eyeshade, sweat, a nervous hunch
     const r = goon({ shoulder: 0.5, chestD: 0.3, waist: 0.44, head: [0.25, 0.3, 0.26], neckW: 0.11, armK: 0.9, farmK: 0.9 });
-    bx(r, 'head', 0.195, 0.235, 0.28, 0.06, 0.28, 0.17, { '*': X1 }, { z: 0.25, z1: -0.05 });   // the green eyeshade's bill, tipped down
+    bx(r, 'head', 0.2, 0.235, 0.28, 0.04, 0.28, 0.1, { '*': X1 }, { z: 0.2, z1: -0.04 });   // the green eyeshade's bill, tipped down
     r.torso[3].push((a) => tbox(a, null, 0.02, 0.42, 0.4, 0.24, 0.38, 0.24, { f: X2, t: X4, '*': X3 }, { x: -0.03, z: 0.27 }));   // the files
     bx(r, 'torso', 0.4, 0.52, 0.17, 0.02, 0.19, 0.02, { '*': SW(0) }, { x: 0.06, z: 0.3, faces: 'fblr' });   // a loose sheet sticking out
     bx(r, 'handr', -0.06, -0.24, 0.06, 0.06, 0.07, 0.07, { '*': SW(1) });   // the stamp's handle
@@ -262,10 +262,10 @@ const BODIES = {
     return r;
   },
   bodyguard() {   // SIGNATURE: refrigerator shoulders under a tiny head. Wraparound shades, a flat-top, the earpiece's coiled cord, fists up
-    const r = goon({ shoulder: 0.84, chestD: 0.42, waist: 0.5, neck: -0.06, head: [0.19, 0.25, 0.21], thighW: 0.22, neckW: 0.2,
+    const r = goon({ shoulder: 0.84, chestD: 0.42, waist: 0.5, neck: 0.0, head: [0.19, 0.25, 0.21], thighW: 0.22, neckW: 0.2,
       armK: 1.3, farmK: 1.2, handK: 1.15, legK: 1.1 });
-    bx(r, 'torso', 0.1, 0.5, 0.62, 0.44, 0.98, 0.48, chest(TA), { z: 0.02, faces: 'fblr' });   // the slab of a chest
-    bx(r, 'torso', 0.42, 0.52, 0.92, 0.42, 0.34, 0.18, { f: X5, '*': X1 }, { faces: 'fblr' });   // shoulders sloping straight into his head
+    bx(r, 'torso', 0.1, 0.47, 0.62, 0.44, 0.98, 0.46, chest(TA), { z: 0.02, faces: 'fblr' });   // the slab of a chest
+    bx(r, 'torso', 0.4, 0.53, 0.92, 0.42, 0.32, 0.16, { f: X5, '*': X1 }, { faces: 'fblr' });   // shoulders sloping straight into his head
     bx(r, 'head', 0.105, 0.16, 0.21, 0.04, 0.205, 0.04, { '*': X2 }, { z: 0.1 });   // wraparound shades
     bx(r, 'head', 0.2, 0.28, 0.18, 0.2, 0.17, 0.19, { '*': X3, t: SW(0) }, { faces: 'fblrt' });   // the flat-top
     bx(r, 'head', 0.07, 0.13, 0.035, 0.05, 0.035, 0.05, { '*': SW(1) }, { x: 0.105, faces: 'fblrt' });   // the earpiece
@@ -294,8 +294,8 @@ const BODIES = {
   // ---- the bar's officials (sheets: tools/goons_officials.py)
   harmony() {   // SIGNATURE: a big blond pompadour over a huge toothy grin. A loud red blazer, the closure notice held up, a thumbs-up
     const r = goon({ shoulder: 0.58, chestD: 0.32, waist: 0.42, head: [0.25, 0.29, 0.26], neckW: 0.12 });
-    bx(r, 'head', 0.24, 0.39, 0.27, 0.28, 0.26, 0.27, { '*': X1, t: SW(0) }, { z: -0.01, faces: 'fblrt' });   // the hair
-    bx(r, 'head', 0.3, 0.46, 0.25, 0.1, 0.23, 0.12, { '*': X1, t: SW(0) }, { z: 0.1, z1: 0.05, faces: 'fblrt' });   // the pompadour's wave
+    bx(r, 'head', 0.24, 0.34, 0.27, 0.28, 0.26, 0.27, { '*': X1, t: SW(0) }, { z: -0.01, faces: 'fblrt' });   // the hair
+    bx(r, 'head', 0.27, 0.4, 0.25, 0.1, 0.23, 0.12, { '*': X1, t: SW(0) }, { z: 0.1, z1: 0.05, faces: 'fblrt' });   // the pompadour's wave
     bx(r, 'hips', -0.02, 0.12, 0.46, 0.31, 0.46, 0.31, { '*': X2 }, { faces: 'fblr' });   // blazer hem
     bx(r, 'torso', 0.3, 0.42, 0.1, 0.025, 0.1, 0.025, { '*': X3 }, { x: -0.16, z: 0.17, faces: 'fblr' });   // the rosette
     bx(r, 'handl', 0.08, -0.3, 0.3, 0.025, 0.3, 0.025, { b: X12, '*': SW(2) }, { z: -0.07 });   // the closure notice on its clipboard
