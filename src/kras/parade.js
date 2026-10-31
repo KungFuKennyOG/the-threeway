@@ -32,6 +32,8 @@ CFG.parade = {
   // you), THE TOWER OF LABOR in gold, hung low (y above the floor) so it sits under the Tower, not on it, and a chime;
   // then PARADE SQUARE, if no fight has started by then. Once per walk-in.
   reveal: { z: 255.0, dur: 3.0, y: 0.9, then: 2.2 },
+  drawNear: [205, 20],   // the square's mesh is drawn within 205 m of its middle or from over 20 m up: from Tripoint Square,
+                         // the road and the gate the Palace and the slabs hide all of it (src/rooms.js: userData.near)
 };
 const PR = {
   rect: [-84, -6, 253, 312],                   // the ground it occupies (the far city keeps off it)
@@ -239,6 +241,7 @@ function buildParade() {
   m.matrixAutoUpdate = false; m.updateMatrix(); m.frustumCulled = false;
   m.material.uniforms.uFogNear = { value: F.near }; m.material.uniforms.uFogFar = { value: F.far };
   scene.add(m); PR.mesh = m; PR.tris = acc.tris;
+  { const [a, b, c, d] = PR.rect, [x, z] = ACT1_WEST.toWorld((a + b) / 2, (c + d) / 2); m.userData.near = [x, z, CFG.parade.drawNear[0], CFG.parade.drawNear[1]]; }   // (src/rooms.js)
   for (const l of PR.lamps) ST.lamps.push(l);   // goons and props are lit live by the nearest of them
   // where you can walk: the Palace's doorway, the square, the way up to the Tower's doors. On while this level is on,
   // and still on in whichever level walks on from here (so you're never pushed off the floor at the hand-over)

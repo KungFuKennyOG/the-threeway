@@ -30,6 +30,8 @@ CFG.palace = {
   // the floodlit square's warm light spills in under it, onto the tunnel and the floor. You can walk under it from
   // `walk` (of the way up); act1-parade crossfades in from `music` (src/music.js: the Palace's `at`; it's decoded ahead
   // once the Bear's track has faded, so it swells in as the shutter rises and is full as it reaches the top)
+  drawNear: [150, 20],   // the stadium's mesh is drawn within 150 m of its middle or from over 20 m up: from Tripoint Square,
+                         // the road, the gate and the courtyard's east side the wall slabs and Superblock 14 hide it (src/rooms.js: userData.near)
   shutter: { time: 4.6, walk: 0.75, music: 0.45, rattle: 0.085, spill: '#ffc982', spillK: 1.0, spillLen: 15, lampK: 1.4, lampRadius: 11 },
 };
 const PL = {
@@ -719,6 +721,7 @@ function buildPalace() {
   buildPalaceInside(inAcc); buildPalaceOutside(outAcc);
   PL.inMesh = mk(inAcc, { ambient: CFG.palace.light.inAmbient, lights: PL.inLamps }); PL.inTris = inAcc.tris;
   PL.outMesh = mk(outAcc, { ambient: Lt.ambient, sky: Lt.sky, lights: PL.outLamps.concat(PL.glowLamps, ACT1_WEST.localLamps(PL.crossLamps)) }); PL.outTris = outAcc.tris;   // (the glow over the bowl lights only this)
+  { const [x, z] = ACT1_WEST.toWorld(...PL.shell.c), N = CFG.palace.drawNear; PL.outMesh.userData.near = [x, z, N[0], N[1]]; }   // (src/rooms.js)
   for (const l of PL.inLamps.concat(PL.outLamps)) ST.lamps.push(l);
   buildShutter();
   // where you can walk: the gap in the fence, the crossing (once the train's by), the boulevard, the forecourt, the foyer,

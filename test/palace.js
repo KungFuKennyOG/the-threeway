@@ -244,6 +244,19 @@ try {
   check('in the arena (facing the stands) only the inside is drawn', TW.roomState.cur === 'palace' && PL.inMesh.visible && !PL.outMesh.visible && !TW.ST.skylineMesh.visible, TW.roomState.cur);
   setL(-40, 0, 176); faceL(Math.PI); step(3);
   check('on the forecourt facing the doors: the outside, and the foyer through them', TW.roomState.cur === 'outside' && PL.outMesh.visible && PL.inMesh.visible, TW.roomState.cur);
+  { const [fx, fz] = AW.toWorld(-40, PL.foyer[2]), far = TW.CFG.street.portalFar, look = (x, z) => { TW.rig.position.set(x, 0, z); run(`desk.yaw = ${Math.atan2(-(fx - x), -(fz - z))}; desk.pitch = 0;`); step(3); return PL.inMesh.visible; };
+    const near = look(...AW.toWorld(-40, PL.foyer[2] - 25)), tripoint = look(0, 9);
+    check('a doorway isn\'t looked through from further than CFG.street.portalFar: the foyer from the boulevard, but not from Tripoint Square, 200 m off',
+      near && !tripoint && Math.hypot(fx, fz - 9) > far, `boulevard ${near}, Tripoint Square ${tripoint}`); }
+  // meshes drawn only where they can be seen (userData.near): the stadium and Parade Square not from Tripoint Square,
+  // the checkpoint's boom not from here; from up high (the wing roof) all of them
+  { const PRm = run('PR').mesh, boom = run('boomPivot'), at = (x, y, z) => { TW.rig.position.set(x, y, z); run('desk.yaw = 0; desk.pitch = 0;'); run(`window.__fy = ${y}`); step(3); return [boom.visible, PL.outMesh.visible, PRm.visible]; };
+    const fy = run('floorAt'); run('floorAt = () => window.__fy || 0');
+    const here = at(...AW.toWorld(-40, 160).flatMap((v, i) => i ? [v] : [v, 0])), square = at(0, 0, 12), roof = at(-30, 33.6, 127);
+    ctx.floorAt = fy;
+    check('the stadium, Parade Square and the checkpoint\'s boom are drawn only where they can be seen: not the boom from the boulevard, not the stadium or the square from Tripoint Square; all of them from up on the wing roof',
+      [boom, PL.outMesh, PRm].every(m => m.userData.near) && !here[0] && here[1] && here[2] && square[0] && !square[1] && !square[2] && roof.every(Boolean) && !TW.ST.litMesh.userData.near,
+      `boulevard ${here}, Tripoint Square ${square}, wing roof ${roof}`); }
   check('starting here from the menu: in the gap in the fence, the train coming', TW.level.name === 'palace' && TR.phase !== 'gone' && !TR.open);
 
   // ---- physics cost in the gym (four goons)

@@ -338,9 +338,13 @@ function skylineLights() {
 }
 // the sky: a band around the player, dark overhead, glowing over each sector (red Hinomoto, sodium Krasnovia, gold Columbia)
 // LOD: every building between the Old Quarter's edge and the skylines is one cheap box with its windows painted on,
-// part of the always-drawn skyline mesh: you see the city's lights and rooflines all the way out, nothing pops.
+// part of the skyline mesh: you see the city's lights and rooflines all the way out, nothing pops. They're filed into
+// square tiles (F.tile m) and appended to the skyline mesh tile by tile (ST.farTiles: each tile one stretch of its
+// vertices), so buildStreet can draw each tile as its own mesh over the same buffers and let three skip the tiles out
+// of view (about half of them, whichever way you look). Nothing in view changes; nothing is built twice.
 function buildFarField() {
   const acc = ST.sky, F = CFG.street.farField; let s = 7, n = 0;
+  const tiles = new Map(), tileAcc = (x, z) => { const k = Math.floor(x / F.tile) * 1000 + Math.floor(z / F.tile); if (!tiles.has(k)) tiles.set(k, new GeoAcc()); return tiles.get(k); };
   const rng = () => { s = (s * 16807) % 2147483647; return (s - 1) / 2147483646; };
   // ground under the whole city, just below the street's own (which covers it near you)
   // finer near you (so street lights pool on it), coarse further out. The coarse ground is a frame AROUND the fine
@@ -375,28 +379,55 @@ function buildFarField() {
       const dh = Math.hypot(mx - STREET.hino[0], mz - STREET.hino[1]); if (sector === 'hino' && dh < 170 && rng() < 0.3) h = 30 + rng() * 60;
       const key = { old: 'farOld', hino: h > 25 ? 'glassN' : 'farHino', kras: 'panel', colu: rng() < 0.5 ? 'farCol' : 'decoStone' }[sector];
       const rows = Math.max(1, Math.round(h / 13));   // one quad per face per ~4 floors
-      if (sector === 'old') acc.tint = PLASTER[Math.floor(rng() * PLASTER.length)].map(c => c * 0.9 + 0.1);
-      frustum(acc, key, mx, 0, mz, w, d, w, d, h, 0, { u: w * 1.0001, v: h / rows * 1.0001, top: false, cell: 999, faceKey: { l: key, r: key } });
+      const A = tileAcc(mx, mz);
+      if (sector === 'old') A.tint = PLASTER[Math.floor(rng() * PLASTER.length)].map(c => c * 0.9 + 0.1);
+      frustum(A, key, mx, 0, mz, w, d, w, d, h, 0, { u: w * 1.0001, v: h / rows * 1.0001, top: false, cell: 999, faceKey: { l: key, r: key } });
       // aq above used u per face = w; side faces (depth d) stretch a little: fine at this distance
-      acc.tint = [1, 1, 1];
+      A.tint = [1, 1, 1];
       if (sector === 'old') {   // mansard / copper roof, sometimes an onion dome
         const rk = rng() < 0.5 ? 'copperTop' : 'slate';
-        frustum(acc, rk, mx, h, mz, w, d, w * 0.55, d * 0.55, 3.2, 0, { u: w * 1.0001, v: 3.3, top: rk, tu: w * 1.0001, cell: 999 });
-        if (rng() < 0.06) onion(acc, mx, h + 3.2, mz, 2.2, 5, 6);
-      } else if (sector === 'hino' && h < 25) frustum(acc, 'kawara', mx, h, mz, w + 1.6, d + 1.6, w * 0.4, d * 0.2, 2.6, 0, { u: 99, v: 99, top: 'kawara', tu: 99, cell: 999 });
-      else ground(acc, 'roofDark', x0, z0, x1, z1, h, 99, { cell: 999 });
+        frustum(A, rk, mx, h, mz, w, d, w * 0.55, d * 0.55, 3.2, 0, { u: w * 1.0001, v: 3.3, top: rk, tu: w * 1.0001, cell: 999 });
+        if (rng() < 0.06) onion(A, mx, h + 3.2, mz, 2.2, 5, 6);
+      } else if (sector === 'hino' && h < 25) frustum(A, 'kawara', mx, h, mz, w + 1.6, d + 1.6, w * 0.4, d * 0.2, 2.6, 0, { u: 99, v: 99, top: 'kawara', tu: 99, cell: 999 });
+      else ground(A, 'roofDark', x0, z0, x1, z1, h, 99, { cell: 999 });
       n++;
     }
     // a street light on the block's corner: the city's lights all the way out
     const lk = { old: 'gaslamp', hino: rng() < 0.5 ? 'litRed' : 'litCyan', kras: 'litSodium', colu: 'litWarm' }[sector];
     const lx = cx - half - (P - B) / 2, lz = cz - half - (P - B) / 2;
     if (!hits(lx - 1, lx + 1, lz - 1, lz + 1)) {
-      sbox(acc, lk, lx, 4.2, lz, 1.0, 1.0, 1.0, 0, { u: 99, v: 99, cell: 999 });
+      sbox(tileAcc(lx, lz), lk, lx, 4.2, lz, 1.0, 1.0, 1.0, 0, { u: 99, v: 99, cell: 999 });
       const L = CFG.street.light, col = { old: L.gas, hino: L.hinoGlow, kras: L.sodium, colu: L.amber }[sector];
       ST.farLamps.push(lightFromHex([lx, 4.6, lz], col, F.lampRadius, F.lampK));
     }
   }
   ST.farBlocks = n;
+  ST.farTiles = [];   // the tiles onto the end of the skyline mesh: [first vertex, vertex count] each
+  for (const k of [...tiles.keys()].sort((a, b) => a - b)) {
+    const T = tiles.get(k), start = acc.p.length / 3;
+    for (let i = 0; i < T.p.length; i++) { acc.p.push(T.p[i]); acc.n.push(T.n[i]); acc.c.push(T.c[i]); }
+    for (let i = 0; i < T.u.length; i++) acc.u.push(T.u[i]);
+    ST.farTiles.push([start, T.p.length / 3]);
+  }
+}
+// the far city's tiles as meshes: each draws its own stretch of the skyline mesh's buffers (shared: no copies on the GPU)
+// with its own bounding sphere, so three culls the ones out of view; the skyline mesh itself draws the rest (the three
+// skylines, the ground), always. They share its material (its fog, the altitude fog up the Tower) and its room.
+function buildFarTiles(sky) {
+  const G = sky.geometry, P = G.attributes.position.array, T = ST.farTiles;
+  if (G.setDrawRange && T.length) G.setDrawRange(0, T[0][0]);
+  ST.farTileMeshes = T.map(([start, count]) => {
+    const g = new THREE.BufferGeometry();
+    for (const k of ['position', 'normal', 'uv', 'bake']) g.setAttribute(k, G.attributes[k]);
+    if (g.setDrawRange) g.setDrawRange(start, count);
+    let x0 = Infinity, y0 = Infinity, z0 = Infinity, x1 = -Infinity, y1 = -Infinity, z1 = -Infinity;
+    for (let i = start * 3; i < (start + count) * 3; i += 3) { x0 = Math.min(x0, P[i]); x1 = Math.max(x1, P[i]); y0 = Math.min(y0, P[i + 1]); y1 = Math.max(y1, P[i + 1]); z0 = Math.min(z0, P[i + 2]); z1 = Math.max(z1, P[i + 2]); }
+    const c = new V3((x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2), r = Math.hypot(x1 - x0, y1 - y0, z1 - z0) / 2 + 2;   // (+2 m: vertex snap)
+    g.userData = { range: [start, count], center: c, radius: r };
+    if (THREE.Sphere) g.boundingSphere = new THREE.Sphere(c, r);
+    const m = new THREE.Mesh(g, sky.material); m.matrixAutoUpdate = false; m.updateMatrix(); m.frustumCulled = true;
+    scene.add(m); return m;
+  });
 }
 function buildSky() {
   // (drawn first, without depth, so its size doesn't matter, only its angles: small enough that its top row, 73° up,
@@ -438,6 +469,7 @@ function buildStreet() {
   const F = CFG.street.fog;
   for (const m of [litMesh, skyMesh]) { m.material.uniforms.uFogNear = { value: F.near }; m.material.uniforms.uFogFar = { value: F.far }; }
   ST.tris = ST.lit.tris; ST.litMesh = litMesh; ST.skylineMesh = skyMesh;
+  buildFarTiles(skyMesh);
   skylineLights(); buildZeppelin(skyMesh); buildBeams(skyMesh);   // the Halcyon and the moving lights ride on the skyline mesh
   skyTick(0, 0, 1.6, 15);
   buildSky();
