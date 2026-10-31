@@ -12,7 +12,7 @@ This is the combat MVP. It answers one question: does hitting people in The Thre
 
 - **Quest 3:** open the GitHub Pages URL for this repo in the Quest browser and press **Enter VR**.
 - **Desktop:** serve the folder over HTTPS or localhost (`npx serve .`) and press **Fight on desktop**. Desktop mode is for testing without a headset.
-- **Skip ahead:** pick a level under **Start at** on the menu (or open the page with `?level=street` or `?level=depot`).
+- **Skip ahead:** pick a level under **Start at** on the menu (or open the page with `?level=street` or `?level=superblock`).
 
 | Quest 3 | Action |
 | --- | --- |
@@ -62,17 +62,17 @@ Clear the bar and the front door swings open onto **Tripoint Square** at night. 
 - **The end:** the joint-militia checkpoint: booth, floodlight, the Free City's flag with the three powers'. Walk up to the boom and it lifts. The Ring Road and the Accords wall start beyond it.
 - **The skylines:** Hinomoto's black-glass neon cluster behind the Threeway (Aoki Development tallest, an expressway of tail lights), Krasnovia's even field of panel slabs, the Tower of Labor and the TV tower right of the road, Columbia's ridge of cream-and-gold deco towers left of it. Red beacons blink on top. The sky glows red, sodium and gold over each sector.
 
-## Level 3: Tram Depot 7
+## Act 1, level 3: the Krasnovian gate and Superblock 14
 
-![Volkov's ring](docs/depot.png)
+Clear the road and the checkpoint boom lifts. Keep walking: there's no cut and no loading. Across the Ring Road, the Accords wall runs on down the old road's line. Krasnovia is the lane to its right.
 
-Walk through the lifted checkpoint boom and you're in **Krasnovia**, at the gate of Tram Depot 7.
+- **The gate:** a concrete wall across the Krasnovian lane, a gantry with KRASNOVIAN UNION in cream on red, a sentry box, a floodlight, red flags. The Columbian lane beyond the wall is shut with an iron gate. Conscripts hold the gate, and a laborer comes from the forecourt.
+- **The forecourt and the arch:** sodium lamps, a worker mosaic and a banner on a nine-storey panel slab. You go in through the arch under it.
+- **Superblock 14's courtyard:** twelve-storey wings with lit kitchens and TV-blue windows, lock-up garages along the Accords wall (its watchtower behind them), packed dirt, a rocket climbing frame, swings, a sandpit, benches, laundry on the line, a parked saloon. Two fights: the courtyard (a laborer, conscripts, the cook) and the door (the wrestler, two laborers, a conscript).
+- **Podezd 3:** the 22-storey point block's door, its stairwell windows lit all the way up. Walk up to it and the level ends; the stairwell is next.
+- **Krasnovian goons only:** the **conscript** (fodder: an oversized greatcoat, a fur ushanka, half asleep, slow windups) and the **laborer** (a steel pipe swung like Bat Boy's bat but slower and heavier; swat it loose and it's yours, and it never breaks), plus the wrestler and the cook.
 
-- **The yard:** sodium lamps on concrete posts, three tracks running in through the big doors, a parked green-and-cream tram, a stack of sleepers and rails, oil drums. The panel slabs and the TV tower stand right behind the wall. The red DEPOT 7 sign and two banners over the doors.
-- **The hall:** soot-dark brick under a sawtooth roof with north-light glazing, trams parked over inspection pits, a gantry crane, rows of cold fluorescent tubes. The middle track leads to the back, where the depot crews have built a ring out of tram seats and crates.
-- **The workshop:** off the hall's east side through a small door: a workbench, a tool board, wheelsets, drums. Nothing to fight in there yet.
-- **The fight:** the yard (two wrestlers and a cook), the hall (Aoki Security, a wrestler, a cook, a kicker coming in behind you), then the ring: **Volkov, "the Bear"**, an old Krasnovian champion. He's a grabber like the wrestler but bigger, with a boss bar, and he gets angry below half health.
-- **Rooms:** the hall and the workshop are drawn only through their doorways. Inside the hall facing the ring, the city, the yard and the workshop aren't drawn at all.
+The old level 3, Tram Depot 7, is still on the menu as "Old: Tram Depot 7". The location is scrapped, and Volkov's ring moves to the Palace of Sport.
 
 ## Quest performance
 
@@ -96,9 +96,10 @@ No headset needed. The tests run the real game script against a small stand-in f
 
 ```
 node test/street.js    # 41 checks: one-mesh bar room, prop batches, LOD stand-ins, portal culling, the door opens and leads outside, walls and crossings, baked light and the live lights outside/inside, the stretches (trigger, spawn, arena lock, clear, lose + restart), the boom, crates/bins/signs, draw calls + triangle budget, street physics cost
-node test/depot.js     # 31 checks: the depot's three baked meshes + triangle budget, nothing from the skylines on it, walls, track doors, workshop door, solid trams, rooms + portals (hall/workshop drawn only through doorways), the yard and hall fights (trigger, spawn, arena lock, clear, lose + restart), Volkov (boss bar, enrage, clear), street boom → depot, hall physics cost
-node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street; --level=depot: the depot and Volkov; --level=road: the street, through the boom, then the depot)
-node test/vr.js        # 52 checks: level 2 in VR (start outside, stick walking, held in by the stretch), tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
+node test/superblock.js  # 29 checks: past the boom with no cut, one baked mesh + triangle budget, nothing from the skylines on it, the gate/arch/slabs/garages as walls, Krasnovian-only fights in order, restart a stretch, the door ends the level, physics cost
+node test/depot.js     # 29 checks (the old level 3): the depot's three baked meshes + triangle budget, nothing from the skylines on it, walls, track doors, workshop door, solid trams, rooms + portals (hall/workshop drawn only through doorways), the yard and hall fights (trigger, spawn, arena lock, clear, lose + restart), Volkov (boss bar, enrage, clear), street boom → depot, hall physics cost
+node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street; --level=superblock: the gate and the courtyard; --level=road: the street, through the boom, on into Superblock 14; --level=depot: the old depot; --level=road: the street, through the boom, then the depot)
+node test/vr.js        # 56 checks: the laborer's pipe (disarm, pick up), the conscript, level 2 in VR (start outside, stick walking, held in by the stretch), tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
 node test/physics.js   # 47 checks: heights for all 9 goons, skinned mesh vs skeleton, one mesh per goon/stool, shove + recover, launch, get-up, dominoes, the cook's lob accuracy, Rocco & Ivan tag + enrage
 node test/bot.js 1 400 --mode=aggro    # a bot plays all four rounds (catches pots, throws them back); prints hits, losses, catches, tags, per-round times, errors
 ```
@@ -117,7 +118,8 @@ Three.js r149 from jsDelivr, WebXR, synthesized placeholder audio. Plain script 
 | `src/geometry.js` | mesh builders, static batching, light baking |
 | `src/bar.js`, `src/bar_atlas.js` | the bar room (one mesh on one atlas: `tools/bar_atlas.py`), walkable areas, the door |
 | `src/street/` | level 2: `paint.js` (painted street atlas), `build.js` (the square, the road, the checkpoint), `skylines.js` (the three sectors, the far city, the sky), `fight.js` (stretches, portals, signs) |
-| `src/depot/` | level 3: `paint.js` (its paintings, in the same street atlas), `build.js` (the yard, the hall, the workshop, the ring; its rooms and doorways) |
+| `src/superblock/` | Act 1's walk into Krasnovia: `paint.js` (slabs, garages, the gate's signs, in the street atlas), `build.js` (the gate, the forecourt, the arch, Superblock 14's courtyard and podezd 3; one baked mesh) |
+| `src/depot/` | the old level 3: `paint.js` (its paintings, in the same street atlas), `build.js` (the yard, the hall, the workshop, the ring; its rooms and doorways) |
 | `src/rooms.js` | rooms + portals: what's drawn from where |
 | `src/characters.js` | goon bodies and poses, the player's hands |
 | `src/audio.js`, `src/fx.js` | placeholder sound, sprites and signs |

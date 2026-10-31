@@ -1,4 +1,4 @@
-// Headless checks for level 3: Tram Depot 7 (Krasnovia). The yard, the hall, the workshop, Volkov's ring.
+// Headless checks for the old level 3: Tram Depot 7 (Krasnovia; scrapped as a location, still reachable from the menu). The yard, the hall, the workshop, Volkov's ring.
 'use strict';
 const vm = require('vm'), path = require('path');
 const THREE = require('./three_stub.js');
@@ -101,14 +101,7 @@ try {
   vk.hp = 0; vk.knockdown(V(0, 0, 1), 'knockdown', true); step(Math.ceil(2 / DT));
   check('putting him down clears the depot', TW.game.state === 'won', TW.game.state);
 
-  // ---- from the street: through the lifted boom, on to the depot
-  run('startStreet(false)'); step(2);
-  run('clearEnemies(); level.encounter = CFG.street.encounters.length - 1; level.arena = null; game.state = "walk";');
-  TW.rig.position.set(0, 0, TW.CFG.street.finishZ + 0.3); step(Math.ceil(2 / DT));
-  const wonStreet = TW.game.state === 'won';
-  TW.rig.position.set(0, 0, TW.STREET.chk.z + TW.CFG.street.exitPast + 0.6); step(3);
-  check('walking through the lifted boom takes you on to the depot', wonStreet && TW.level.name === 'depot' && TW.player.head.z - D.z < 6, `${TW.level.name} z ${(TW.player.head.z - D.z).toFixed(1)}`);
-  check('the street\'s props stay behind', TW.props.every(p => p.body.ps[0].x.distanceTo(L(0, 30)) < 60), TW.props.length + ' props');
+  // (the street's boom now leads on into Krasnovia, the gate and Superblock 14: see test/superblock.js)
 
   // ---- physics cost in the hall (walls, trams, ring posts, lockers filed by z band)
   run('clearEnemies(); startDepot(false); level.encounter = 99'); at(0, 50, Math.PI);

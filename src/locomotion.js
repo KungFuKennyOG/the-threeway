@@ -25,7 +25,7 @@ function updateLocomotion(dt) {
       if (Math.abs(x) < 0.3) snapReady = true;
     }
     // restart after a win / loss
-    if (R && (game.state === 'won') && R.buttons[4] && R.buttons[4].pressed) { if (level.name === 'street') startStreet(false); else if (level.name === 'depot') startDepot(false); else startGame(); }
+    if (R && (game.state === 'won') && R.buttons[4] && R.buttons[4].pressed) { if (level.name === 'street') startStreet(false); else if (level.name === 'superblock') startSuperblock(false); else if (level.name === 'depot') startDepot(false); else startGame(); }
     // keep the head inside the room and out of the bar
     camera.getWorldPosition(_v1);
     _v2.copy(_v1); keepPlayerIn(_v2, 0.25);

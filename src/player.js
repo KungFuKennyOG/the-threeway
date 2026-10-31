@@ -115,7 +115,7 @@ addEventListener('keydown', (e) => {
   if (e.code === 'KeyE') deskGrab();
   if (e.code === 'KeyQ') deskThrow();
   if (e.code === 'KeyG') player.headbuttT = 0.18;
-  if (e.code === 'KeyR' && (game.state === 'won' || game.state === 'lost')) { if (level.name === 'street') startStreet(false); else if (level.name === 'depot') startDepot(false); else startGame(); }
+  if (e.code === 'KeyR' && (game.state === 'won' || game.state === 'lost')) { if (level.name === 'street') startStreet(false); else if (level.name === 'superblock') startSuperblock(false); else if (level.name === 'depot') startDepot(false); else startGame(); }
   if (e.code === 'KeyJ') deskPunch(hands.left, e.shiftKey);
   if (e.code === 'KeyK') deskPunch(hands.right, e.shiftKey);
   if (e.code === 'Space') e.preventDefault();

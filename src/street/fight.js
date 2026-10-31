@@ -32,8 +32,9 @@ function startStreet(fromBar) {
 }
 // The street and the depot share one flow: stretches with arena locks, spawns, clear, lose + restart, finish.
 // Their configs (CFG.street, CFG.depot) use positions relative to the level's origin.
-const stageCfg = () => level.name === 'depot' ? CFG.depot : CFG.street;
+const stageCfg = () => level.name === 'depot' ? CFG.depot : level.name === 'superblock' ? CFG.superblock : CFG.street;
 const stageOrigin = () => level.name === 'depot' ? [DEPOT.x, DEPOT.z] : [0, 0];
+const STAGES = new Set(['street', 'superblock', 'depot']);   // levels run by updateStreet()
 function startEncounter(i) {
   const E = stageCfg().encounters[i];
   level.encounter = i; level.arena = E.arena;
@@ -53,6 +54,20 @@ function startDepot(fromStreet) {
   game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
   showSign('depot', 2.6);
 }
+// Act 1, level 2: straight on from the checkpoint, no cut. From the street you just keep walking (the boom stays up);
+// from the menu you start just past the boom.
+function startSuperblock(fromStreet) {
+  level.name = 'superblock'; level.encounter = -1; level.arena = null;
+  clearEnemies();
+  if (boomPivot) boomPivot.rotation.z = -1.35;
+  const held = new Set(handList.map(h => h.held));
+  if (!fromStreet) { DOOR.target = 1; DOOR.open = 1; player.hp = CFG.player.health; player.hurtT = 0; game.catches = 0; game.disarms = 0; }
+  for (const p of props.slice()) if (!held.has(p)) { scene.remove(p.obj); p.body.remove(); p.alive = false; props.splice(props.indexOf(p), 1); }   // bar and street props stay behind
+  for (const [type, x, z] of CFG.superblock.props) new Prop(type, new V3(x, type === 'bottle' ? 0.5 : 0, z));
+  if (!fromStreet) placePlayer(CFG.superblock.start[0], CFG.superblock.start[1], Math.PI);
+  game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
+  showSign('krasnovia', 2.6);
+}
 function updateStreet(dt) {   // the stage flow for whichever level you're in (street or depot)
   const S = stageCfg(), enc = S.encounters, [ox, oz] = stageOrigin(), z = player.head.z - oz;
   if (game.state === 'walk') {
@@ -60,6 +75,9 @@ function updateStreet(dt) {   // the stage flow for whichever level you're in (s
     if (next < enc.length && z > enc[next].trigger) startEncounter(next);
     else if (level.name === 'street' && next >= enc.length && z > S.finishZ) {
       game.state = 'won'; game.timer = 0; showSign('checkpoint', 1e9); AU.bell();
+    }
+    else if (level.name === 'superblock' && next >= enc.length && z > S.finishZ && Math.abs(player.head.x - SB.door[0]) < 3) {
+      game.state = 'won'; game.timer = 0; showSign('stairwell', 1e9); AU.bell();   // the stairwell is the next level
     }
     return;
   }
@@ -93,9 +111,9 @@ function updateStreet(dt) {   // the stage flow for whichever level you're in (s
     placePlayer(ox + E.respawn[0], oz + E.respawn[1], Math.PI);
     startEncounter(level.encounter);
   }
-  if (game.state === 'won' && level.name === 'street') {   // the boom lifts; walk through it to the depot
+  if (game.state === 'won' && level.name === 'street') {   // the boom lifts; walk on through it into Krasnovia
     if (boomPivot) boomPivot.rotation.z = Math.max(-1.35, boomPivot.rotation.z - dt * 0.9);
-    if (player.head.z > STREET.chk.z + CFG.street.exitPast) startDepot(true);
+    if (player.head.z > STREET.chk.z + CFG.street.exitPast) startSuperblock(true);
   }
 }
 // a boss loses it: faster, shorter windups, red
@@ -110,7 +128,7 @@ function enrage(s) {
 // encounter walls: only the player is held in; goons walk in from outside them
 function keepPlayerIn(p, r) {
   pushOutXZ(p, r);
-  if ((level.name === 'street' || level.name === 'depot') && level.arena) { const oz = stageOrigin()[1]; p.z = clamp(p.z, oz + level.arena[0] + r, oz + level.arena[1] - r); }
+  if (STAGES.has(level.name) && level.arena) { const oz = stageOrigin()[1]; p.z = clamp(p.z, oz + level.arena[0] + r, oz + level.arena[1] - r); }
 }
 // lights and fog follow you: the bar's six inside, the nearest six street lamps outside
 const _lampD = [];
@@ -174,7 +192,8 @@ function doorInView() {
 // big signs painted in code (same pixel font as the street), with a hard drop shadow
 const SIGN_TEXT = { depot: ['TRAM DEPOT 7', '#ff9a3c'], yard: ['FIGHT!', '#f2c14e'], hall: ['FIGHT!', '#f2c14e'], volkov: ['THE BEAR', '#e8352b'],
   depotClear: ['DEPOT CLEARED', '#33e0d0'], street: ['TRIPOINT SQUARE', '#c9a04a'], go: ['GO!', '#33e0d0'], goCheck: ['TO THE CHECKPOINT', '#33e0d0'],
-  checkpoint: ['CHECKPOINT', '#f2ede4'], doorOpen: ['THE DOOR IS OPEN', '#ff9a3c'], square: ['FIGHT!', '#f2c14e'], road: ['FIGHT!', '#f2c14e'], last: ['LAST STRETCH', '#ff4f9a'] };
+  checkpoint: ['CHECKPOINT', '#f2ede4'], krasnovia: ['KRASNOVIA', '#ff9a3c'], gate: ['FIGHT!', '#f2c14e'], courtyard: ['SUPERBLOCK 14', '#ff9a3c'],
+  podezd: ['PODEZD 3', '#ff4f9a'], stairwell: ['TO THE STAIRWELL', '#33e0d0'], doorOpen: ['THE DOOR IS OPEN', '#ff9a3c'], square: ['FIGHT!', '#f2c14e'], road: ['FIGHT!', '#f2c14e'], last: ['LAST STRETCH', '#ff4f9a'] };
 function paintSign(text, col) {
   const s = 3, w = textW(text) * s + 6, h = 7 * s + 6, p = new Pix(w, h);
   for (const [dx, dy, c] of [[3, 3, '#000000'], [0, 0, col]]) {

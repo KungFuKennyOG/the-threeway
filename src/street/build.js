@@ -245,10 +245,11 @@ function checkpoint(acc, z) {   // the joint city militia: shields and batons, n
   WORLD_BOXES.push([bx - 1.0, 0, bz - 1.1, bx + 1.0, 2.7, bz + 1.1], [-4.4, 0.85, z - 0.07, 1.7, 1.06, z + 0.07]);
   BLOCKERS.push({ x0: bx - 1.0, x1: bx + 1.0, z0: bz - 1.1, z1: bz + 1.1 });
 }
-// the Ring Road beyond the checkpoint, and the Accords wall starting down the middle of the old road
+// the Ring Road beyond the checkpoint, and the Accords wall starting down the middle of the old road (the Krasnovian
+// gate and Superblock 14 on the -x side are in src/superblock/build.js)
 function ringRoad(acc, z) {
   ground(acc, 'cobble', -40, z + 2, 40, z + 16, 0.0, 2);
-  for (let k = 0; k < 8; k++) { const wz = z + 16 + k * 5; sbox(acc, 'concrete', 0, 0, wz + 2.5, 0.6, 5, 4.2, 0, { u: 2, v: 2, top: 'wallTop', tu: 1 }); }
+  for (let k = 0; k < 16; k++) { const wz = z + 16 + k * 5; sbox(acc, 'concrete', 0, 0, wz + 2.5, 0.6, 5, 4.2, 0, { u: 2, v: 2, top: 'wallTop', tu: 1 }); }
   sbox(acc, 'concrete', 0, 0, z + 54, 3.2, 3.2, 9, 0, { u: 2, v: 2, top: 'concrete' });   // watchtower
   sbox(acc, 'booth', 0, 9, z + 54, 4, 4, 2.4, 0, { u: 4, v: 2.4, top: 'concrete' });
   ST.lamps.push(lightFromHex([0, 11.5, z + 54], CFG.street.light.flood, 16, 0.9));
@@ -257,7 +258,7 @@ function ringRoad(acc, z) {
     acc.tint = [0.72 + (k % 3) * 0.06, 0.44, 0.36];
     sbox(acc, 'tenementPlain', 9 + k * 7.2, 0, z + 24, 7, 10, 9 + (k % 2) * 3.2, 0, { u: 9.6, v: 6.4, top: 'slate', cell: 4 });
     acc.tint = [1, 1, 1];
-    sbox(acc, 'panel', -14 - k * 13, 0, z + 30 + (k % 2) * 6, 12, 10, 12 + (k % 3) * 3, 0, { u: 12, v: 12, top: 'roofDark', cell: 6 });
+    if (k < 2) sbox(acc, 'panel', -58 - k * 13, 0, z + 30 + (k % 2) * 6, 12, 10, 12 + (k % 3) * 3, 0, { u: 12, v: 12, top: 'roofDark', cell: 6 });   // west of Superblock 14
   }
   ST.lamps.push(lightFromHex([-10, 6, z + 10], CFG.street.light.sodium, 14, 1.2));
   ST.lamps.push(lightFromHex([10, 6, z + 10], CFG.street.light.amber, 14, 1.0));

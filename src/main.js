@@ -71,7 +71,7 @@ function boot() {
   depotRooms();
   addRoom('outside', () => true);
   roomMeshes('bar', ...ST.barGroup);
-  roomMeshes('outside', ...ST.streetGroup, ST.beaconMesh, ...DP.outside);
+  roomMeshes('outside', ...ST.streetGroup, ST.beaconMesh, ...DP.outside, SBX.mesh);
   addPortal('bar', 'outside', [0, 1.2, STREET.fz], () => DOOR.open > 0.02);
   for (const h of handList) { h.anchor.rotation.order = 'XYZ'; h.anchor.position.set(...DH.guard[h.side]); }
   attachHandsDesktop();
@@ -82,12 +82,12 @@ function boot() {
   loadTune();
   renderer.setAnimationLoop(frame);
   window.__tw = { CFG, game, player, enemies, props, bodies, hands, scene, camera, rig, renderer, playerHit, startGame, Enemy, Prop, updatePhysics,
-    perf, perfPanel, TUNE, bossBars, roomTris: () => roomTris, level, startStreet, STREET, ST, WALK, DOOR, keepInWalk, pushOutXZ, WORLD_BOXES, BLOCKERS, desk, DEPOT, DP, startDepot, ROOMS, roomState, updateRooms };
+    perf, perfPanel, TUNE, bossBars, roomTris: () => roomTris, level, startStreet, STREET, ST, WALK, DOOR, keepInWalk, pushOutXZ, WORLD_BOXES, BLOCKERS, desk, DEPOT, DP, startDepot, SB, SBX, startSuperblock, ROOMS, roomState, updateRooms };
 }
 
 const levelSel = document.getElementById('levelSel');
-{ const m = /[?&]level=(street|depot)/.exec((window.location && window.location.search) || ''); if (levelSel && m) levelSel.value = m[1]; }
-const begin = () => { const v = levelSel ? levelSel.value : 'bar'; if (v === 'street') startStreet(false); else if (v === 'depot') startDepot(false); else startGame(); };
+{ const m = /[?&]level=(street|superblock|depot)/.exec((window.location && window.location.search) || ''); if (levelSel && m) levelSel.value = m[1]; }
+const begin = () => { const v = levelSel ? levelSel.value : 'bar'; if (v === 'street') startStreet(false); else if (v === 'superblock') startSuperblock(false); else if (v === 'depot') startDepot(false); else startGame(); };
 const menu = document.getElementById('menu'), vrBtn = document.getElementById('vrBtn'), deskBtn = document.getElementById('deskBtn'), vrNote = document.getElementById('vrNote');
 deskBtn.addEventListener('click', () => {
   AU.init(); menu.hidden = true; hudEl.hidden = false; xrMode = false;

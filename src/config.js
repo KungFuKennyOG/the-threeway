@@ -138,7 +138,25 @@ const CFG = {
              skylineAmbient: [0.22, 0.2, 0.26], skylineSky: [0.05, 0.05, 0.08] },
     sky: { top: '#0e0710', horizon: '#2a1424', hino: '#8a1434', kras: '#6a3008', colu: '#5a4414' },
   },
-  // ---- level 3: Tram Depot 7, Krasnovia (positions are local to the depot gate: lx across, lz in; see src/depot/build.js)
+  // ---- Act 1, level 2: through the Krasnovian gate into Superblock 14 (world positions; see src/superblock/build.js).
+  // Straight on from the checkpoint: no cut. Krasnovian goons only.
+  superblock: {
+    start: [-2.5, 59.5],                       // "start here" puts you just past the lifted boom, facing the gate
+    finishZ: 115.6,                            // walk up to podezd 3's door once the courtyard is clear
+    spawnGap: 1.1, clearedPause: 1.6, healBetween: 20,
+    encounters: [
+      { name: 'gate', trigger: 64, arena: [58, 80.5], respawn: [-3, 63], sign: 'gate',
+        spawn: [['conscript', -5, 77.5], ['conscript', -2.2, 79], ['conscript', -8, 62], ['laborer', -14, 83]] },
+      { name: 'courtyard', trigger: 95, arena: [91, 118], respawn: [-19.8, 94.5], sign: 'courtyard',
+        spawn: [['laborer', -25, 113], ['conscript', -14, 110], ['cook', -31, 104], ['conscript', -19.8, 88]] },
+      { name: 'podezd', trigger: 107, arena: [103, 118], respawn: [-19.8, 104], sign: 'podezd',
+        spawn: [['wrestler', -13, 116], ['laborer', -24, 116.5], ['conscript', -31, 110], ['laborer', -10, 104]] },
+    ],
+    props: [['bin', -15, 84.6], ['crate', -24, 84.4], ['crate', -24.8, 84.6], ['sign', -2.4, 82], ['bin', -9.4, 116.6], ['bin', -10.2, 116.8],
+            ['crate', -32.6, 94], ['bottle', -31.6, 99.2], ['bottle', -11.2, 106.6], ['crate', -21.5, 116.6]],
+    light: { sodiumRadius: 14, sodiumK: 1.5, floodRadius: 18, floodK: 1.4 },
+  },
+  // ---- the old level 3: Tram Depot 7, Krasnovia (scrapped as a location; its ring moves to the Palace of Sport) (positions are local to the depot gate: lx across, lz in; see src/depot/build.js)
   depot: {
     start: [0, 2.2],                           // where you arrive (through the gate), facing into the yard
     spawnGap: 1.2, clearedPause: 1.6, healBetween: 25,
