@@ -107,5 +107,8 @@ const TEX = {
  "sheet_bodyguard": "assets/tex/sheet_bodyguard.png",
  "sheet_orlova": "assets/tex/sheet_orlova.png",
  "sheet_chairman": "assets/tex/sheet_chairman.png",
- "baton": "assets/tex/baton.png"
+ "baton": "assets/tex/baton.png",
+ "sheet_harmony": "assets/tex/sheet_harmony.png",
+ "sheet_enforcer": "assets/tex/sheet_enforcer.png",
+ "sheet_aokiagent": "assets/tex/sheet_aokiagent.png"
 };

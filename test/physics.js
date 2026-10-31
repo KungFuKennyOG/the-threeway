@@ -32,9 +32,9 @@ const freeze = (e) => { e.cooldown = 1e9; e.cfg = Object.assign({}, e.cfg, { spe
 try {
   // ---- scale + standing heights
   const H = {};
-  const ALL = Object.keys(TW.CFG.enemies);   // every goon there is (the Palace's, the Parade's, the Tower's, the officials' too)
-  for (const t of ALL) {
-    const e = new TW.Enemy(t); freeze(e); e.placeAt(0, 2.5, Math.PI); e.state = 'circle'; TW.enemies.push(e);
+  const ALL = ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'rocco', 'ivan', 'secguard', 'kicker'];
+  const measure = (t) => {
+    const e =new TW.Enemy(t); freeze(e); e.placeAt(0, 2.5, Math.PI); e.state = 'circle'; TW.enemies.push(e);
     step(90);
     const P = e.body.by;
     H[t] = { head: P.head.x.y, top: P.head.x.y + 0.15 * e.s, pelvis: P.pelvis.x.y, foot: Math.min(P.anL.x.y, P.anR.x.y) };
@@ -49,11 +49,13 @@ try {
     const meshes = TW.scene.children.filter(o => o.material === e.mat);
     check(`${t}: one mesh, one draw call`, meshes.length === 1 && meshes[0].children.length === 0, meshes.length + ' meshes');
     e.remove();
-  }
-  for (const t of Object.keys(H)) {
+  };
+  const heights = (types) => { for (const t of types) {
     const [lo, hi] = TW.CFG.enemies[t].boss ? [1.72, 2.02] : [1.6, 1.92];   // bosses: Inspector Orlova is a tall woman, the Bear a giant
     check(`${t}: realistic height`, H[t].top > lo && H[t].top < hi, `top of head ${H[t].top.toFixed(2)} m, pelvis ${H[t].pelvis.toFixed(2)}, feet ${H[t].foot.toFixed(2)}`);
-  }
+  } };
+  for (const t of ALL) measure(t);
+  heights(ALL);
 
   // ---- hit shove: a solid punch moves the chest, then it springs back
   TW.rig.position.set(0, 0, 2.6); step(3);
@@ -147,6 +149,13 @@ try {
   check('staggering the active boss tags in his partner', act.benched && !wait.benched, `${act.type} benched ${act.benched}, ${wait.type} benched ${wait.benched}`);
   wait.hp = 0; wait.knockdown(new THREE.Vector3(0, 0, 1), 'knockdown', true); step(4);
   check('dropping one enrages the other', act.enraged && !act.benched && act.cfg.speed > TW.CFG.enemies[act.type].speed, act.type + ' enraged ' + act.enraged);
+  // every other goon (the Palace's, the Parade's, the Tower's, the officials', the laborer and the conscript): measured last, so the
+  // checks above keep their timing
+  run(`clearEnemies(); stockProps(); game.state = 'fight'; game.queue = []; updateGame = function () {};`);
+  TW.rig.position.set(0, 0, 0); run('desk.yaw = Math.PI; desk.pitch = 0;'); step(3);
+  const REST = Object.keys(TW.CFG.enemies).filter(t => !ALL.includes(t));
+  for (const t of REST) measure(t);
+  heights(REST);
   // performance of the solver
   run(`clearEnemies(); stockProps();`);
   for (const t of ['boso', 'boxer', 'wrestler', 'boso']) { const q = new TW.Enemy(t); q.placeAt(rnd() * 4 - 2, rnd() * 3, 0); TW.enemies.push(q); }
