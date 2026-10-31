@@ -69,11 +69,10 @@ Object.assign(PAINT, {
     p.speck('#000000', 30, 0); return p;
   },
   prChalk() {   // the honour guard's formation, chalked on the granite: seven files, eight ranks numbered, a cross per man (8 m x 12 m)
-    const p = new Pix(64, 96); p.fill('#000000', 0); const C = '#e4e0d6';
-    for (let r = 0; r < 8; r++) { const y = 8 + r * 11; p.text(String(r + 1), 1, y - 3, C); for (let c = 0; c < 7; c++) { const x = 13 + c * 8; p.rect(x - 1, y, 3, 1, C); p.rect(x, y - 1, 1, 3, C); } }
-    for (let x = 9; x < 63; x += 3) { p.set(x, 1, C); p.set(x, 94, C); } for (let y = 1; y < 95; y += 3) { p.set(9, y, C); p.set(62, y, C); }   // the block, dashed
-    p.rect(30, 88, 9, 1, C); p.set(31, 87, C); p.set(31, 89, C);   // an arrow: this way
-    p.speck('#000000', 160, 0); return p;
+    const p = new Pix(64, 96); p.fill('#000000', 0); const C = '#aeaaa2';
+    for (let r = 0; r < 8; r++) { const y = 8 + r * 11; p.text(String(r + 1), 1, y - 3, C); p.rect(12, y, 50, 1, C); for (let c = 0; c < 7; c++) p.rect(14 + c * 8, y - 1, 1, 3, C); }   // each rank's line, a tick per man
+    for (let x = 9; x < 63; x += 4) { p.rect(x, 1, 2, 1, C); p.rect(x, 94, 2, 1, C); } for (let y = 1; y < 95; y += 4) { p.rect(9, y, 1, 2, C); p.rect(62, y, 1, 2, C); }   // the block, dashed
+    p.speck('#000000', 24, 0); return p;
   },
   prCableRamp() {   // a rubber cable ramp across the route: yellow and black (4 m x 0.5 m)
     const p = new Pix(32, 4); p.fill('#1e1c1e'); for (let x = 0; x < 32; x += 4) p.rect(x, 1, 2, 2, '#d8b030'); return p;
@@ -173,7 +172,7 @@ Object.assign(PAINT, {
     p.rect(0, 0, 8, 2, '#e8c040'); return p;
   },
   prScaffold() {   // a scaffold tower, its whole face (3 m x 21 m): standards, ledgers every 2 m, a brace, boards at three lifts (cut out between)
-    const p = new Pix(24, 168); p.fill('#000000', 0); const T = '#8e9296', D = '#5e6266';
+    const p = new Pix(24, 168); p.fill('#000000', 0); const T = '#b4b8bc', D = '#7a7e84';
     p.rect(0, 0, 2, 168, T); p.rect(22, 0, 2, 168, T); p.rect(1, 0, 1, 168, D); p.rect(23, 0, 1, 168, D);
     for (let y = 0; y < 168; y += 16) p.rect(0, y, 24, 1, T);
     for (let y = 0; y < 168; y++) { const x = Math.round(2 + ((y % 32) < 16 ? (y % 16) : 15 - (y % 16)) * 1.25); p.set(x, y, D); }
@@ -231,6 +230,15 @@ Object.assign(PAINT, {
     for (const x of [0, 32]) { p.rect(x, 0, 4, 40, '#948c88'); p.rect(x + 4, 0, 1, 40, '#5e5856'); }
     for (const x of [8, 40]) { p.rect(x, 5, 20, 26, '#6e6662'); p.rect(x, 5, 20, 1, '#5a5452'); p.rect(x, 30, 20, 1, '#8a8280'); }
     p.rect(0, 0, 64, 2, '#a8a09a'); p.rect(0, 34, 64, 1, '#c9a04a'); p.rect(0, 35, 64, 5, '#4e4846'); return p;
+  },
+  prEmblem() {   // the emblem on the guest stand's pylon: the gold cog in a wreath of wheat, a red ribbon (cut out round it)
+    const p = new Pix(32, 32); p.fill('#000000', 0);
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) { const d = Math.hypot(x - 15.5, y - 14), a = Math.atan2(y - 14, x - 15.5); if ((d < 7.2 && d > 4) || (d < 9.4 && d >= 7.2 && Math.cos(a * 10) > 0.25)) p.set(x, y, '#f2c14e', EM); if (d <= 4 && d > 2.2) p.set(x, y, '#a82a22'); }
+    for (const s of [-1, 1]) for (let k = 0; k < 9; k++) {   // the wheat ears, up both sides
+      const x = 15.5 + s * Math.sin(k * 0.19 + 0.3) * 13, y = 28 - k * 2.8;
+      p.rect(Math.round(x), Math.round(y), 2, 2, k % 2 ? '#e8b848' : '#c9a04a', EM); p.set(Math.round(x + s * 1.5), Math.round(y - 1), '#f2c14e', EM);
+    }
+    p.rect(9, 28, 14, 3, '#a82a22'); p.rect(9, 28, 14, 1, '#c83a2c'); return p;
   },
   prSlogan() {   // cream on faded red: PEACE · LABOR · UNITY
     const p = new Pix(136, 14); p.fill('#9a2a24'); p.rect(0, 0, 136, 1, '#d8b048'); p.rect(0, 13, 136, 1, '#d8b048');

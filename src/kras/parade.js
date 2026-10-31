@@ -24,7 +24,7 @@ CFG.parade = {
   // crates of rehearsal kit, bins, a cast-iron sign ([type, x, z])
   props: [['crate', -50.6, 262.6], ['crate', -50.4, 263.5], ['bin', -30.4, 261.8], ['sign', -64, 268.5], ['crate', -19.6, 281],
           ['bin', -51, 289], ['crate', -60.5, 298.5], ['sign', -20.5, 291.5], ['bin', -47.6, 301.4], ['crate', -14.6, 271]],
-  light: { flood: '#ffe2b4', floodRadius: 25, floodK: 3.0, floodY: 10,  // the masts: big warm-white pools on the four fight zones
+  light: { flood: '#ffe2b4', floodRadius: 21, floodK: 3.6, floodY: 8,   // the masts: warm-white pools on the four fight zones, darker between
            sodiumRadius: 12, sodiumK: 1.5,                             // sodium lamps at the Palace doors, the ministry, the bleachers
            stand: '#fff0d4', standRadius: 16, standK: 1.9,             // the doorway between the stand's wings: the goal
            foot: '#ffd8a0', footRadius: 9, footK: 1.5 },               // each float's footlight on its portrait
@@ -46,10 +46,10 @@ const PR = {
   floats: [[-55, 266, 'prHero1'], [-25, 266, 'prHero2'], [-24, 284, 'prHero3']],   // the third (the miner) is still being painted
   // the truck crane hoisting the Chairman's portrait up the Ministry's face: the truck [x0, x1, z0, z1], the boom's foot and
   // its tip (right over the portrait), the portrait [x, z, y0, y1, width], the scaffold tower beside it [x0, x1, z0, z1, top]
-  crane: { truck: [-71.2, -68.6, 264.5, 273.5], foot: [-69.9, 3.6, 270.2], tip: [-70.4, 29, 283] },
+  crane: { truck: [-71.2, -68.6, 264.5, 273.5], foot: [-69.9, 3.6, 267.4], tip: [-70.4, 26.6, 283] },
   portrait: [-70.4, 283, 9.2, 19.6, 8],
   scaffold: [-72, -70.8, 289.4, 292.6, 21.6],
-  programme: [-49.4, 258.5],                   // the running order on a board, on your left as you come out
+  programme: [-48.2, 259.2],                   // the running order on a board, on your right as you come out
   // the mesh is drawn as chunks (by where each triangle's middle lies: these x and z edges) that the camera culls
   chunkX: [-58, -30], chunkZ: [273, 293],
   mats: [-67, -55, 279, 291],
@@ -124,6 +124,7 @@ function prMast(acc, x, z, cx, cz) {
     prBeam(acc, 'iron', [hx, 12.9, hz], [mx, 12.5, mz], 0.14, 0.6, 'black');
   }
   prLight(cx, L.floodY, cz, L.flood, L.floodRadius, L.floodK);
+  if (x < -60) prLight(x - 1.2, 13.5, z, L.flood, 14, 1.2);   // their spill washes the Ministry's face behind them
   prSolid(x - 0.6, z - 0.6, x + 0.6, z + 0.6, 14);
 }
 // ---- a portrait float: a draped platform on wheels, a giant portrait (an invented worker) facing the way you come
@@ -228,6 +229,12 @@ function prBand(acc) {
     for (const s of [-1, 1]) sbox(acc, 'iron', x + s * 0.18, 0, z + 0.75, 0.03, 0.42, 0.42, 0, { u: 1, v: 1, top: false, cell: 99 });
     prSolid(x - 0.1, z - 0.1, x + 0.1, z + 0.1, 1.4); prSolid(x - 0.22, z + 0.53, x + 0.22, z + 0.97, 0.92);
   }
+  // the basses' sousaphones parked on their stands behind the chairs, bells to the square: big gilt rings under the floods
+  for (const x of [-28.5, -24.5, -20.5]) {
+    sbox(acc, 'iron', x, 0, 301.9, 0.06, 0.06, 1.3, 0, { u: 1, v: 1, top: false, cell: 99 });
+    cyl(acc, 'gilt', x, 1.1, 301.9, 0.14, 0.5, 0.75, 8, { u: 1, v: 1, cell: 99 }); prHeadUp(acc, x, 1.84, 301.9, 0.36);
+    prSolid(x - 0.3, 301.6, x + 0.3, 302.2, 1.9);
+  }
   // the conductor's podium out front, his score on its stand facing him
   sbox(acc, 'lacquer', -24.5, 0, 293.6, 1.0, 1.0, 0.32, 0, { u: 1, v: 1, top: 'prBoards', tu: 1, cell: 99 }); prSolid(-25, 293.1, -24, 294.1, 0.32);
   sbox(acc, 'iron', -24.5, 0, 294.5, 0.04, 0.04, 1.2, 0, { u: 1, v: 1, top: false, cell: 99 }); sbox(acc, 'iron', -24.5, 1.15, 294.5, 0.5, 0.03, 0.36, 0, { u: 1, v: 1, cell: 99 });
@@ -260,15 +267,21 @@ function prBleachers(acc) {
   for (let k = 0; k < 3; k++) { const a = x0 + k * 1.8; sbox(acc, 'prBleacher', (a + x1) / 2, 0, (z0 + z1) / 2, x1 - a, z1 - z0, 0.55 * (k + 1), 0, { u: 8, v: 0.55, top: 'prBleachTop', tu: 8, skip: 'r', cell: 8 }); }
   sbox(acc, 'prStandWall', x1 - 0.15, 0, (z0 + z1) / 2, 0.3, z1 - z0 + 2, 5.2, 0, { u: 8, v: 5.2, top: 'wallTop', tu: 8, skip: 'r', cell: 8 });
   plate(acc, 'prSlogan', x1 - 0.3, 3.7, (z0 + z1) / 2, 23, 23 * 14 / 136, -Math.PI / 2, 0.02);
-  for (let k = 0; k < 7; k++) {   // a row of flags along the top of the wall, against the slabs' lit windows
-    const z = z0 + 2 + k * 6.33; sbox(acc, 'iron', x1 - 0.15, 5.2, z, 0.08, 0.08, 4.2, 0, { u: 1, v: 1, top: false, cell: 99 });
-    plate(acc, 'flag_kras', x1 - 0.15, 8.75, z - 0.75, 1.5, 1.0, -Math.PI / 2, 0, [0, 0, 1, 1], true);
+  for (let k = 0; k < 7; k++) {   // a row of flags along the top of the wall, against the slabs' lit windows (the emblem's pylon in the middle)
+    if (k === 3) continue; const z = z0 + 2 + k * 6.33; sbox(acc, 'iron', x1 - 0.15, 5.2, z, 0.1, 0.1, 5.4, 0, { u: 1, v: 1, top: false, cell: 99 });
+    plate(acc, 'flag_kras', x1 - 0.15, 9.7, z - 1.15, 2.25, 1.5, -Math.PI / 2, 0, [0, 0, 1, 1], true);
   }
   for (const z of [266, 292]) {
     sbox(acc, 'iron', x1 - 1.3, 5.3, z, 2.0, 0.14, 0.12, 0, { u: 1, v: 1, cell: 99 });
     sbox(acc, 'litSodium', x1 - 2.4, 5.1, z, 0.6, 0.3, 0.22, 0, { u: 1, v: 1, cell: 99 });
     prLight(x1 - 2.6, 4.8, z, CFG.street.light.sodium, CFG.parade.light.sodiumRadius, CFG.parade.light.sodiumK);
   }
+  // the centrepiece over the empty seats, facing the Ministry across the square: a granite pylon with the emblem (the gold cog
+  // in a wreath of wheat), floodlit from below
+  const pz = (z0 + z1) / 2;
+  sbox(acc, 'prStandWall', x1 - 0.7, 5.2, pz, 1.4, 3.6, 6.8, 0, { u: 3.6, v: 6.8, top: 'wallTop', tu: 99, skip: 'r', cell: 99 });   // on the wall, over the slogan
+  plate(acc, 'prEmblem', x1 - 1.4, 8.9, pz, 4.6, 4.6, -Math.PI / 2, 0.02);
+  prLight(x1 - 4.5, 4.2, pz, '#ffe2b4', 11, 1.6);
   prSolid(x0, z0, x1, z1, 1.65); prSolid(x1 - 0.3, z0 - 1, x1, z1 + 1, 5.2);
 }
 // ---- the Ministry of Order (Inspector Orlova's), after Moscow's Lubyanka and Minsk's ministries: a rusticated dark granite
@@ -313,24 +326,25 @@ function prMinistry(acc) {
 function prCrane(acc) {
   const C = PR.crane, [x0, x1, z0, z1] = C.truck, cx = (x0 + x1) / 2, w = x1 - x0, [px, pz, y0, y1, pw] = PR.portrait;
   sbox(acc, 'prCrane', cx, 0.55, (z0 + z1) / 2, w, z1 - z0, 0.75, 0, { u: 4, v: 0.75, top: 'iron', cell: 99 });            // the chassis
-  sbox(acc, 'prCraneCab', cx, 1.3, z0 + 1.25, w, 2.5, 2.0, 0, { u: 2.6, v: 2.0, top: 'iron', cell: 99 });                 // the cab, south end
-  sbox(acc, 'litSodium', cx, 3.3, z0 + 1.0, 0.25, 0.25, 0.2, 0, { u: 1, v: 1, cell: 99 }); prLight(cx, 3.9, z0 + 1.0, CFG.street.light.sodium, 6, 1.0);   // its amber beacon
+  sbox(acc, 'prCraneCab', cx, 1.3, z1 - 1.25, w, 2.5, 2.0, 0, { u: 2.6, v: 2.0, top: 'iron', cell: 99 });                 // the cab, north end (the boom works out over it)
+  sbox(acc, 'litSodium', cx, 3.3, z1 - 1.0, 0.25, 0.25, 0.2, 0, { u: 1, v: 1, cell: 99 }); prLight(cx, 3.9, z1 - 1.0, CFG.street.light.sodium, 6, 1.0);   // its amber beacon
   for (const z of [z0 + 1.3, z1 - 2.6, z1 - 1.3]) for (const x of [x0 + 0.2, x1 - 0.2]) sbox(acc, 'black', x, 0, z, 0.4, 1.0, 1.0, 0, { u: 1, v: 1, cell: 99 });
   for (const z of [z0 + 3.2, z1 - 0.3]) {   // the outriggers, down on their pads
     sbox(acc, 'iron', (x0 + x1 + 0.2) / 2, 0.75, z, w + 1.8, 0.24, 0.24, 0, { u: 1, v: 1, cell: 99 });
     for (const x of [x0 - 0.75, x1 + 0.95]) { sbox(acc, 'iron', x, 0.08, z, 0.14, 0.14, 0.7, 0, { u: 1, v: 1, top: false, cell: 99 }); sbox(acc, 'iron', x, 0, z, 0.6, 0.6, 0.08, 0, { u: 1, v: 1, cell: 99 }); }
   }
-  sbox(acc, 'prCrane', cx, 1.3, C.foot[2] - 0.6, 2.4, 3.4, 1.9, 0, { u: 4, v: 1.9, top: 'iron', cell: 99 });                // the house on its turntable
-  sbox(acc, 'iron', cx, 1.6, C.foot[2] - 2.75, 2.2, 0.9, 1.4, 0, { u: 1, v: 1, cell: 99 });                                // the counterweight
-  sbox(acc, 'prCraneCab', x1 - 0.5, 3.2, C.foot[2] + 0.6, 0.9, 1.1, 1.1, 0, { u: 1.1, v: 1.1, top: 'iron', cell: 99 });   // the operator's cab
-  sbox(acc, 'litWarm', cx, 3.2, C.foot[2] + 0.9, 0.5, 0.25, 0.3, 0, { u: 1, v: 1, cell: 99 });                             // its work lamp on the portrait
-  prLight(px + 1.2, 6.4, pz - 5.6, '#fff0d4', 15, 2.2);
+  sbox(acc, 'prCrane', cx, 1.3, C.foot[2] - 0.2, 2.4, 3.2, 1.9, 0, { u: 4, v: 1.9, top: 'iron', cell: 99 });                // the house on its turntable
+  sbox(acc, 'iron', cx, 1.6, C.foot[2] - 2.25, 2.2, 0.9, 1.4, 0, { u: 1, v: 1, cell: 99 });                                // the counterweight
+  sbox(acc, 'prCraneCab', x1 - 0.5, 3.2, C.foot[2] + 0.7, 0.9, 1.1, 1.1, 0, { u: 1.1, v: 1.1, top: 'iron', cell: 99 });   // the operator's cab
+  sbox(acc, 'litWarm', cx, 3.2, C.foot[2] + 1.0, 0.5, 0.25, 0.3, 0, { u: 1, v: 1, cell: 99 });                             // its work lamp on the portrait
+  prLight(px + 1.4, 6.4, pz - 5.6, '#fff0d4', 15, 2.2);
   prBeam(acc, 'prBoom', C.foot, C.tip, 1.0, 0.5);                                                                          // the boom
-  prBeam(acc, 'iron', [cx, 3.3, C.foot[2] - 2.6], [C.tip[0], C.tip[1] - 0.4, C.tip[2] - 0.4], 0.05, 0.05);                  // the luffing rope
-  sbox(acc, 'prCrane', C.tip[0], C.tip[1] - 0.6, C.tip[2], 0.7, 0.9, 0.9, 0, { u: 1, v: 0.9, top: 'iron', cell: 99 });      // the boom's head
-  prBeam(acc, 'iron', [px, C.tip[1] - 0.6, pz], [px, y1 + 2.4, pz], 0.06, 0.06);                                           // the hoist rope
-  sbox(acc, 'prCrane', px, y1 + 1.6, pz, 0.45, 0.45, 0.8, 0, { u: 1, v: 0.8, top: 'iron', cell: 99 });                     // the hook block
-  for (const s of [-1, 1]) prBeam(acc, 'iron', [px, y1 + 1.65, pz], [px - 0.14, y1, pz + s * (pw / 2 - 0.35)], 0.05, 0.05);   // the slings
+  prBeam(acc, 'iron', [cx, 3.3, C.foot[2] - 2.1], [C.tip[0], C.tip[1] - 0.4, C.tip[2] - 0.4], 0.07, 0.07);                  // the luffing rope
+  sbox(acc, 'prCrane', C.tip[0], C.tip[1] - 0.7, C.tip[2], 0.9, 1.2, 1.1, 0, { u: 1, v: 1.1, top: 'iron', cell: 99 });      // the boom's head
+  sbox(acc, 'litRed', C.tip[0], C.tip[1] + 0.4, C.tip[2] + 0.3, 0.45, 0.45, 0.45, 0, { u: 1, v: 1, cell: 99 });               // its red warning lamp
+  prBeam(acc, 'iron', [px, C.tip[1] - 0.6, pz], [px, y1 + 2.4, pz], 0.14, 0.14);                                           // the hoist rope (thick enough to read across the square)
+  sbox(acc, 'prCrane', px, y1 + 1.5, pz, 0.6, 0.6, 0.95, 0, { u: 1, v: 0.95, top: 'iron', cell: 99 });                     // the hook block
+  for (const s of [-1, 1]) prBeam(acc, 'iron', [px, y1 + 1.55, pz], [px - 0.14, y1, pz + s * (pw / 2 - 0.35)], 0.1, 0.1);   // the slings
   for (const s of [-1, 1]) prBeam(acc, 'prRope', [px - 0.1, y0, pz + s * (pw / 2 - 0.3)], [-71.0, 1.0, pz + s * 4.5], 0.04, 0.04);   // tag lines down to the pillars
   // the portrait: a battened frame, the Chairman on its face (cut in cells so the two lamps' light shows on it)
   sbox(acc, 'prPlywood', px - 0.14, y0, pz, 0.24, pw, y1 - y0, 0, { u: 99, v: 99, top: 'prPlywood', tu: 99, skip: 'lr', cell: 99 });
