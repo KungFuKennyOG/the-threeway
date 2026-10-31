@@ -7,7 +7,7 @@
 // north end in front of the Tower's doors (the Tower itself is its own level). One flat floor: no stairs, no ramps.
 // Authored running +z from the Palace's doors to the Tower's (the Ministry on the local west, -x), and laid into the world
 // running west into the sector by the ACT1_WEST frame (src/levels.js): there the Tower is due west, the Ministry on the
-// south side. CFG.parade is in the frame's coordinates. One baked mesh on the street atlas.
+// south side. CFG.parade is in the frame's coordinates. One baked buffer on the street atlas, drawn in chunks the camera culls.
 CFG.parade = {
   start: [-40, 254.8],                         // "start here": just out of the Palace of Sport's doors, facing the Tower
   spawnGap: 1.1, clearedPause: 1.6, healBetween: 20,
