@@ -128,6 +128,12 @@ const CFG = {
     harmony:   { hp: 40, poise: 40, speed: 1.3, reach: 0.78, windup: 0.75, dmg: 9, combo: 1, scale: 0.87 },   // Columbia's Civic Harmony officer: fodder
     enforcer:  { hp: 60, poise: 58, speed: 1.65, reach: 0.74, windup: 0.46, dmg: 7, combo: 3, comboWindup: 0.26, highGuard: true, scale: 0.9 },   // a boxer in a fedora
     aokiagent: { hp: 45, poise: 40, speed: 2.4, reach: 1.0, windup: 0.5, dmg: 8, combo: 2, comboWindup: 0.4, kicker: true, retreat: 2.6, scale: 0.88 },   // Aoki's man: kicks
+    // ---- Act 2, Columbia's regulars: looks only so far. Placeholder stats near their nearest kin; no special moves yet
+    // (the soda jerk's bottles and plates, the linebacker's tackle, the agent's counter come once the looks are approved)
+    cadet:      { hp: 40, poise: 38, speed: 1.6, reach: 0.78, windup: 0.6, dmg: 8, combo: 2, comboWindup: 0.35, scale: 0.86 },   // eager fodder
+    sodajerk:   { hp: 40, poise: 35, speed: 1.35, reach: 0.78, windup: 0.7, dmg: 8, combo: 1, scale: 0.87 },                    // fodder (thrower later)
+    linebacker: { hp: 120, poise: 130, speed: 1.15, reach: 0.86, windup: 1.0, dmg: 14, combo: 1, scale: 0.96 },                 // the heavy (tackle later)
+    agent:      { hp: 70, poise: 65, speed: 1.6, reach: 0.76, windup: 0.45, dmg: 9, combo: 2, comboWindup: 0.3, scale: 0.9 },   // a quick boxer (counters later)
   },
   boss: { tagCooldown: 4.0, benchRadius: 2.9, enrageSpeed: 1.25, enrageWindup: 0.75 },
   // the bar's four rounds: the officials of the three countries (Columbia's Civic Harmony, Krasnovia's Ministry, Aoki's men), then their bouncers

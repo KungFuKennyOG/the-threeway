@@ -13,6 +13,9 @@ const HEADT = [33, 65, 37, 68];   // the top of the head: a patch of HEADS' top 
 const SW = (i) => [48 + (i % 4) * 4, 112 + (i >> 2) * 4, 52 + (i % 4) * 4, 116 + (i >> 2) * 4];
 const SLEEVE = [32, 48, 48, 59], HAND = [32, 60, 48, 64];   // TC split: sleeve (rows 0-10), hand (rows 12-15)
 const FACE_OFFSET = { normal: [0, 0], hurt: [32 / SHEET_W, 0], ko: [0, 32 / SHEET_H] };
+// Act 2's Columbian regulars (tools/goons_columbia.py) register their sheets here, with their bodies
+Object.assign(TEX, { sheet_cadet: 'assets/tex/sheet_cadet.png', sheet_sodajerk: 'assets/tex/sheet_sodajerk.png',
+  sheet_linebacker: 'assets/tex/sheet_linebacker.png', sheet_agent: 'assets/tex/sheet_agent.png' });
 // uvs for a box textured from the torso panel (or a slice of it): the front keeps it, the back and the sides
 // read the same slice of the back and side panels, so ties, buttons, zips and logos stay on the front
 function chest(r) {
@@ -321,6 +324,51 @@ const BODIES = {
     bx(r, 'hips', 0.12, -0.36, 0.4, 0.28, 0.46, 0.32, { '*': X12 }, { faces: 'fblr' });   // the jacket's long skirt
     return r;
   },
+  // ---- Act 2, Columbia's regulars (sheets: tools/goons_columbia.py). Looks and idle poses only, for now
+  cadet() {     // SIGNATURE: a towering bell-topped shako with a red-and-white pompom, saluting. Pigeon chest, white cross-belts, jug ears, shouting SIR!
+    const r = goon({ shoulder: 0.52, chestD: 0.3, waist: 0.32, head: [0.25, 0.3, 0.26], thighW: 0.16, neckW: 0.1, armK: 0.85, farmK: 0.85, legK: 0.9, shinK: 0.9 });
+    bx(r, 'torso', 0.18, 0.47, 0.5, 0.38, 0.54, 0.42, chest([32, 32, 48, 43]), { z: 0.06, faces: 'fblr' });   // the pigeon chest, puffed out
+    bx(r, 'head', 0.25, 0.72, 0.27, 0.28, 0.36, 0.34, { f: X1, '*': TD, t: SW(1) }, { z: -0.01, z1: 0.02, faces: 'fblrt' });   // the shako, flaring to a bell top
+    bx(r, 'head', 0.235, 0.26, 0.27, 0.16, 0.27, 0.16, { '*': SW(0) }, { z: 0.17 });   // its patent visor
+    bx(r, 'head', 0.7, 0.86, 0.15, 0.15, 0.13, 0.13, { '*': X2 }, { z: 0.08, faces: 'fblrt' });   // the pompom
+    for (const s of [-1, 1]) bx(r, 'head', 0.1, 0.2, 0.05, 0.07, 0.06, 0.06, { '*': SW(2) }, { x: s * 0.14, x1: s * 0.02, faces: 'fblrt' });   // jug ears
+    bx(r, 'hips', 0.08, -0.36, 0.3, 0.07, 0.36, 0.07, { '*': X3 }, { z: -0.15, z1: -0.04, faces: 'fblr' });   // the coatee's tails
+    for (const nm of ['l', 'r']) bx(r, 'farm' + nm, -0.15, -0.27, 0.13, 0.13, 0.17, 0.17, { '*': X4 }, { faces: 'fblr' });   // white gauntlet gloves
+    return r;
+  },
+  sodajerk() {  // SIGNATURE: a tower of diner plates balanced overhead, a cola bottle cocked to throw. A beanpole: paper cap, ginger, freckles, a gum bubble
+    const r = goon({ shoulder: 0.5, chestD: 0.28, waist: 0.34, neck: 0.11, head: [0.23, 0.29, 0.25], thighW: 0.15, neckW: 0.085,
+      armK: 0.8, farmK: 0.8, handK: 1.15, legK: 0.85, shinK: 0.85 });
+    bx(r, 'head', 0.25, 0.38, 0.13, 0.3, 0.03, 0.27, { '*': X1 }, { x: 0.02, x1: 0.02, z: -0.01, faces: 'fblrt' });   // the paper cap, cocked
+    bx(r, 'head', 0.2, 0.29, 0.1, 0.05, 0.14, 0.07, { '*': SW(3) }, { x: -0.05, z: 0.12, z1: 0.03, faces: 'fblrt' });   // a ginger flick under it
+    bx(r, 'head', 0.03, 0.12, 0.09, 0.07, 0.09, 0.07, { '*': SW(1) }, { z: 0.165 });   // the gum bubble
+    bx(r, 'torso', 0.39, 0.47, 0.15, 0.04, 0.15, 0.04, { '*': X3 }, { z: 0.15, faces: 'fblr' });   // the red bow tie
+    bx(r, 'hips', 0.16, -0.56, 0.4, 0.04, 0.48, 0.04, { '*': X4 }, { z: 0.15, faces: 'fblr' });   // the candy-striped apron
+    bx(r, 'handl', -0.08, -0.44, 0.34, 0.34, 0.36, 0.36, { '*': X5, t: X12, d: X12 }, { x: 0.02 });   // the plates, stacked high on his palm
+    bx(r, 'handr', -0.04, -0.3, 0.13, 0.13, 0.13, 0.13, { '*': TC, t: SW(2), d: SW(2) });   // the cola bottle's body
+    bx(r, 'handr', -0.3, -0.42, 0.08, 0.08, 0.05, 0.05, { '*': SW(2) }, { faces: 'fblrd' });   // and its neck
+    return r;
+  },
+  linebacker() {   // SIGNATURE: giant shoulder pads under a red helmet. A barrel chest, number 54, eye black, a cage over his snarl; set to tackle
+    const r = goon({ shoulder: 0.74, chestD: 0.46, waist: 0.5, neck: 0.02, head: [0.25, 0.28, 0.27], thighW: 0.22, neckW: 0.22,
+      armK: 1.35, farmK: 1.3, handK: 1.2, legK: 1.35, shinK: 1.2 });
+    bx(r, 'torso', 0.0, 0.36, 0.62, 0.46, 0.76, 0.52, chest(TA), { z: 0.03, faces: 'fblr' });   // the barrel chest
+    for (const s of [-1, 1]) bx(r, 'torso', 0.3, 0.53, 0.5, 0.6, 0.4, 0.52, { f: X1, '*': X2 }, { x: s * 0.27, x1: -s * 0.04, faces: 'fblrtd' });   // the shoulder pads
+    bx(r, 'head', -0.02, 0.37, 0.34, 0.35, 0.3, 0.32, { '*': X3, b: TD, t: X4 }, { z: -0.02, faces: 'blrt' });   // the helmet's shell (open at the front)
+    bx(r, 'head', 0.24, 0.37, 0.3, 0.05, 0.28, 0.05, { '*': X4 }, { z: 0.15, faces: 'fblrt' });   // its brow, the stripe over the top
+    for (const y of [0.11, 0.035]) bx(r, 'head', y, y + 0.025, 0.36, 0.025, 0.36, 0.025, { '*': SW(1) }, { z: 0.19, faces: 'fblrtd' });   // the face cage's bars
+    bx(r, 'head', 0.035, 0.135, 0.025, 0.025, 0.025, 0.025, { '*': SW(1) }, { z: 0.19, faces: 'fblr' });   // and its upright
+    return r;
+  },
+  agent() {     // SIGNATURE: a big white Stetson, its brim curled up. A square cleft jaw, silver sideburns, a bolo tie, arms folded: go on, swing
+    const r = goon({ shoulder: 0.74, chestD: 0.34, waist: 0.3, head: [0.24, 0.29, 0.26], thighW: 0.17, neckW: 0.14, armK: 1.05, farmK: 1.05, legK: 0.95 });
+    bx(r, 'head', 0.25, 0.55, 0.3, 0.32, 0.26, 0.26, { '*': X1, t: SW(0) }, { z: -0.02, faces: 'fblrt' });   // the ten-gallon crown
+    bx(r, 'head', 0.24, 0.27, 0.42, 0.62, 0.42, 0.62, { '*': X2 }, { z: -0.01 });   // its brim
+    for (const s of [-1, 1]) bx(r, 'head', 0.25, 0.34, 0.11, 0.6, 0.06, 0.5, { '*': X2 }, { x: s * 0.2, x1: s * 0.035, z: -0.01, faces: 'fblrt' });   // curled up at the sides
+    bx(r, 'head', -0.035, 0.065, 0.26, 0.22, 0.25, 0.22, { '*': X3 }, { z: 0.045, faces: 'fblrd' });   // the jaw, square and jutting
+    bx(r, 'hips', 0.08, -0.2, 0.42, 0.3, 0.46, 0.32, { '*': X12 }, { faces: 'fblr' });   // the jacket's skirt
+    return r;
+  },
   ivan() {     // Krasnovian bouncer: wrestler frame in a tracksuit
     const r = humanoid({ torso: TA, legs: TB, arms: TA_S, hands: TC, feet: TD, shoulder: 0.68, chestD: 0.42, waist: 0.5,
       neck: -0.02, head: [0.25, 0.29, 0.27], thighW: 0.22 });
@@ -417,6 +465,15 @@ Object.assign(POSES, {   // the newer goons' idle poses: every one has attitude 
     thighl: [-18, 0, -8], shinl: [20, 0, 0], thighr: [14, 0, 8], shinr: [10, 0, 0] },
   aokiagent: { hips: [0, 30, 0], torso: [-4, -24, 0], head: [-6, -6, 0], uarml: [30, 0, -8], farml: [-60, 0, 40], uarmr: [-72, 0, 8], farmr: [-24, 0, 0],   // bladed, one hand out
     thighl: [-10, 0, -4], shinl: [8, 0, 0], thighr: [6, 0, 6] },
+  // Act 2, Columbia's regulars
+  cadet: { torso: [-12, 0, 0], head: [-2, -4, 0], uarml: [-4, 0, -6], farml: [-10, 0, 0], uarmr: [0, -65, 90], farmr: [0, 0, 125], handr: [0, 0, 20],   // chest out, saluting
+    thighl: [0, 0, -2], thighr: [0, 0, 2], footl: [0, -22, 0], footr: [0, 22, 0] },
+  sodajerk: { hips: [0, 10, -6], torso: [-6, -12, 6], head: [-8, 14, -8], uarml: [-8, 0, -158], farml: [0, 0, -14], uarmr: [0, -15, 84], farmr: [0, 0, 95], handr: [40, 0, 0],   // plates up, bottle cocked back
+    thighl: [-4, 0, -2], thighr: [-8, 0, 12], shinr: [10, 0, 0], footr: [0, 20, 0] },
+  linebacker: { torso: [14, 0, 0], head: [-18, 0, 0], uarml: [-50, 0, -30], farml: [-74, 0, 0], uarmr: [-50, 0, 30], farmr: [-74, 0, 0],   // set to tackle
+    thighl: [-34, 0, -18], shinl: [44, 0, 4], thighr: [-34, 0, 18], shinr: [44, 0, -4], footl: [-10, -12, 0], footr: [-10, 12, 0] },
+  agent: { hips: [0, 14, 0], torso: [-6, -8, 0], head: [-10, 12, 6], uarml: [-10, 86, -4], farml: [-94, 0, 0], uarmr: [-24, -86, 4], farmr: [-94, 0, 0],   // arms folded
+    thighl: [-2, 0, -6], thighr: [6, 0, 8], shinr: [6, 0, 0] },
 });
 function attackPose(type, side, phase) {   // phase: 'windup' | 'strike'
   if (type === 'batboy-bat') return phase === 'windup' ? POSES.batWind : POSES.batStrike;
