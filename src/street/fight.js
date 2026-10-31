@@ -76,7 +76,7 @@ function updateStreet(dt) {   // the stage flow for whichever level you're in (t
     else if (level.name === 'street' && next >= enc.length && z > S.finishZ) {
       game.state = 'won'; game.timer = 0; showSign('checkpoint', 1e9); AU.bell();
     }
-    else if (D && D.finish && next >= enc.length && D.finish(z)) { game.state = 'won'; game.timer = 0; showSign(D.wonSign || 'ko', 1e9); AU.bell(); }
+    else if (D && D.finish && next >= enc.length && D.finish(z)) { game.state = 'won'; game.timer = 0; if (D.wonSign !== null) showSign(D.wonSign || 'ko', 1e9); AU.bell(); }   // (wonSign: null, no sign)
     return;
   }
   if (game.state === 'intro') { if (game.timer > 0.9) { game.state = 'fight'; game.timer = 0; } return; }
@@ -99,7 +99,7 @@ function updateStreet(dt) {   // the stage flow for whichever level you're in (t
   if (game.state === 'cleared' && game.timer > S.clearedPause) {
     level.arena = null; game.state = 'walk'; game.timer = 0; if (typeof LOCKED !== 'undefined') LOCKED.clear();
     player.hp = Math.min(CFG.player.health, player.hp + S.healBetween);
-    showSign(level.encounter + 1 < enc.length ? 'go' : 'goCheck', 2.0);
+    showSign(level.encounter + 1 < enc.length ? 'go' : (D && D.goSign) || 'goCheck', 2.0);   // (a level may name its own for after the last fight)
     return;
   }
   if (game.state === 'lost' && game.timer > 3.5) {   // back to the start of this stretch, full health

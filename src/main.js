@@ -69,7 +69,8 @@ function boot() {
   buildRoom();
   ST.barGroup = scene.children.slice(n0);   // portal culling: the bar's meshes
   buildStreet(); buildBoom(); indexWorld();
-  ST.streetGroup = [ST.litMesh, ST.skylineMesh, ST.skyMesh, boomPivot];
+  ST.streetGroup = [ST.litMesh, ST.skylineMesh, ST.skyMesh, boomPivot, ...(ST.farTileMeshes || [])];
+  boomPivot.userData.near = CFG.street.boomNear;   // (src/rooms.js)
   // rooms: the bar and the levels' insides are interiors; everything else is outside (src/rooms.js)
   addRoom('bar', (p) => p.z < STREET.fz - 0.05 && p.z > -5.6 && Math.abs(p.x) < 5.6);
   for (const D of levelList()) if (D.rooms) D.rooms();

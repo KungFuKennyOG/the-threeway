@@ -17,6 +17,7 @@
 //   update(dt) {},                                 // every frame while it's on (rides, set pieces)
 //   after: 'podezd', enter: () => bool,            // walk on from that level (once it's won) when this turns true
 //   finish: (z) => bool, wonSign: 'sign',          // optional: the level is won when its fights are done and this is true
+//                                                  // (wonSign: null shows none); goSign: the sign once its last fight's clear
 //   signs: { key: ['TEXT', '#colour'] },           // big signs it shows (showSign(key))
 //   hud: { walk: 'text', won: 'text', short: 'Palace' },
 // })

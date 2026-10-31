@@ -28,6 +28,12 @@ CFG.parade = {
            sodiumRadius: 12, sodiumK: 1.5,                             // sodium lamps at the Palace doors, the ministry, the bleachers
            stand: '#fff0d4', standRadius: 16, standK: 1.9,             // the doorway between the stand's wings: the goal
            foot: '#ffd8a0', footRadius: 9, footK: 1.5 },               // each float's footlight on its portrait
+  // walking out of the Palace's north doors: once you're out from under the doors' canopy (z, with the whole Tower over
+  // you), THE TOWER OF LABOR in gold, hung low (y above the floor) so it sits under the Tower, not on it, and a chime;
+  // then PARADE SQUARE, if no fight has started by then. Once per walk-in.
+  reveal: { z: 255.0, dur: 3.0, y: 0.9, then: 2.2 },
+  drawNear: [205, 20],   // the square's mesh is drawn within 205 m of its middle or from over 20 m up: from Tripoint Square,
+                         // the road and the gate the Palace and the slabs hide all of it (src/rooms.js: userData.near)
 };
 const PR = {
   rect: [-84, -6, 253, 312],                   // the ground it occupies (the far city keeps off it)
@@ -41,6 +47,7 @@ const PR = {
   bleachers: [-11.6, -6.1, 258, 300],
   masts: [[-69.6, 257.6, -52, 268], [-13.4, 257.6, -28, 268], [-69.6, 300.4, -52, 292], [-13.4, 300.4, -28, 292]],   // [x, z, where its pool falls]
   acc: null, mesh: null, lamps: [], tris: 0,
+  reveal: { due: false, shown: false, t: 0, then: false },   // the walk-in's reveal (CFG.parade.reveal)
 };
 function prSolid(x0, z0, x1, z1, h) { WORLD_BOXES.push([x0, 0, z0, x1, h, z1]); BLOCKERS.push({ x0, x1, z0, z1 }); }
 function prLight(x, y, z, col, r, k) { PR.lamps.push(lightFromHex([x, y, z], col, r, k)); }
@@ -234,6 +241,7 @@ function buildParade() {
   m.matrixAutoUpdate = false; m.updateMatrix(); m.frustumCulled = false;
   m.material.uniforms.uFogNear = { value: F.near }; m.material.uniforms.uFogFar = { value: F.far };
   scene.add(m); PR.mesh = m; PR.tris = acc.tris;
+  { const [a, b, c, d] = PR.rect, [x, z] = ACT1_WEST.toWorld((a + b) / 2, (c + d) / 2); m.userData.near = [x, z, CFG.parade.drawNear[0], CFG.parade.drawNear[1]]; }   // (src/rooms.js)
   for (const l of PR.lamps) ST.lamps.push(l);   // goons and props are lit live by the nearest of them
   // where you can walk: the Palace's doorway, the square, the way up to the Tower's doors. On while this level is on,
   // and still on in whichever level walks on from here (so you're never pushed off the floor at the hand-over)
@@ -249,11 +257,11 @@ function buildParade() {
 }
 defineLevel('parade', {
   menu: '6 · Parade Square', cfg: () => CFG.parade, build: buildParade, outside: () => [PR.mesh], rects: () => [ACT1_WEST.rect(PR.rect)], frame: ACT1_WEST,
-  start: (f) => startParade(f),
+  start: (f) => startParade(f), update: (dt) => updateParade(dt),
   after: 'palace', enter: () => ACT1_WEST.head().z > 253.2,                                   // out of the Palace's north doors
   finish: () => { const h = ACT1_WEST.head(); return h.z > 309.5 && Math.abs(h.x + 40) < 5; }, wonSign: 'tower',   // up to the Tower's doors
   signs: { parade: ['PARADE SQUARE', '#ff9a3c'], guardFight: ['HONOUR GUARD', '#e8352b'], gymFight: ['FIGHT!', '#f2c14e'],
-           bandFight: ['THE BAND', '#f2c14e'], tower: ['THE TOWER OF LABOR', '#33e0d0'] },
+           bandFight: ['THE BAND', '#f2c14e'], tower: ['THE TOWER OF LABOR', '#f2c14e'], towerReveal: ['THE TOWER OF LABOR', '#f2c14e'] },
   hud: { walk: 'Parade Square — cross to the Tower of Labor', last: 'Walk up to the Tower of Labor\'s doors', won: 'Parade Square cleared — into the Tower of Labor (R to restart)', short: 'Parade' },
 });
 function startParade(fromPalace) {
@@ -265,5 +273,16 @@ function startParade(fromPalace) {
   for (const [type, x, z] of CFG.parade.props) new Prop(type, ACT1_WEST.world(new V3(x, 0, z)));
   if (!fromPalace) { placePlayer(...ACT1_WEST.toWorld(CFG.parade.start[0], CFG.parade.start[1]), Math.PI + ACT1_WEST.yaw); rig.position.y = 0; }
   game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
-  showSign('parade', 2.6);
+  Object.assign(PR.reveal, { due: !!fromPalace, shown: false, t: 0, then: false });
+  if (!fromPalace) showSign('parade', 2.6);   // (walking in from the Palace, the Tower comes first: updateParade)
+}
+function updateParade(dt) {
+  if (typeof placeShutter === 'function') placeShutter();   // the Palace's north doors stand open behind you (its spill, its lamp)
+  const R = PR.reveal, C = CFG.parade.reveal;
+  if (R.due && !R.shown && ACT1_WEST.head().z > C.z) {   // out from under the doors' canopy: the whole Tower over you
+    R.shown = true; R.t = 0; showSign('towerReveal', C.dur, C.y); if (AU.chime) AU.chime();
+  }
+  if (R.shown && !R.then && (R.t += dt) > C.dur) {   // then the square's name, unless a fight has taken the sign
+    R.then = true; if (level.encounter < 0 && game.state === 'walk') showSign('parade', C.then);
+  }
 }

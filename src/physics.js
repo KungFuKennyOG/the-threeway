@@ -52,7 +52,7 @@ function collideWorld(p, b) {
     if (p.p.x !== ox) impact = Math.max(impact, Math.abs(p.v.x));
     if (p.p.z !== oz) impact = Math.max(impact, Math.abs(p.v.z));
   }
-  for (const B of boxesNear(p.p.z)) {
+  for (const B of boxesNear(p.p.z, p.p.x)) {
     const qx = clamp(p.p.x, B[0], B[3]), qy = clamp(p.p.y, B[1], B[4]), qz = clamp(p.p.z, B[2], B[5]);
     const dx = p.p.x - qx, dy = p.p.y - qy, dz = p.p.z - qz, d2 = dx * dx + dy * dy + dz * dz;
     if (d2 >= r * r) continue;

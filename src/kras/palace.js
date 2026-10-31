@@ -26,6 +26,13 @@ CFG.palace = {
           ['bottle', -30.8, 188.6], ['crate', -49.2, 192], ['bottle', -31, 192.4], ['stool', -35.7, 230.3]],
   light: { inAmbient: [0.1, 0.095, 0.105], sodiumRadius: 14, sodiumK: 1.5, ring: '#fff4e0', ringRadius: 12, ringK: 4,
            flood: '#ffe8c8', floodRadius: 12, floodK: 1.1, stand: '#ffd8a0', standRadius: 9, standK: 0.8 },
+  // the north doors' steel shutter: once the Bear is down (after the KO beat) it rolls up over `time` s, rattling, and
+  // the floodlit square's warm light spills in under it, onto the tunnel and the floor. You can walk under it from
+  // `walk` (of the way up); act1-parade crossfades in from `music` (src/music.js: the Palace's `at`; it's decoded ahead
+  // once the Bear's track has faded, so it swells in as the shutter rises and is full as it reaches the top)
+  drawNear: [150, 20],   // the stadium's mesh is drawn within 150 m of its middle or from over 20 m up: from Tripoint Square,
+                         // the road, the gate and the courtyard's east side the wall slabs and Superblock 14 hide it (src/rooms.js: userData.near)
+  shutter: { time: 4.6, walk: 0.75, music: 0.45, rattle: 0.085, spill: '#ffc982', spillK: 1.0, spillLen: 15, lampK: 1.4, lampRadius: 11 },
 };
 const PL = {
   gap: [-42, -38],                                   // both tunnels inside the Palace (local x; the axis is local x -40)
@@ -59,6 +66,9 @@ const PL = {
   sqRect: [-58, -4, 151.4, 216], yard: [-157.6, -56, 151.7, 164], yardEnd: -65, yardTop: 160.5,   // (the yard's east end, drawn: the square's wall)
   crossMesh: null, crossLamps: [], crossTris: 0,
   inMesh: null, outMesh: null, inLamps: [], outLamps: [], glowLamps: [], inTris: 0, outTris: 0, shutter: null,
+  // the shutter: t how far up (0 shut .. 1 up), phase 'down' | 'rolling' | 'up'; the light spilling in under it (one small
+  // additive mesh, drawn only while it's open and the inside is in view) and its live lamp (goons, props and hands)
+  shut: { t: 0, k: 0, phase: 'down', tick: 0, hold: false }, spill: null, spillLamp: null, spillGrow: null, spillCol: null,
 };
 // the skewed crossing: its centreline's x at z, the planks' half-width along x, the way across (a unit [x, z]), where it
 // ends west (the train clears that before the barriers lift), and the arrival: one step off its north end
@@ -620,10 +630,81 @@ function buildTrain() {   // four cars of the evening electric, each its own sma
   TRAIN.lampA = lamps(-1); TRAIN.lampB = lamps(1);
   resetTrain('gone');
 }
-function buildShutter() {   // the steel shutter in the north doors (local: it rides in the frame's group)
-  const sh = new GeoAcc(); plFace(sh, 'gate', PL.gap[0], PL.bowl[3] + 0.3, PL.gap[1], PL.bowl[3] + 0.3, 0, PL.tunnelH, 0, -1, 2, 1.5); plFace(sh, 'gate', PL.gap[0], PL.bowl[3] + 0.32, PL.gap[1], PL.bowl[3] + 0.32, 0, PL.tunnelH, 0, 1, 2, 1.5);
+// The steel shutter in the north doors (local: it rides in the frame's group), a roller: it goes up into the wall over the
+// tunnel (the tunnel's ceiling and the bowl's back wall hide it up there), its bottom rail first. One small mesh, moved
+// by its position only. Then the light from the square that spills in under it: one small mesh drawn as light (one draw
+// call, 36 triangles, its strength a uniform), the tunnel's floor, walls and ceiling on the square's side and a patch on the
+// floor inside that runs further in as the shutter goes up; and one live lamp, so goons, props and your hands warm up
+// in it too. None of it is baked: the inside's own light (PL.inMesh) doesn't change.
+function buildShutter() {
+  const [g0, g1] = PL.gap, z = PL.bowl[3] + 0.3, TH = PL.tunnelH, C = CFG.palace.shutter;
+  const sh = new GeoAcc(); plFace(sh, 'gate', g0, z, g1, z, 0, TH, 0, -1, 2, 1.5); plFace(sh, 'gate', g0, z + 0.02, g1, z + 0.02, 0, TH, 0, 1, 2, 1.5);
+  sbox(sh, 'iron', -40, 0, z + 0.01, g1 - g0, 0.12, 0.1, 0, { u: 1, v: 1 });   // the bottom rail
   PL.shutter = new THREE.Mesh(sh.geometry({ ambient: [0.5, 0.48, 0.46], lights: [] }), makeMat('street', { baked: true })); PL.shutter.frustumCulled = false; PL.shutter.visible = false; PL.shutter.userData.small = true; scene.add(PL.shutter);
+  // the spill: quads [corners, strength at each corner]; the floor patch inside last (its far rows move: PL.spillGrow)
+  const zs = z + 0.03, zn = PL.northZ, y = 0.03, w = 0.02, Q = [];
+  Q.push([[[g0, y, zn], [g1, y, zn], [g1, y, zs], [g0, y, zs]], [1, 1, 0.8, 0.8]]);                                    // the tunnel's floor
+  for (const x of [g0 + w, g1 - w]) Q.push([[[x, TH - w, zn], [x, TH - w, zs], [x, y, zs], [x, y, zn]], [0.5, 0.3, 0.55, 0.85]]);   // its walls
+  Q.push([[[g0, TH - w, zs], [g1, TH - w, zs], [g1, TH - w, zn], [g0, TH - w, zn]], [0.2, 0.2, 0.35, 0.35]]);          // its ceiling
+  const rows = [[0, 0, 0.95], [0.25, 0.25, 0.6], [0.55, 0.6, 0.25], [1, 1.1, 0]];   // the patch inside: [along, widening, strength]
+  for (let r = 0; r < rows.length - 1; r++) { const [, a, ka] = rows[r], [, b, kb] = rows[r + 1];
+    Q.push([[[g0 - a, y, 0], [g1 + a, y, 0], [g1 + b, y, 0], [g0 - b, y, 0]], [ka, ka, kb, kb], [r, r + 1]]); }
+  const n = Q.length * 6, P = new Float32Array(n * 3), N = new Float32Array(n * 3), U = new Float32Array(n * 2), B = new Float32Array(n * 3);
+  const W = ST.atlas.rect.white, col = new THREE.Color(C.spill), ORD = [0, 1, 2, 0, 2, 3], grow = [];
+  Q.forEach(([c, k, rw], q) => ORD.forEach((j, i) => { const o = q * 6 + i;
+    P.set(c[j], o * 3); N[o * 3 + 1] = 1; U[o * 2] = (W[0] + W[2]) / 2; U[o * 2 + 1] = (W[1] + W[3]) / 2;
+    B[o * 3] = col.r * k[j] * C.spillK; B[o * 3 + 1] = col.g * k[j] * C.spillK; B[o * 3 + 2] = col.b * k[j] * C.spillK;
+    if (rw) grow.push([o, rows[j < 2 ? rw[0] : rw[1]][0]]); }));   // (corners 0, 1 on the near row, 2, 3 on the far one)
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setAttribute('bake', new THREE.Float32BufferAttribute(B, 3));
+  const m = new THREE.Mesh(g, makeMat('street', { baked: true, fog: false, depthWrite: false, side: THREE.DoubleSide }));
+  // drawn as light, not paint: it brightens what's under it (dst x (1 + its colour)), so the floor's own pattern shows through.
+  // Not `transparent`: three draws a two-sided transparent mesh twice (back faces, then front); in the opaque list with
+  // renderOrder 5 it's still drawn after the inside it lies on, in one pass (it writes no depth)
+  Object.assign(m.material, { blending: THREE.CustomBlending || 5, blendEquation: THREE.AddEquation || 100, blendSrc: THREE.DstColorFactor || 208, blendDst: THREE.OneFactor || 201 });
+  m.renderOrder = 5; m.frustumCulled = false; m.visible = false; m.userData.small = true; scene.add(m);
+  PL.spill = m; PL.spillGrow = { list: grow, z: zs, len: -1 }; PL.spillCol = col;
+  PL.spillLamp = [[-40, 1.4, zs - 1.6], [0, 0, 0], C.lampRadius]; ST.lamps.push(PL.spillLamp);   // (black until it opens: it bakes into nothing)
+  placeShutter();   // (neither is drawn on any level till the Palace places them)
 }
+// the shutter, the spill and its lamp where they are now (from PL.shut.t). Out of the Palace (Parade Square from the
+// menu, the Tower) the shutter is up: the doors are open. Both meshes belong to the Palace's room (drawn only while the
+// inside is in view); their materials say whether they're drawn at all (the shutter till it's up, the spill once it lifts)
+function placeShutter() {
+  if (!PL.shutter) return;
+  const S = PL.shut, C = CFG.palace.shutter, here = level.name === 'palace', t = here ? S.t : 1, near = here || level.name === 'parade';
+  PL.shutter.position.y = PL.tunnelH * t; PL.shutter.material.visible = here && t < 1; PL.shutter.updateMatrixWorld(true);
+  const k = t * (2 - t);   // (quick to show, eased to full)
+  PL.spill.material.visible = near && t > 0;
+  PL.spill.material.uniforms.uTint.value.set(k, k, k);
+  const G = PL.spillGrow, len = C.spillLen * Math.min(1, 0.25 + t);   // the patch runs further in as the gap under it grows
+  if (Math.abs(len - G.len) > 1e-3) {
+    const A = PL.spill.geometry.attributes.position; for (const [o, f] of G.list) A.array[o * 3 + 2] = G.z - len * f;
+    A.needsUpdate = true; G.len = len;
+  }
+  const lk = near ? k * C.lampK : 0, c = PL.spillCol;
+  PL.spillLamp[1][0] = c.r * lk; PL.spillLamp[1][1] = c.g * lk; PL.spillLamp[1][2] = c.b * lk;
+}
+// once the Bear is down and the KO's beat is over, the shutter rolls up: a clank, a motor, a rattle all the way, a clank
+function updatePalaceShutter(dt) {
+  const S = PL.shut, C = CFG.palace.shutter;
+  if (S.phase === 'down' && level.name === 'palace' && palaceVolkovDown() && game.state !== 'cleared') {
+    S.phase = 'rolling'; S.k = 0; S.t = 0; S.tick = 0.35;
+    if (AU.clank) { AU.clank(); AU.tone('sawtooth', 52, 60, C.time, 0.07, 0.1, 260); AU.noise(0.4, 0.25, 300, 'lowpass'); }
+  }
+  if (S.phase === 'rolling' && !S.hold) {
+    S.k = Math.min(1, S.k + dt / C.time);
+    S.t = S.k < 0.5 ? 2 * S.k * S.k : 1 - 2 * (1 - S.k) * (1 - S.k);   // eased off the latch and into the housing
+    if ((S.tick -= dt) <= 0 && S.k < 0.97 && AU.tone) {   // the slats rattling over the drum
+      S.tick = C.rattle * (0.8 + Math.random() * 0.4);
+      AU.tone('square', 150 + Math.random() * 90, 95, 0.035, 0.05); AU.noise(0.05, 0.1, 1500 + Math.random() * 900, 'bandpass');
+    }
+    if (S.k >= 1) { S.phase = 'up'; S.t = 1; if (AU.clank) { AU.clank(); AU.tone('sine', 90, 60, 0.25, 0.3); } }
+  }
+  placeShutter();
+}
+function resetShutter() { Object.assign(PL.shut, { t: 0, k: 0, phase: 'down', tick: 0, hold: false }); placeShutter(); }
 // called from buildStreet(): the inside (one baked mesh, drawn as a room), the outside (one baked mesh), the train and barriers
 function buildPalace() {
   PL.inLamps = []; PL.outLamps = []; PL.glowLamps = []; PL.crossLamps = [];
@@ -640,6 +721,7 @@ function buildPalace() {
   buildPalaceInside(inAcc); buildPalaceOutside(outAcc);
   PL.inMesh = mk(inAcc, { ambient: CFG.palace.light.inAmbient, lights: PL.inLamps }); PL.inTris = inAcc.tris;
   PL.outMesh = mk(outAcc, { ambient: Lt.ambient, sky: Lt.sky, lights: PL.outLamps.concat(PL.glowLamps, ACT1_WEST.localLamps(PL.crossLamps)) }); PL.outTris = outAcc.tris;   // (the glow over the bowl lights only this)
+  { const [x, z] = ACT1_WEST.toWorld(...PL.shell.c), N = CFG.palace.drawNear; PL.outMesh.userData.near = [x, z, N[0], N[1]]; }   // (src/rooms.js)
   for (const l of PL.inLamps.concat(PL.outLamps)) ST.lamps.push(l);
   buildShutter();
   // where you can walk: the gap in the fence, the crossing (once the train's by), the boulevard, the forecourt, the foyer,
@@ -672,16 +754,18 @@ function buildPalace() {
   PL.crossMesh = mk(xAcc, { ambient: Lt.ambient, sky: Lt.sky, lights: PL.crossLamps.concat(SBX.lamps.filter(l => l[0][2] > 128), PL.outLamps, bake) }); PL.crossTris = xAcc.tris;
   for (const l of PL.crossLamps) ST.lamps.push(l);
 }
-const palaceNorthOpen = () => level.encounter >= CFG.palace.encounters.length - 1 && (game.state === 'walk' || game.state === 'won' || game.state === 'cleared');
+const palaceVolkovDown = () => level.encounter >= CFG.palace.encounters.length - 1 && (game.state === 'walk' || game.state === 'won' || game.state === 'cleared');
+// the way out north: once he's down and the shutter's far enough up to walk under (the doorway shows from the moment it lifts)
+const palaceNorthOpen = () => palaceVolkovDown() && PL.shut.t >= CFG.palace.shutter.walk;
 const inPalace = (p) => p.y < PL.roofY + 1 && ((p.x > PL.annex[0] - 0.3 && p.x < PL.annex[1] + 0.3 && p.z > PL.foyer[2] + 0.02 && p.z < PL.gym[3])
   || (p.z >= PL.gym[3] && p.z < PL.northZ && Math.hypot(p.x - PL.drum[0], p.z - PL.drum[1]) < PL.drum[2]));   // the drum
 const _plL = new V3();
 function palaceRooms() {   // (the inside is in the frame's coordinates)
   const W = ACT1_WEST;
   addRoom('palace', (p) => inPalace(W.local(p, _plL)));
-  roomMeshes('palace', PL.inMesh);
+  roomMeshes('palace', PL.inMesh, PL.shutter, PL.spill);
   addPortal('outside', 'palace', W.pt([-40, 1.3, PL.foyer[2]]));
-  addPortal('outside', 'palace', W.pt([-40, 1.3, PL.northZ]), () => level.name !== 'palace' || palaceNorthOpen());   // shut while the shutter's down
+  addPortal('outside', 'palace', W.pt([-40, 1.3, PL.northZ]), () => level.name !== 'palace' || (palaceVolkovDown() && PL.shut.t > 0));   // shut while the shutter's down
 }
 // ---- the crossing: warn (bells, lamps, barriers down) → the train runs → the barriers lift → open
 function resetTrain(state) {
@@ -696,7 +780,7 @@ function placeTrain() {
   for (const B of TRAIN.booms) { B.pivot.rotation.z = -1.35 * TRAIN.lift; B.base.updateMatrixWorld(true); }
   const blink = !TRAIN.open && Math.floor(TRAIN.t * 2.4) % 2 === 0;
   TRAIN.lampA.visible = !TRAIN.open && blink; TRAIN.lampB.visible = !TRAIN.open && !blink;
-  if (PL.shutter) PL.shutter.visible = here && !palaceNorthOpen();
+  placeShutter();
 }
 function updatePalace(dt) {
   const T = CFG.palace.train, P = TRAIN;
@@ -708,20 +792,23 @@ function updatePalace(dt) {
   if (P.phase === 'run' && tail < PL.cross.west - 3) { P.phase = 'lift'; P.t = 0; }
   if (P.phase === 'lift') { P.lift = Math.min(1, P.t / T.lift); if (P.lift >= 1) { P.phase = 'open'; P.open = true; showSign('palace', 2.2); } }
   placeTrain();
+  updatePalaceShutter(dt);
 }
 defineLevel('palace', {
   menu: '5 · The Palace of Sport (Volkov)', cfg: () => CFG.palace, build: buildPalace, rooms: palaceRooms, frame: ACT1_WEST,
   outside: () => [PL.outMesh, PL.crossMesh, ...TRAIN.booms.map(B => B.base)], rects: () => [ACT1_WEST.rect(PL.rect), PL.rail, PL.sqRect, PL.yard],
   start: (f) => startPalace(f), update: (dt) => updatePalace(dt),
   after: 'podezd', enter: () => player.head.z > PL.fenceZ + 0.2 && Math.abs(player.head.x - PL.cross.x) < 2.2,   // through the gap in the fence
-  finish: () => { const h = ACT1_WEST.head(); return h.z > CFG.palace.finishZ && Math.abs(h.x + 40) < 2.2; }, wonSign: 'toParade',
+  // the Bear down: TO PARADE SQUARE as the shutter starts up; then no sign of its own in the doorway (Parade Square's
+  // reveal, THE TOWER OF LABOR, is two steps on, and nothing should hang in front of the Tower before it)
+  goSign: 'toParade', finish: () => { const h = ACT1_WEST.head(); return h.z > CFG.palace.finishZ && Math.abs(h.x + 40) < 2.2; }, wonSign: null,
   signs: { crossing: ['LEVEL CROSSING', '#e8352b'], palace: ['PALACE OF SPORT', '#ff9a3c'], boulevard: ['FIGHT!', '#f2c14e'], gym: ['THE GYM', '#f2c14e'],
            bear: ['BOGDAN VOLKOV, THE BEAR', '#e8352b'], toParade: ['TO PARADE SQUARE', '#33e0d0'] },
   hud: { walk: 'The Palace of Sport — up the boulevard', last: 'The Bear is down — out the north doors', won: 'Out the north doors to Parade Square (R to restart)', short: 'Palace' },
 });
 function startPalace(fromPodezd) {
   level.name = 'palace'; level.encounter = -1; level.arena = null; LOCKED.clear();
-  clearEnemies(); resetTrain('warn');
+  clearEnemies(); resetTrain('warn'); resetShutter();
   const held = new Set(handList.map(h => h.held));
   if (!fromPodezd) { DOOR.target = 1; DOOR.open = 1; player.hp = CFG.player.health; player.hurtT = 0; game.catches = 0; game.disarms = 0; }
   for (const p of props.slice()) if (!held.has(p)) { scene.remove(p.obj); p.body.remove(); p.alive = false; props.splice(props.indexOf(p), 1); }

@@ -165,9 +165,18 @@ const musicSources = () => AC.sources.filter(s => s.loop);
     check('down against Volkov and back in: his track carries on (no restart, no duck on his sign again)', src() === sVol && sVol.stopAt === undefined && TW.game.state !== 'lost' && TW.level.encounter === vi && M.bossUntil < 0);
     run(`clearEnemies(); game.queue = []; game.state = 'cleared'; game.timer = 0`); await settle();
     check('he\'s down: back to act1-palace (a normal crossfade)', song() === 'palace' && src() !== sPal && M.fading[0] && M.fading[0].src === sVol && near(fadeLen(M.fading[0]), F.fade, 0.05));
+    // the north doors: as the shutter goes up (after the KO's beat), act1-parade crossfades in early, decoded ahead
+    // once the Bear's track has gone, before you step out; walking out onto the square it just carries on
+    const SH = run('PL.shut'), SC = TW.CFG.palace.shutter, sPal2 = src();
+    for (let i = 0; i < 900 && SH.t < SC.music; i++) { step(1); if (i % 30 === 0) await flush(); }
+    const early = M.bufs.has('parade') && SH.phase === 'rolling';
+    await settle(1);
+    const sParE = src();
+    check('the north shutter going up: act1-parade crossfades in early (decoded ahead), the Palace\'s fading out, still in the Palace',
+      early && song() === 'parade' && TW.level.name === 'palace' && SH.t < SC.walk && M.fading.some(v => v.src === sPal2) && near(fadeLen(M.fading.find(v => v.src === sPal2)), F.fade, 0.05), `at ${(SH.t * 100).toFixed(0)}% up; decoded ahead: ${early}`);
     step(Math.ceil((F.fade + 0.2) / DT));
     run(`LEVELS.parade.start(true)`); await settle();
-    check('palace -> parade: act1-parade', song() === 'parade');
+    check('palace -> parade: act1-parade (the same voice: no restart as you step out)', song() === 'parade' && src() === sParE && sParE.stopAt === undefined);
     step(Math.ceil((F.fade + 0.2) / DT));
     const sPar = src();
     fightThrough(encI('parade', 'guard'));

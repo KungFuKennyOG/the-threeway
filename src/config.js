@@ -205,8 +205,10 @@ const CFG = {
     fog: { near: 28, far: 130 },               // outside (the bar's is render.fogNear / fogFar); blends at the door. Far enough to see the checkpoint from the square
     skylineFog: 0.5,                           // the far skylines get at most this much fog
     atlasGutter: 8,                            // px of wrapped border per street texture, so the atlas can be mipmapped
-    farField: { radius: 430, pitch: 30, block: 22, oldRadius: 140, lampRadius: 16, lampK: 1.3, fineGround: [-170, 170, -150, 250] },   // LOD stand-ins: a street grid of lit boxes from the street's edge out to radius (m), a street light per block
+    farField: { radius: 430, pitch: 30, block: 22, oldRadius: 140, lampRadius: 16, lampK: 1.3, fineGround: [-170, 170, -150, 250], tile: 240 },   // LOD stand-ins: a street grid of lit boxes from the street's edge out to radius (m), a street light per block; drawn in tiles (m square) culled out of view
     portalDeg: 72,                             // the bar and the street only draw each other when the door is open and in view
+    boomNear: [0, 30, 120, 20],                // the checkpoint's boom is drawn within 120 m of (0, 30) or from over 20 m up (src/rooms.js: userData.near)
+    portalFar: 150,                            // and no doorway is looked through from further than this (m): the Palace's foyer from Tripoint Square, the bar from Parade Square
     beaconBlink: 1.6,                          // s per on/off cycle of the towers' red beacons
     light: { ambient: [0.09, 0.075, 0.11], sky: [0.05, 0.075, 0.11],          // night + a little moonlight on roofs
              gas: '#dbe8c4', gasRadius: 9.5, gasK: 1.6,                         // pale gaslight (not Krasnovian sodium)

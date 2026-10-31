@@ -32,7 +32,17 @@ try {
   // ---- the build: one atlas, a handful of meshes, a sane triangle budget
   const atlasKeys = Object.keys(run('PAINT')), rect = TW.ST.atlas.rect;
   check('every street painting is in the atlas', atlasKeys.every(k => rect[k] && rect[k][2] > rect[k][0] && rect[k][3] > rect[k][1] && rect[k][2] <= 1 && rect[k][3] <= 1), atlasKeys.length + ' paintings, ' + TW.ST.atlas.W + 'x' + TW.ST.atlas.H);
-  const streetMeshes = TW.scene.children.filter(o => o.material && o.material.uniforms && o.material.uniforms.map && o.material.uniforms.map.value === TW.ST.atlas.tex && !o.parent.isProp && !o.userData.small);   // small: set pieces drawn only while they're on (the train, the crossing lamps)
+  const tiles = TW.ST.farTileMeshes || [];   // (the far city's tiles: one mesh's buffers drawn in pieces, checked below)
+  const streetMeshes = TW.scene.children.filter(o => o.material && o.material.uniforms && o.material.uniforms.map && o.material.uniforms.map.value === TW.ST.atlas.tex && !o.parent.isProp && !o.userData.small && !tiles.includes(o));   // small: set pieces drawn only while they're on (the train, the crossing lamps)
+  { const G = TW.ST.skylineMesh.geometry, P = G.attributes.position.array, nv = G.attributes.position.count, base = G.drawRange ? G.drawRange.count : TW.ST.farTiles[0][0];
+    let covered = base, inside = true, shared = true, prev = base;
+    for (const m of tiles) { const [s, c] = m.geometry.userData.range, { center: o, radius: r } = m.geometry.userData;
+      if (s !== prev) covered = -1; prev = s + c; covered += c;
+      for (const k of ['position', 'normal', 'uv', 'bake']) if (m.geometry.attributes[k] !== G.attributes[k]) shared = false;
+      for (let i = s * 3; i < (s + c) * 3; i += 3) if (Math.hypot(P[i] - o.x, P[i + 1] - o.y, P[i + 2] - o.z) > r) inside = false; }
+    check('the far city is drawn in tiles over the skyline mesh\'s own buffers (no copies) that three culls when they\'re out of view; with the skylines they draw every vertex once',
+      tiles.length >= 8 && tiles.length <= 40 && covered === nv && shared && inside && tiles.every(m => m.frustumCulled && m.material === TW.ST.skylineMesh.material && TW.ROOMS.get('outside').meshes.has(m)) && TW.ST.skylineMesh.frustumCulled === false,
+      `${tiles.length} tiles, ${nv - base} of ${nv} vertices`); }
   { const nL = Object.keys(TW.LEVELS).length;
     check('the outdoor levels are a few meshes (street, skylines, sky, beacons, and at most two per level after the street)', streetMeshes.length <= 5 + 2 * nL, streetMeshes.length + ' static meshes for ' + nL + ' levels'); }
   const litTris = run('ST.lit.tris'), skyTris = run('ST.sky.tris');

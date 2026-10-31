@@ -215,7 +215,25 @@ try {
   until(() => TW.game.state === 'fight' && !TW.game.queue.length, 900);
   { const b = TW.enemies[0]; b.hp = b.maxHp * 0.4; step(3); check('he loses it at half health', b.enraged === true); }
   clearAll();
-  check('down: the shutter goes up', !PL.shutter.visible);
+  // the north doors: after the KO's beat the shutter rolls up over a few seconds (not at once), the light from the square
+  // spilling in under it as it goes; you can't get under it until it's most of the way up; your view never moves
+  { const S = PL.shut, SC = P.shutter, ts = [], k = [], lamp = [];
+    const shut0 = PL.shutter.material.visible && S.t === 0 && !PL.spill.material.visible;
+    let blocked = null, jump0 = maxJump; maxJump = 0;
+    for (let i = 0; i < Math.ceil((SC.time + 0.6) / DT); i++) {
+      frame(); ts.push(S.t); k.push(PL.spill.material.uniforms.uTint.value.x); lamp.push(PL.spillLamp[1].slice());
+      if (blocked === null && S.t > 0.3 && S.t < SC.walk - 0.1) { const [x, z] = AW.toWorld(-40, PL.bowl[3] + 1.5), p = V(x, 0, z); TW.keepInWalk(p, 0.3); blocked = L(p).z < PL.bowl[3]; }
+    }
+    const first = ts.findIndex(t => t > 0), full = ts.findIndex(t => t >= 1), secs = (full - first) * DT, mono = ts.every((t, i) => !i || t >= ts[i - 1]);
+    check('down: after the KO the shutter rolls up slowly (a few seconds, never jumping), then it\'s gone',
+      shut0 && first >= 0 && full > first && secs > 3 && secs < 6 && mono && ts.every((t, i) => !i || t - ts[i - 1] < 0.02) && S.phase === 'up' && !PL.shutter.material.visible,
+      `${secs.toFixed(2)} s from first lift to the top`);
+    const mid = ts.findIndex(t => t >= 0.5), warm = lamp[mid];
+    check('...the square\'s warm light spills in under it as it goes (the tunnel, the floor, a live lamp for goons and hands), growing with it',
+      PL.spill.material.visible && k[first] < 0.1 && k[mid] > 0.5 && k[k.length - 1] > 0.99 && warm[0] > warm[2] && warm[0] > 0.3 && TW.ST.lamps.includes(PL.spillLamp),
+      `strength ${k[first].toFixed(2)} -> ${k[mid].toFixed(2)} -> ${k[k.length - 1].toFixed(2)}`);
+    check('...and you can\'t walk under it till it\'s most of the way up; your view stays put the whole time', blocked === true && maxJump < 1e-9, `blocked ${blocked}`);
+    maxJump = Math.max(maxJump, jump0); }
   walkL(-40, 241); walkL(-40, 251.6); step(3);
   check('out the north doors: the Palace is done', TW.game.state === 'won', TW.game.state);
   walkL(-40, 253.6);
@@ -226,6 +244,19 @@ try {
   check('in the arena (facing the stands) only the inside is drawn', TW.roomState.cur === 'palace' && PL.inMesh.visible && !PL.outMesh.visible && !TW.ST.skylineMesh.visible, TW.roomState.cur);
   setL(-40, 0, 176); faceL(Math.PI); step(3);
   check('on the forecourt facing the doors: the outside, and the foyer through them', TW.roomState.cur === 'outside' && PL.outMesh.visible && PL.inMesh.visible, TW.roomState.cur);
+  { const [fx, fz] = AW.toWorld(-40, PL.foyer[2]), far = TW.CFG.street.portalFar, look = (x, z) => { TW.rig.position.set(x, 0, z); run(`desk.yaw = ${Math.atan2(-(fx - x), -(fz - z))}; desk.pitch = 0;`); step(3); return PL.inMesh.visible; };
+    const near = look(...AW.toWorld(-40, PL.foyer[2] - 25)), tripoint = look(0, 9);
+    check('a doorway isn\'t looked through from further than CFG.street.portalFar: the foyer from the boulevard, but not from Tripoint Square, 200 m off',
+      near && !tripoint && Math.hypot(fx, fz - 9) > far, `boulevard ${near}, Tripoint Square ${tripoint}`); }
+  // meshes drawn only where they can be seen (userData.near): the stadium and Parade Square not from Tripoint Square,
+  // the checkpoint's boom not from here; from up high (the wing roof) all of them
+  { const PRm = run('PR').mesh, boom = run('boomPivot'), at = (x, y, z) => { TW.rig.position.set(x, y, z); run('desk.yaw = 0; desk.pitch = 0;'); run(`window.__fy = ${y}`); step(3); return [boom.visible, PL.outMesh.visible, PRm.visible]; };
+    const fy = run('floorAt'); run('floorAt = () => window.__fy || 0');
+    const here = at(...AW.toWorld(-40, 160).flatMap((v, i) => i ? [v] : [v, 0])), square = at(0, 0, 12), roof = at(-30, 33.6, 127);
+    ctx.floorAt = fy;
+    check('the stadium, Parade Square and the checkpoint\'s boom are drawn only where they can be seen: not the boom from the boulevard, not the stadium or the square from Tripoint Square; all of them from up on the wing roof',
+      [boom, PL.outMesh, PRm].every(m => m.userData.near) && !here[0] && here[1] && here[2] && square[0] && !square[1] && !square[2] && roof.every(Boolean) && !TW.ST.litMesh.userData.near,
+      `boulevard ${here}, Tripoint Square ${square}, wing roof ${roof}`); }
   check('starting here from the menu: in the gap in the fence, the train coming', TW.level.name === 'palace' && TR.phase !== 'gone' && !TR.open);
 
   // ---- physics cost in the gym (four goons)
