@@ -11,13 +11,14 @@ const POOL = { x: 2.7, z: 1.2, hx: 0.78, hz: 1.28, top: 0.86 };
 const TRIPOINT = { x: 0, z: -1.7, r: 0.55 };
 const BAR_LINES = [[0, ROOM.z - 0.03], [-(ROOM.x - 0.04), -3.88], [ROOM.x - 0.04, -3.88]];
 // Corner furniture (solid: goons and props collide, nobody walks through): Sasha's back counter, the Hinomoto pachinko
-// pair, the Columbian diner booth, the Krasnovian chess table. Boxes [x0, y0, z0, x1, y1, z1].
+// pair, the Columbian diner booth, the Krasnovian chess table. Boxes [x0, y0, z0, x1, y1, z1]. Every gap they leave is
+// either over 0.7 m (a goon's root needs 0.64) or shut: a narrower slot traps goons walking around.
 const BAR_SOLIDS = [
-  [-2.8, 0, -5, 2.8, 1.0, -4.6],                                                 // the back counter under the mirror
+  [-2.8, 0, -5, 2.8, 1.0, -4.78],                                                // the back counter under the mirror (0.83 m behind the bar stays clear)
   [-4.98, 0, -4.45, -4.55, 1.78, -3.38],                                         // pachinko x2 (left wall, back corner)
-  [3.9, 0, -5, 5, 0.5, -4.5], [3.9, 0.5, -5, 5, 1.16, -4.82],                    // the booth: back bench and its back
-  [4.08, 0, -4.42, 5, 0.77, -3.78],                                              //   the table
-  [3.9, 0, -3.7, 5, 0.5, -3.25], [3.9, 0.5, -3.37, 5, 1.16, -3.25],              //   front bench and its back
+  [3.9, 0, 3.2, 5, 0.5, 3.65], [3.9, 0.5, 3.2, 5, 1.16, 3.32],                   // the diner booth by the front window: a bench
+  [4.08, 0, 3.75, 5, 0.77, 4.35],                                                //   the table
+  [3.9, 0, 4.45, 5, 0.5, 4.86], [3.9, 0.5, 4.74, 5, 1.16, 4.86],                 //   the bench under the window
   [-4.52, 0, 3.23, -3.88, 0.74, 3.87],                                           // the chess table
   [-4.45, 0, 2.74, -3.95, 0.47, 3.16], [-4.45, 0, 2.74, -3.95, 0.98, 2.8],       //   its chairs
   [-4.45, 0, 3.94, -3.95, 0.47, 4.36], [-4.45, 0, 4.3, -3.95, 0.98, 4.36],
@@ -26,15 +27,15 @@ const SURFACES = [   // things props can rest on: x0,x1,z0,z1,top (physics works
   { x0: BAR.x0, x1: BAR.x1, z0: BAR.z0, z1: BAR.z1, top: BAR.top },
   ...TABLES.map(t => ({ x0: t.x - 0.45, x1: t.x + 0.45, z0: t.z - 0.45, z1: t.z + 0.45, top: 0.79 })),
   { x0: POOL.x - POOL.hx, x1: POOL.x + POOL.hx, z0: POOL.z - POOL.hz, z1: POOL.z + POOL.hz, top: POOL.top },
-  { x0: 4.08, x1: 5, z0: -4.42, z1: -3.78, top: 0.77 }, { x0: -4.52, x1: -3.88, z0: 3.23, z1: 3.87, top: 0.74 },
+  { x0: 4.08, x1: 5, z0: 3.75, z1: 4.35, top: 0.77 }, { x0: -4.52, x1: -3.88, z0: 3.23, z1: 3.87, top: 0.74 },
 ];
 const BLOCKERS = [   // xz boxes nobody walks through
   { x0: BAR.x0, x1: BAR.x1, z0: BAR.z0, z1: BAR.z1 },
   { x0: POOL.x - POOL.hx, x1: POOL.x + POOL.hx, z0: POOL.z - POOL.hz, z1: POOL.z + POOL.hz },
   { x0: -4.95, x1: -4.35, z0: 1.0, z1: 1.95 },  // jukebox
-  { x0: -2.8, x1: 2.8, z0: -5, z1: -4.6 },      // the back counter
+  { x0: -2.8, x1: 2.8, z0: -5, z1: -4.78 },     // the back counter
   { x0: -5, x1: -4.55, z0: -4.45, z1: -3.38 },  // pachinko
-  { x0: 3.9, x1: 5, z0: -5, z1: -3.25 },        // the diner booth (0.6 m clear of the bar's end: you can still get behind it)
+  { x0: 3.9, x1: 5, z0: 3.2, z1: 4.86 },        // the diner booth (0.7 m clear of the pool table's end)
   { x0: -4.6, x1: -3.85, z0: 2.74, z1: 4.36 },  // the chess table and chairs
 ];
 // Where anyone can stand: a union of xz rectangles (the bar, the doorway once the door is open, the street).
@@ -269,33 +270,33 @@ function buildRoom() {
   box('barfront', [BAR.x0 + 0.1, 0, BAR.z0], [BAR.x1 - 0.1, 1.08, BAR.z1 - 0.1], { uvs: { f: [0, 0, 6.4, 1], l: [0, 0, 0.55, 1], r: [0, 0, 0.55, 1] }, faces: 'flr' });
   box('counter', [BAR.x0, 1.08, BAR.z0], [BAR.x1, BAR.top, BAR.z1], { tile: 0.6 });
   box('brass', [BAR.x0 + 0.1, 0.12, BAR.z1 - 0.06], [BAR.x1 - 0.1, 0.16, BAR.z1 - 0.02], { faces: 'ftd' });   // the foot rail
-  box('barfront', [-2.75, 0, -5], [2.75, 0.96, -4.62], { uvs: { f: [0, 0, 5.5, 1] }, faces: 'f' });
-  box('counter', [-2.8, 0.96, -5], [2.8, 1.0, -4.58], { tile: 0.6, faces: 'tflr' });
+  box('barfront', [-2.75, 0, -5], [2.75, 0.96, -4.8], { uvs: { f: [0, 0, 5.5, 1] }, faces: 'f' });
+  box('counter', [-2.8, 0.96, -5], [2.8, 1.0, -4.76], { tile: 0.6, faces: 'tflr' });
   onWall('mirror', 'back', -2.65, 2.65, 1.0, 2.25, { off: 0.02, div: [8, 2] });
   for (const x of [-2.72, -0.62, 0.62, 2.72]) box('darkwood', [x - 0.07, 1.0, -4.98], [x + 0.07, 2.25, -4.68], { faces: 'flr' });
   box('darkwood', [-2.86, 2.25, -5], [2.86, 2.33, -4.6], { faces: 'ftdlr' });
   box('brass', [-2.86, 2.235, -4.6], [2.86, 2.265, -4.585], { faces: 'fd' });
   onWall('emblem', 'back', -0.5, 0.5, 1.2, 2.2, { off: 0.04, emissive: true });
-  for (const [x0, x1] of [[-2.65, -0.69], [0.69, 2.65]]) for (const [k, y] of [[1, 1.27], [0, 1.75]]) {
+  for (const [x0, x1] of [[-2.65, -0.69], [0.69, 2.65]]) for (const [k, y] of [[1, 1.38], [0, 1.81]]) {
     box('chrome', [x0, y - 0.02, -4.98], [x1, y, -4.74], { faces: 'td', tile: 0.5 });
     box('glow', [x0, y - 0.035, -4.76], [x1, y - 0.02, -4.74], { faces: 'fd', emissive: true });
     const u = (x) => (x + 2.65) / 5.3;
-    sacc('shelf').quad([[x0, y + 0.46, -4.86], [x1, y + 0.46, -4.86], [x1, y, -4.86], [x0, y, -4.86]], [[u(x0), k * 0.5], [u(x1), k * 0.5], [u(x1), k * 0.5 + 0.5], [u(x0), k * 0.5 + 0.5]], [0, 0, 1]);
+    sacc('shelf').quad([[x0, y + 0.42, -4.86], [x1, y + 0.42, -4.86], [x1, y, -4.86], [x0, y, -4.86]], [[u(x0), k * 0.5], [u(x1), k * 0.5], [u(x1), k * 0.5 + 0.5], [u(x0), k * 0.5 + 0.5]], [0, 0, 1]);
   }
   // on the counter: the brass till, the radio (its dial marked for Krasnograd, Halcyon and Okyo), the lucky cat, the samovar
   const bit = (x0, y1, z0, x1, z1, r) => box('backbits', [x0, 1.0, z0], [x1, y1, z1], { uvs: { f: r, '*': [r[0] + 0.004, r[1] + 0.02, r[0] + 0.01, r[1] + 0.06] }, faces: 'ftlr' });
-  bit(1.17, 1.36, -4.94, 1.53, -4.64, [0, 0, 16 / 48, 1]);
-  bit(-1.62, 1.25, -4.92, -1.22, -4.7, [16 / 48, 0, 32 / 48, 10 / 16]);
-  bit(-2.34, 1.32, -4.86, -2.18, -4.72, [32 / 48, 0, 40 / 48, 1]);
-  bit(2.2, 1.4, -4.92, 2.4, -4.72, [40 / 48, 0, 1, 1]);
+  bit(1.17, 1.33, -4.96, 1.5, -4.79, [0, 0, 16 / 48, 1]);
+  bit(-1.62, 1.25, -4.95, -1.22, -4.79, [16 / 48, 0, 32 / 48, 10 / 16]);
+  bit(-2.34, 1.32, -4.92, -2.18, -4.79, [32 / 48, 0, 40 / 48, 1]);
+  bit(2.2, 1.33, -4.96, 2.37, -4.79, [40 / 48, 0, 1, 1]);
   for (const x of [-2.6, -1.3, 0, 1.3, 2.6]) {
     box('lantern', [x - 0.17, 2.45, -3.55], [x + 0.17, 2.95, -3.21], { uvs: { '*': [0, 0, 1, 1], t: [0, 0, 1, 0.08], d: [0, 0.95, 1, 1] }, emissive: true });
     box('black', [x - 0.01, 2.95, -3.39], [x + 0.01, Y - 0.17, -3.37], { faces: 'fblr' });
   }
   // the lit board between the shelves and the neon: what's on ice from home (tools/bar_home.py paints it and the bottles)
   sacc('menuboard', { emissive: true, tint: [0.92, 0.88, 0.9] }).quad([[2.88, 2.57, -4.96], [3.88, 2.57, -4.96], [3.88, 1.26, -4.96], [2.88, 1.26, -4.96]], [[0, 0], [1, 0], [1, 1], [0, 1]], [0, 0, 1]);
-  // Akira-style vertical neon boards in brush lettering, either end of the back bar (the right one over the diner booth)
-  for (const [x, w, y0] of [[-3.34, 0.26, 0.55], [4.25, 0.18, 1.22]])
+  // Akira-style vertical neon boards in brush lettering, either end of the back bar
+  for (const [x, w, y0] of [[-3.34, 0.26, 0.55], [4.2, 0.26, 0.55]])
     sacc('neon_hino', { emissive: true }).quad([[x - w, 2.62, -4.92], [x + w, 2.62, -4.92], [x + w, y0, -4.92], [x - w, y0, -4.92]], [[0, 0], [1, 0], [1, 1], [0, 1]], [0, 0, 1]);
   // the Hinomoto window, back corner: black glass and neon, the Shuto's tail lights, Aoki Development's red crown
   onWall('window_hino', 'back', -4.68, -3.73, 1.0, 2.56, { emissive: true, tint: [0.9, 0.9, 1.0] });
@@ -339,22 +340,22 @@ function buildRoom() {
   box('darkwood', [4.9, 0.94, -2.7], [5.0, 1.0, -0.5]);
   sacc('neon_open', { emissive: true }).quad([[4.95, 3.05, -2.75], [4.95, 3.05, -0.45], [4.95, 2.7, -0.45], [4.95, 2.7, -2.75]], [[0.02, 0.15], [0.98, 0.15], [0.98, 0.85], [0.02, 0.85]], [-1, 0, 0]);
   sacc('cola').quad([[4.96, 2.3, 0.8], [4.96, 2.3, 1.5], [4.96, 1.25, 1.5], [4.96, 1.25, 0.8]], [[0, 0], [1, 0], [1, 1], [0, 1]], [-1, 0, 0]);
-  // the Columbian diner booth in the back corner: red tufted vinyl, a formica table, a pendant lamp, FLY HALCYON
+  // the Columbian diner booth by the front window: red tufted vinyl, a formica table, a pendant lamp, FLY HALCYON
   {
-    for (const [z0, z1, bz0, bz1] of [[-4.95, -4.5, -4.97, -4.82], [-3.7, -3.25, -3.37, -3.25]]) {
+    for (const [z0, z1, bz0, bz1] of [[3.2, 3.65, 3.2, 3.32], [4.45, 4.86, 4.74, 4.86]]) {
       box('darkwood', [3.9, 0, z0], [4.97, 0.42, z1], { faces: 'fblr' });
       box('vinyl', [3.9, 0.42, z0], [4.97, 0.5, z1], { tile: 0.5, faces: 'tfblr' });
       box('vinyl', [3.9, 0.5, bz0], [4.97, 1.12, bz1], { tile: 0.5, faces: 'fblr' });
       box('chrome', [3.9, 1.12, bz0], [4.97, 1.16, bz1], { faces: 'tfbl' });
     }
-    box('formica', [4.08, 0.72, -4.42], [4.97, 0.77, -3.78], { tile: 0.4, faces: 't' });
-    box('chrome', [4.08, 0.72, -4.42], [4.97, 0.77, -3.78], { faces: 'fbl' });
-    box('chrome', [4.5, 0, -4.14], [4.58, 0.72, -4.06], { faces: 'fblr' });
-    box('chrome', [4.62, 0.77, -4.2], [4.72, 0.9, -4.12]);                       // the napkin holder
-    box('black', [4.45 - 0.01, 1.92, -4.11], [4.45 + 0.01, Y, -4.09], { faces: 'fblr' });
-    box('brass', [4.3, 1.84, -4.25], [4.6, 1.94, -3.95], { faces: 'fblrt' });
-    box('glow', [4.31, 1.839, -4.24], [4.59, 1.84, -3.96], { faces: 'd', emissive: true });
-    onWall('poster_halcyon', 'right', -4.55, -3.89, 1.42, 2.26, { off: 0.04 });
+    box('formica', [4.08, 0.72, 3.75], [4.97, 0.77, 4.35], { tile: 0.4, faces: 't' });
+    box('chrome', [4.08, 0.72, 3.75], [4.97, 0.77, 4.35], { faces: 'fbl' });
+    box('chrome', [4.5, 0, 4.01], [4.58, 0.72, 4.09], { faces: 'fblr' });
+    box('chrome', [4.62, 0.77, 3.97], [4.72, 0.9, 4.05]);                         // the napkin holder
+    box('black', [4.45 - 0.01, 1.92, 4.04], [4.45 + 0.01, Y, 4.06], { faces: 'fblr' });
+    box('brass', [4.3, 1.84, 3.9], [4.6, 1.94, 4.2], { faces: 'fblrt' });
+    box('glow', [4.31, 1.839, 3.91], [4.59, 1.84, 4.19], { faces: 'd', emissive: true });
+    onWall('poster_halcyon', 'right', 3.56, 4.22, 1.36, 2.2, { off: 0.04 });
   }
   const px = POOL.x, pz = POOL.z;
   box('felt', [px - 0.7, 0.74, pz - 1.2], [px + 0.7, 0.8, pz + 1.2], { tile: 0.5, faces: 't' });
@@ -423,7 +424,7 @@ const BAR_BAKE = { ambient: BAR_LIGHT.ambient, lights: [...BAR_LIGHT.lights,
   lightFromHex([-4.4, 1.8, -1.6], '#ff9a3c', 2.6, 0.6),     // Krasnovia's sodium through its window
   lightFromHex([3.4, 1.9, 4.5], '#d8e8c0', 3.0, 0.45),      // the square's gaslight through the front windows
   lightFromHex([-3.4, 1.9, 4.5], '#d8e8c0', 3.0, 0.45),
-  lightFromHex([4.45, 1.7, -4.1], '#ffc870', 2.2, 1.3),     // the diner booth's pendant
+  lightFromHex([4.45, 1.7, 4.05], '#ffc870', 2.2, 1.3),     // the diner booth's pendant
   lightFromHex([-4.2, 1.4, 3.55], '#ffd890', 2.0, 1.1),     // the chess table's green lamp
   lightFromHex([0, 2.7, -1.7], '#ffd8a0', 3.4, 0.9),        // the fan's lamp over the Tripoint
 ] };

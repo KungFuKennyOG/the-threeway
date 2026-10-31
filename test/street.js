@@ -201,15 +201,15 @@ try {
     const solids = run('BAR_SOLIDS'), have = (B) => TW.WORLD_BOXES.some(W => W.every((v, i) => v === B[i]));
     const blocked = (x, z) => { const q = V(x, 0, z); TW.pushOutXZ(q, 0.2); return Math.hypot(q.x - x, q.z - z) > 0.05; };
     check('the corner furniture is solid: booth, chess table, pachinko and the back counter stop you and goons, and props collide with them',
-      solids.every(have) && [[4.4, -4.1], [-4.2, 3.55], [-4.8, -3.9], [0, -4.75]].every(([x, z]) => blocked(x, z)));
+      solids.every(have) && [[4.4, 4.05], [-4.2, 3.55], [-4.8, -3.9], [0, -4.9]].every(([x, z]) => blocked(x, z)));
     // the fight floor and the walk behind the bar stay clear: the spawn by the door, where goons gather, the start, behind the bar
-    const free = [[0, 4.4], [-2.2, 1.6], [2.2, 3.2], [0, 2.4], [0, -1.4], [-1.2, -2.4], [1.2, -2.4], [3.6, -3.7], [3.6, -4.3], [0, -4.3], [-3.6, -4.3]];
-    check('the fight floor, the door\'s spawn, the start and the walk behind the bar (past the booth) stay clear', free.every(([x, z]) => !blocked(x, z)),
+    const free = [[0, 4.4], [-2.2, 1.6], [2.2, 3.2], [0, 2.4], [0, -1.4], [-1.2, -2.4], [1.2, -2.4], [3.6, -3.7], [3.6, -4.3], [4.2, -4.3], [0, -4.3], [-3.6, -4.3], [-2, -4.36], [2, -4.36], [4.2, 2.85]];
+    check('the fight floor, the door\'s spawn, the start and the walk behind the bar (0.83 m: goons fit, 0.64) stay clear', free.every(([x, z]) => !blocked(x, z)),
       free.filter(([x, z]) => blocked(x, z)).map(a => a.join(',')).join(' '));
     const T = run('TRIPOINT'), L = run('BAR_LINES');
     check('the three brass Accords lines come in under the door and meet at the Tripoint disc, where you start', Math.hypot(T.x, T.z + 1.4) < T.r && L.length === 3 && L[0][0] === 0 && L[0][1] > 4.9 && L.slice(1).every(([x]) => Math.abs(x) > 4.9));
     run('clearEnemies(); stockProps();');
-    const b1 = new TW.Prop('bottle', V(4.5, 1.2, -4.25)), b2 = new TW.Prop('bottle', V(-4.1, 1.2, 3.45)); b1.body.wake(); b2.body.wake(); step(150);
+    const b1 = new TW.Prop('bottle', V(4.4, 1.2, 4.1)), b2 = new TW.Prop('bottle', V(-4.1, 1.2, 3.45)); b1.body.wake(); b2.body.wake(); step(150);
     const bottom = (b) => Math.min(...b.body.ps.map(q => q.x.y - q.r));
     check('a bottle set down on the diner booth\'s table or the chess table rests on it', Math.abs(bottom(b1) - 0.77) < 0.05 && Math.abs(bottom(b2) - 0.74) < 0.05, bottom(b1).toFixed(2) + ' / ' + bottom(b2).toFixed(2));
     run('stockProps();');
