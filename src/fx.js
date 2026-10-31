@@ -51,7 +51,7 @@ function showSign(name, dur = 2.5) {
   let at = new V3(0, 2.85, 4.3);
   if (level.name !== 'bar' || player.head.z > STREET.fz - 0.4) {   // outside: up ahead of you, wherever you're looking
     camera.getWorldDirection(_v1); _v1.y = 0; if (_v1.lengthSq() < 1e-4) _v1.set(0, 0, 1); _v1.normalize();
-    at = player.head.clone().addScaledVector(_v1, 4.5); at.y = 2.7;
+    at = player.head.clone().addScaledVector(_v1, 4.5); at.y = player.floorY + 2.7;
   }
   if (!imgSize['sign_' + name]) tex('sign_' + name);
   bigSign = fx(['sign_' + name], at, { life: dur, scale: 0.016 });

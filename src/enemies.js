@@ -89,8 +89,9 @@ class Enemy {
     if (this.cfg.weapon) this.equip(new Prop(this.cfg.weapon, this.pos));
     this.drawParts();
   }
-  placeAt(x, z, yaw) {   // teleport: rig, targets and particles together
-    this.pos.set(x, 0, z); this.yaw = yaw; this.applyPose(POSES[this.type], 1e9, 1);
+  // teleport: rig, targets and particles together. y picks the floor where floors stack (default: the one you're on)
+  placeAt(x, z, yaw, y) {
+    this.pos.set(x, floorAt(x, z, y === undefined ? player.floorY : y), z); this.yaw = yaw; this.applyPose(POSES[this.type], 1e9, 1);
     for (const p of this.body.ps) { p.x.copy(this.targets[p.name]); p.p.copy(p.x); p.v.set(0, 0, 0); }
     this.drawParts();
     if (this.weapon) { this.updateWeapon(1); for (const q of this.weapon.body.ps) { q.x.copy(q.pin); q.p.copy(q.pin); } this.weapon.render(); }
@@ -156,7 +157,7 @@ class Enemy {
     AU.whiff();
   }
   // ---------- skeleton / targets / drawing
-  syncRig() { this.rig.position.set(this.pos.x, this.rootY || 0, this.pos.z); this.rig.rotation.set(0, this.yaw, 0); this.rig.updateMatrixWorld(true); }
+  syncRig() { this.rig.position.set(this.pos.x, this.pos.y + (this.rootY || 0), this.pos.z); this.rig.rotation.set(0, this.yaw, 0); this.rig.updateMatrixWorld(true); }
   computeTargets() { for (const [n, part, off] of JOINTS) this.bones[part].localToWorld(this.targets[n].set(off[0], off[1], off[2])); }
   drawParts() {
     const P = this.body ? this.body.by : null; if (!P) return;
@@ -421,7 +422,7 @@ class Enemy {
       }
       case 'held': {
         // dangling from the player's hand; struggles, then breaks free
-        this.pos.set(this.body.by.pelvis.x.x, 0, this.body.by.pelvis.x.z);
+        this.rootAtPelvis();
         if (Math.random() < dt * 4) { const p = this.body.ps[3 + Math.floor(Math.random() * 12)]; p.v.add(_v2.set(rand(-2, 2), rand(0, 2), rand(-2, 2))); }
         if (this.timer >= CFG.grab.breakFree) {
           const h = this.heldBy; if (h) { h.held = null; h.desk.mode = 'guard'; buzz(h, 0.5, 80); }
@@ -479,7 +480,7 @@ class Enemy {
         break;
       }
       case 'ragdoll': {
-        this.pos.set(this.body.by.pelvis.x.x, 0, this.body.by.pelvis.x.z);
+        this.rootAtPelvis();
         return;
       }
       case 'getup': {
@@ -499,7 +500,7 @@ class Enemy {
         if (this.koT > CFG.reactions.koRemoveTime) {   // sink out of the floor
           this.body.sim = false;
           for (const p of this.body.ps) { p.x.y -= dt * 0.4; }
-          if (this.body.by.chest.x.y < -0.4) this.remove();
+          if (this.body.by.chest.x.y < this.pos.y - 0.4) this.remove();
         }
         return;
       }
@@ -513,6 +514,7 @@ class Enemy {
     }
     this.separate();
     this.collideRoot();
+    this.pos.y = floorAt(this.pos.x, this.pos.z, this.pos.y);   // up and down ramps and stairs (the ragdoll pull smooths any step)
     this.pull = pull; this.body.pull = pull; this.body.drag = 0.6;
     this.applyPose(pose, rate, dt);
     this.updateWeapon(dt); this.updateCarry();
@@ -541,8 +543,8 @@ class Enemy {
   }
   startGetup() {
     if (!this.alive) { this.setState('ko'); return; }
-    this.pos.set(this.body.by.pelvis.x.x, 0, this.body.by.pelvis.x.z);
-    pushOutXZ(this.pos, 0.32);
+    this.rootAtPelvis();
+    if (pushOutXZ(this.pos, 0.32)) this.pos.y = floorAt(this.pos.x, this.pos.z, this.pos.y);
     this.yaw = Math.atan2(player.head.x - this.pos.x, player.head.z - this.pos.z);
     this.setState('getup'); this.pull = 0; this.flying = false;
   }
@@ -624,14 +626,19 @@ class Enemy {
     this.yaw += d * Math.min(1, dt * 8);
   }
   separate() {
+    const gap = CFG.floors.goonGap;   // on different floors of a stack, nobody is in anybody's way
     for (const o of enemies) {
-      if (o === this || !o.hittable()) continue;
+      if (o === this || !o.hittable() || Math.abs(this.pos.y - o.pos.y) > gap) continue;
       const d = _v3.set(this.pos.x - o.pos.x, 0, this.pos.z - o.pos.z), L = d.length(), m = 0.62 * (this.s + o.s) / 1.76;
       if (L < m && L > 1e-4) this.pos.addScaledVector(d.divideScalar(L), (m - L) * 0.5);
     }
+    if (Math.abs(this.pos.y - player.floorY) > gap) return;
     const d = _v3.set(this.pos.x - player.head.x, 0, this.pos.z - player.head.z), L = d.length();
     const minD = CFG.physics.personalSpace;
     if (L < minD && L > 1e-4) this.pos.addScaledVector(d.divideScalar(L), minD - L);
+  }
+  rootAtPelvis() {   // a limp or dangling goon's root: under his pelvis, on the floor he's over
+    const P = this.body.by.pelvis.x; this.pos.set(P.x, floorAt(P.x, P.z, P.y), P.z);
   }
   collideRoot() {
     const hit = pushOutXZ(this.pos, 0.32);
@@ -680,9 +687,10 @@ class Enemy {
 const ZERO3 = [0, 0, 0];
 function tokensInUse() { let n = 0; for (const e of enemies) if (e.hasToken) n++; return n; }
 function pushOutXZ(p, r, includeBlockers = true) {
-  let moved = keepInWalk(p, r);   // false | true (wall) | the blocker box
+  let moved = keepInWalk(p, r);   // false | true (wall) | the blocker box. p.y: the feet (matters only on raised floors)
   if (!includeBlockers) return moved;
   for (const b of blockersNear(p.z)) {
+    if (b.y1 !== undefined && (p.y >= b.y1 - CFG.floors.step || p.y + 1.6 < (b.y0 || 0))) continue;   // a blocker with a height range: only at its own floor
     const x0 = b.x0 - r, x1 = b.x1 + r, z0 = b.z0 - r, z1 = b.z1 + r;
     if (p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1) {
       const dx0 = p.x - x0, dx1 = x1 - p.x, dz0 = p.z - z0, dz1 = z1 - p.z, m = Math.min(dx0, dx1, dz0, dz1);

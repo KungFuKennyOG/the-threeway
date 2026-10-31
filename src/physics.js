@@ -13,7 +13,7 @@ const WORLD_BOXES = [   // solid furniture [x0,y0,z0,x1,y1,z1]
   ...TABLES.flatMap(t => [[t.x - 0.45, 0.72, t.z - 0.45, t.x + 0.45, 0.79, t.z + 0.45], [t.x - 0.05, 0, t.z - 0.05, t.x + 0.05, 0.74, t.z + 0.05]]),
 ];
 class Particle {
-  constructor(name, pos, r, w) { this.name = name; this.x = pos.clone(); this.p = pos.clone(); this.v = new V3(); this.r = r; this.w = w; this.pin = null; this.ground = false; }
+  constructor(name, pos, r, w) { this.name = name; this.x = pos.clone(); this.p = pos.clone(); this.v = new V3(); this.r = r; this.w = w; this.pin = null; this.ground = false; this.fy = 0; this.wk = null; }
 }
 class Body {
   constructor(kind, owner) {
@@ -45,10 +45,10 @@ function solveC(c) {
   a.p.addScaledVector(d, k * wa); b.p.addScaledVector(d, -k * wb);
 }
 function collideWorld(p, b) {
-  const r = p.r; let impact = 0;
-  if (p.p.y < r) { impact = Math.max(impact, -p.v.y); p.p.y = r; p.ground = true; }
+  const r = p.r, fy = p.fy; let impact = 0;   // the floor under it, looked up once per step (0 unless the level has raised floors here)
+  if (p.p.y < fy + r) { impact = Math.max(impact, -p.v.y); p.p.y = fy + r; p.ground = true; }
   const ox = p.p.x, oz = p.p.z;
-  if (keepInWalk(p.p, r, true)) {   // hit a wall
+  if (keepInWalk(p.p, r, true, p)) {   // hit a wall
     if (p.p.x !== ox) impact = Math.max(impact, Math.abs(p.v.x));
     if (p.p.z !== oz) impact = Math.max(impact, Math.abs(p.v.z));
   }
@@ -70,7 +70,7 @@ function collideWorld(p, b) {
 }
 function collidePlayer(p) {   // the player's body is a capsule nobody walks into
   const hx = player.head.x, hz = player.head.z, top = player.head.y, R = CFG.physics.playerRadius + p.r;
-  const y = clamp(p.p.y, 0.2, top);
+  const y = clamp(p.p.y, player.floorY + 0.2, top);
   const dx = p.p.x - hx, dz = p.p.z - hz, dy = p.p.y - y, d2 = dx * dx + dy * dy + dz * dz;
   if (d2 >= R * R) return;
   const d = Math.sqrt(d2) || 1e-4;
@@ -126,6 +126,7 @@ function physicsStep(dt) {
       if (b.gravity) p.v.y += g * dt;
       p.v.multiplyScalar(Math.max(0, 1 - b.drag * dt));
       p.p.copy(p.x).addScaledVector(p.v, dt); p.ground = false;
+      p.fy = floorAt(p.p.x, p.p.z, p.p.y - p.r);   // a low particle can't be pushed onto a higher floor mid-step (its edge is a wall), so this holds for the step
     }
   }
   for (let it = 0; it < CFG.physics.iterations; it++) {
@@ -141,7 +142,7 @@ function physicsStep(dt) {
     for (const p of b.ps) {
       if (p.pin) continue; const t = b.targets[p.name]; if (!t) continue;
       p.p.lerp(t, b.pull); if (b.collidesPlayer) collidePlayer(p);
-      if (p.p.y < p.r) p.p.y = p.r;
+      if (p.p.y < p.fy + p.r) p.p.y = p.fy + p.r;
     }
   }
   const vmax = CFG.physics.maxSpeed;

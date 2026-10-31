@@ -104,6 +104,14 @@ const CFG = {
             fogNear: 4.5, fogFar: 12.5 },
   hands: { modelPitchDeg: -30, fistForward: 0.02 },   // tilt of the fist model inside the controller grip
   move: { speed: 2.2, snapTurnDeg: 30, deadzone: 0.3 },
+  // raised floors, ramps and stairs (walk rects with a height: see addWalk / floorAt in src/bar.js)
+  floors: {
+    step: 0.45,               // m: the most you step up or down between walk rects; a taller edge is a wall (or a drop, for ragdolls)
+    followRate: 12,           // 1/s: how fast your view eases onto the floor height under you
+    maxRise: 2.4,             // m/s: the fastest your view ever moves up or down (VR comfort: no sudden jumps)
+    snapDist: 1.0,            // m: a jump this big in one frame (respawn, level start) snaps to the floor instead of easing
+    goonGap: 1.2,             // m: goons farther apart than this in height don't push each other (or you) apart: they're on different floors
+  },
   // ---- level 2: out the door into Tripoint Square, down the old road to the militia checkpoint
   street: {
     doorSpeed: 0.9, doorOpenDeg: 100,          // the bar's door swings out onto the square once the bar is clear
