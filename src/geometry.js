@@ -39,9 +39,11 @@ class GeoAcc {
 }
 
 // Tapered box from y0 (w0,d0) to y1 (w1,d1); uvs in sheet pixels {f,b,l,r,t,d,'*'}.
+// TBOX_SHEET: the sheet size used when a call doesn't give one (goon bodies are built with it set to 64 x 128).
+const TBOX_SHEET = [64, 64];
 function tbox(acc, accFace, y0, y1, w0, d0, w1, d1, uvs, o = {}) {
   const x = o.x || 0, z = o.z || 0, x1 = o.x1 || 0, z1 = o.z1 || 0, faces = o.faces || 'ftblrd', sub = o.sub || 1;
-  const sw = o.sheetW || o.sheet || 64, sh = o.sheetH || o.sheet || 64;
+  const sw = o.sheetW || o.sheet || TBOX_SHEET[0], sh = o.sheetH || o.sheet || TBOX_SHEET[1];
   let lo = [y0, w0, d0, x, z], hi = [y1, w1, d1, x + x1, z + z1];
   if (y0 > y1) { const t = lo; lo = hi; hi = t; }
   const [ya, wa, da, xa, za] = lo, [yb, wb, db, xb, zb] = hi;

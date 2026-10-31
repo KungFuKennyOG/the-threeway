@@ -1,8 +1,20 @@
 'use strict';
 // ============================== characters ==================================
+// Goon sheets are 64 x 128: faces (normal, hurt, KO) and four 16-px body panels in the top 64 rows, then a strip
+// holding the torso's back panel (TA_B) and side panel (TA_S), painted by tools/sheet_backs.py; rows 80-127 are free.
+const SHEET_W = 64, SHEET_H = 128;
 const FACE = [0, 0, 32, 32], TA = [32, 32, 48, 48], TB = [48, 32, 64, 48], TC = [32, 48, 48, 64], TD = [48, 48, 64, 64];
 const TD_L = [48, 48, 56, 64], TD_R = [56, 48, 64, 64], HAIR = [1, 1, 3, 5];
-const FACE_OFFSET = { normal: [0, 0], hurt: [0.5, 0], ko: [0, 0.5] };
+const TA_B = [0, 64, 16, 80], TA_S = [16, 64, 32, 80];
+const FACE_OFFSET = { normal: [0, 0], hurt: [32 / SHEET_W, 0], ko: [0, 32 / SHEET_H] };
+// uvs for a box textured from the torso panel (or a slice of it): the front keeps it, the back and the sides
+// read the same slice of the back and side panels, so ties, buttons, zips and logos stay on the front
+function chest(r) {
+  if (r[0] < TA[0] || r[1] < TA[1] || r[2] > TA[2] || r[3] > TA[3]) return { '*': r };
+  const sh = (o) => [r[0] - TA[0] + o[0], r[1] - TA[1] + o[1], r[2] - TA[0] + o[0], r[3] - TA[1] + o[1]];
+  const s = sh(TA_S);
+  return { '*': r, b: sh(TA_B), l: s, r: s };
+}
 
 // part spec: [name, parent, pivot, [geometry fns(acc, accFace)]]
 function humanoid(p) {
@@ -11,7 +23,7 @@ function humanoid(p) {
   const [hw, hh, hd] = P.head;
   const parts = [
     ['hips', null, [0, 1.06, 0], [(a) => tbox(a, null, -0.12, 0.08, P.waist, 0.25, P.waist, 0.25, { '*': P.legs })]],
-    ['torso', 'hips', [0, 0.08, 0], [(a) => tbox(a, null, 0, 0.5, P.waist, 0.25, P.shoulder, P.chestD, { '*': P.torso }, { sub: 2, faces: 'fblrt' })]],
+    ['torso', 'hips', [0, 0.08, 0], [(a) => tbox(a, null, 0, 0.5, P.waist, 0.25, P.shoulder, P.chestD, chest(P.torso), { sub: 2, faces: 'fblrt' })]],
     ['head', 'torso', [0, 0.5 + P.neck, 0.01], [
       (a, f) => tbox(a, f, 0, hh, hw, hd, hw * 0.92, hd * 0.95, { f: FACE, b: P.headSide, l: P.headSide, r: P.headSide, t: P.headSide, d: P.headSide }, { sub: 2 }),
       (a) => tbox(a, null, -P.neck - 0.02, 0.02, 0.13, 0.13, 0.12, 0.12, { '*': TC }, { faces: 'fblr' })]],
@@ -33,7 +45,7 @@ const BODIES = {
     r.head[3].push((a) => tbox(a, null, 0.2, 0.44, 0.24, 0.26, 0.2, 0.16, { '*': [48, 48, 52, 52] }, { z: -0.01, z1: 0.14 }));
     r.head[3].push((a) => tbox(a, null, 0.36, 0.47, 0.19, 0.16, 0.15, 0.1, { '*': [49, 49, 51, 51], t: [48, 48, 50, 49] }, { z: 0.15, z1: 0.08 }));
     r.hips[3].push((a) => tbox(a, null, 0.06, -0.72, 0.42, 0.3, 0.66, 0.46, { f: TB, b: TB, l: TB, r: TB, '*': TA }, { z1: -0.02, sub: 2, faces: 'fblr' }));
-    r.torso[3].push((a) => tbox(a, null, 0.42, 0.56, 0.4, 0.3, 0.34, 0.26, { '*': [40, 44, 47, 47] }, { faces: 'fblr' }));
+    r.torso[3].push((a) => tbox(a, null, 0.42, 0.56, 0.4, 0.3, 0.34, 0.26, chest([40, 44, 47, 47]), { faces: 'fblr' }));
     for (const nm of ['l', 'r']) r['farm' + nm][3].push((a) => tbox(a, null, -0.2, -0.27, 0.14, 0.14, 0.14, 0.14, { '*': [32, 46, 48, 48] }, { faces: 'fblr' }));
     return r;
   },
@@ -56,8 +68,8 @@ const BODIES = {
   wrestler() {
     const r = humanoid({ torso: TA, legs: [32, 39, 48, 48], arms: TC, hands: TC, feet: TD, shoulder: 0.66, chestD: 0.42, waist: 0.5,
       neck: -0.02, head: [0.25, 0.29, 0.27], thighW: 0.22 });
-    r.torso[3].push((a) => tbox(a, null, 0.0, 0.32, 0.5, 0.36, 0.6, 0.44, { '*': [33, 40, 47, 47] }, { z: 0.02, faces: 'fblr' }));
-    r.torso[3].push((a) => tbox(a, null, 0.44, 0.56, 0.5, 0.3, 0.3, 0.24, { '*': [33, 33, 47, 36] }, { faces: 'fblrt' }));
+    r.torso[3].push((a) => tbox(a, null, 0.0, 0.32, 0.5, 0.36, 0.6, 0.44, chest([33, 40, 47, 47]), { z: 0.02, faces: 'fblr' }));
+    r.torso[3].push((a) => tbox(a, null, 0.44, 0.56, 0.5, 0.3, 0.3, 0.24, chest([33, 33, 47, 36]), { faces: 'fblrt' }));
     r.hips[3].push((a) => tbox(a, null, 0.02, 0.14, 0.56, 0.4, 0.58, 0.42, { '*': TB }, { faces: 'fblr' }));
     for (const nm of ['l', 'r']) {
       r['shin' + nm][3].push((a) => tbox(a, null, -0.16, -0.44, 0.16, 0.17, 0.15, 0.16, { '*': TD }, { faces: 'fblr' }));
@@ -70,14 +82,14 @@ const BODIES = {
     const r = humanoid({ torso: TA, legs: TB, arms: [33, 36, 47, 47], hands: TC, feet: TD_R, headSide: HAIR });
     r.head[3].push((a) => tbox(a, null, 0.23, 0.34, 0.25, 0.28, 0.22, 0.25, { '*': TD_L }, { z: -0.01, faces: 'fblrt' }));
     r.head[3].push((a) => tbox(a, null, 0.225, 0.245, 0.23, 0.16, 0.23, 0.16, { '*': TD_L }, { z: 0.2 }));
-    r.torso[3].push((a) => tbox(a, null, 0.0, 0.1, 0.42, 0.29, 0.44, 0.3, { '*': [36, 45, 44, 48] }, { faces: 'fblr' }));   // jacket hem
+    r.torso[3].push((a) => tbox(a, null, 0.0, 0.1, 0.42, 0.29, 0.44, 0.3, chest([36, 45, 44, 48]), { faces: 'fblr' }));   // jacket hem
     return r;
   },
   cook() {     // kitchen whites, houndstooth trousers, tall toque
     const r = humanoid({ torso: TA, legs: TB, arms: [48, 48, 56, 64], hands: TC, feet: TD_R, shoulder: 0.6, waist: 0.44, chestD: 0.36 });
     r.head[3].push((a) => tbox(a, null, 0.24, 0.3, 0.25, 0.28, 0.25, 0.28, { '*': TD_L }, { z: -0.01, faces: 'fblr' }));
     r.head[3].push((a) => tbox(a, null, 0.3, 0.55, 0.25, 0.28, 0.33, 0.34, { '*': TD_L }, { z: -0.01 }));
-    r.torso[3].push((a) => tbox(a, null, -0.08, 0.2, 0.46, 0.3, 0.5, 0.36, { '*': [33, 36, 47, 47] }, { faces: 'fblr' }));   // belly in an apron
+    r.torso[3].push((a) => tbox(a, null, -0.08, 0.2, 0.46, 0.3, 0.5, 0.36, chest([33, 36, 47, 47]), { faces: 'fblr' }));   // belly in an apron
     return r;
   },
   secguard() {   // Aoki Security: black suit, riot helmet with a mirrored visor, clear shield on the left forearm, baton in the right fist
@@ -93,28 +105,28 @@ const BODIES = {
     const r = humanoid({ torso: TA, legs: TB, arms: TC, hands: TD_L, feet: TD_R, shoulder: 0.54, chestD: 0.3, waist: 0.36, thighW: 0.17 });
     for (const [x, z, h] of [[-0.08, 0.02, 0.1], [0.0, -0.05, 0.13], [0.08, 0.02, 0.1], [0.0, 0.07, 0.08]])
       r.head[3].push((a) => tbox(a, null, 0.29, 0.29 + h, 0.1, 0.1, 0.02, 0.02, { '*': HAIR }, { x, z }));
-    r.torso[3].push((a) => tbox(a, null, 0.44, 0.58, 0.4, 0.3, 0.3, 0.24, { '*': [32, 32, 48, 34] }, { faces: 'fblrt' }));   // bomber collar
+    r.torso[3].push((a) => tbox(a, null, 0.44, 0.58, 0.4, 0.3, 0.3, 0.24, chest([32, 32, 48, 34]), { faces: 'fblrt' }));   // bomber collar
     return r;
   },
   rocco() {    // Columbian bouncer: a boxer without headgear, broader
     const r = BODIES.boxer(true, 0.64);
-    r.torso[3].push((a) => tbox(a, null, 0.3, 0.52, 0.56, 0.34, 0.64, 0.36, { '*': TA }, { z: 0.01, faces: 'fblr' }));
+    r.torso[3].push((a) => tbox(a, null, 0.3, 0.52, 0.56, 0.34, 0.64, 0.36, chest(TA), { z: 0.01, faces: 'fblr' }));
     return r;
   },
   volkov() {   // Bogdan "the Bear" Volkov: barrel chest, bare arms, red singlet, black tights, a champion's gold belt
     const r = humanoid({ torso: TA, legs: TB, arms: TC, hands: TC, feet: TD, shoulder: 0.74, chestD: 0.46, waist: 0.54,
       neck: -0.03, head: [0.26, 0.3, 0.28], thighW: 0.24 });
-    r.torso[3].push((a) => tbox(a, null, 0.0, 0.36, 0.56, 0.42, 0.68, 0.5, { '*': TA }, { z: 0.02, faces: 'fblr' }));
+    r.torso[3].push((a) => tbox(a, null, 0.0, 0.36, 0.56, 0.42, 0.68, 0.5, chest(TA), { z: 0.02, faces: 'fblr' }));
     r.hips[3].push((a) => tbox(a, null, 0.1, 0.2, 0.6, 0.44, 0.6, 0.44, { '*': [43, 36, 44, 37] }, { faces: 'fblr' }));   // the belt
     for (const nm of ['l', 'r']) r['uarm' + nm][3] = [(a) => tbox(a, null, 0.06, -0.31, 0.21, 0.21, 0.17, 0.17, { '*': TC })];
     return r;
   },
   ivan() {     // Krasnovian bouncer: wrestler frame in a tracksuit
-    const r = humanoid({ torso: TA, legs: TB, arms: TA, hands: TC, feet: TD, shoulder: 0.68, chestD: 0.42, waist: 0.5,
+    const r = humanoid({ torso: TA, legs: TB, arms: TA_S, hands: TC, feet: TD, shoulder: 0.68, chestD: 0.42, waist: 0.5,
       neck: -0.02, head: [0.25, 0.29, 0.27], thighW: 0.22 });
-    r.torso[3].push((a) => tbox(a, null, 0.0, 0.34, 0.5, 0.38, 0.62, 0.46, { '*': TA }, { z: 0.02, faces: 'fblr' }));
-    r.torso[3].push((a) => tbox(a, null, 0.44, 0.56, 0.5, 0.3, 0.3, 0.24, { '*': [33, 33, 47, 36] }, { faces: 'fblrt' }));
-    for (const nm of ['l', 'r']) r['uarm' + nm][3] = [(a) => tbox(a, null, 0.06, -0.31, 0.19, 0.19, 0.15, 0.16, { '*': TA })];
+    r.torso[3].push((a) => tbox(a, null, 0.0, 0.34, 0.5, 0.38, 0.62, 0.46, chest(TA), { z: 0.02, faces: 'fblr' }));
+    r.torso[3].push((a) => tbox(a, null, 0.44, 0.56, 0.5, 0.3, 0.3, 0.24, chest([33, 33, 47, 36]), { faces: 'fblrt' }));
+    for (const nm of ['l', 'r']) r['uarm' + nm][3] = [(a) => tbox(a, null, 0.06, -0.31, 0.19, 0.19, 0.15, 0.16, { '*': TA_S })];
     return r;
   },
 };

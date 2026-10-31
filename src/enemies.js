@@ -38,6 +38,7 @@ class Enemy {
     this.neck = def.head[2][1] - 0.5;
     this.partNames = Object.keys(def);
     const Pp = [], Nn = [], Uu = [], Ii = [];
+    TBOX_SHEET[0] = SHEET_W; TBOX_SHEET[1] = SHEET_H;   // goon sheets are 64 x 128
     this.partNames.forEach((name, pi) => {
       const [, parent, pivot, geos] = def[name];
       const bone = new THREE.Group(); bone.position.set(pivot[0], pivot[1], pivot[2]); bone.rotation.order = 'YXZ';
@@ -55,6 +56,7 @@ class Enemy {
         this.tris += A.tris;
       }
     });
+    TBOX_SHEET[0] = 64; TBOX_SHEET[1] = 64;
     this.baseP = new Float32Array(Pp); this.baseN = new Float32Array(Nn); this.baseU = new Float32Array(Uu); this.vIdx = new Uint8Array(Ii);
     const geo = this.geo = new THREE.BufferGeometry();
     for (const [n, arr, k] of [['position', Pp, 3], ['normal', Nn, 3], ['uv', Uu, 2]]) {
