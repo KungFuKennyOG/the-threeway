@@ -132,6 +132,8 @@ Through the Tower's big front doors from Parade Square, no cut. Krasnovia's seat
 
 New or changed goons follow `docs/goon-style.md`. Each one is a character with one loud signature shape, pushed proportions, a distinct face, a dense hand-pixeled sheet and an idle pose with attitude. No uniform-only goons. Check every one in a lineup beside the originals.
 
+**Act 2's Columbian regulars (looks only, awaiting approval):** the academy **cadet** (a towering pompom shako, saluting), the Liberty Diner's **soda jerk** (a tower of plates overhead, a cola bottle cocked), the **linebacker** (giant shoulder pads, number 54) and the government **agent** (a white Stetson, arms folded). `tools/goons_columbia.py` paints them; they have bodies, idle poses and placeholder `CFG.enemies` stats, but no special moves yet and aren't in any fight.
+
 ## Quest performance
 
 - **Merged static geometry.** The whole bar room is one mesh on one atlas (`tools/bar_atlas.py` packs its textures; the shader tiles each texture inside its box of the atlas). The street is one mesh on a painted, mipmapped atlas, the skylines and far city another. Light is **baked per vertex** at build time with the shader's own formula, so any number of gas lamps is free; goons, props and hands are lit live by the 6 nearest lamps (the bar's six inside).

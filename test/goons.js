@@ -69,6 +69,24 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
       check(`every new goon (${built.length}) is one mesh on its own sheet, 250-340 tris, and no longer a stand-in`, bad.length === 0 && built.length > 0, bad.join(',') + ' | ' + tris.join(' '));
     }
 
+    // ---- Act 2's Columbian regulars (looks only so far): they exist, load as one mesh on their own sheet in budget, stand at a
+    // real height in their idle pose, and aren't in any fight yet
+    {
+      run('clearEnemies()');
+      const COL = ['cadet', 'sodajerk', 'linebacker', 'agent'], bad = [], info = [];
+      for (const t of COL) {
+        if (!TW.CFG.enemies[t] || !run(`typeof BODIES.${t} === 'function' && !!POSES.${t} && !!TEX.sheet_${t}`)) { bad.push(t + ':missing'); continue; }
+        const e = new TW.Enemy(t); e.cfg = Object.assign({}, e.cfg, { speed: 0 }); e.cooldown = 1e9; e.placeAt(0, -2.5, 0); e.state = 'circle'; TW.enemies.push(e); step(90);
+        const meshes = TW.scene.children.filter(o => o.material === e.mat), top = e.body.by.head.x.y + 0.15 * e.s;
+        info.push(`${t}:${e.tris}/${top.toFixed(2)}m`);
+        if (meshes.length !== 1 || e.tris < 250 || e.tris > 340 || top < 1.6 || top > 1.92 || run(`enemyType('${t}')`) !== t) bad.push(t);
+        e.remove();
+      }
+      check('Act 2\'s Columbian regulars (cadet, soda jerk, linebacker, agent) load: one mesh on their own sheet, 250-340 tris, 1.6-1.92 m tall', bad.length === 0, bad.join(',') + ' | ' + info.join(' '));
+      const cfgNoEnemies = JSON.stringify(Object.assign({}, TW.CFG, { enemies: null }));
+      check('and none of them is in a fight yet (looks first)', COL.every(t => !cfgNoEnemies.includes(`"${t}"`)), COL.filter(t => cfgNoEnemies.includes(`"${t}"`)).join(','));
+    }
+
     // ---- the honour guard's flagpole: upright at rest, levelled at you to lunge; swat it mid-lunge and it's yours
     fresh();
     const gd = spawn('guard', 0, -1.6, { state: 'circle', cooldown: 99, cfg: { speed: 0 } }); step(60);
