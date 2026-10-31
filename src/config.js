@@ -49,7 +49,7 @@ const CFG = {
   defense: { blockRadius: 0.15, blockMaxFromHead: 0.55, dodgeDistance: 0.28, parryMinSpeed: 1.5, parryWindow: 0.15, lowBlockRadius: 0.42, lowDrop: 0.7 },
   grab: { reach: 0.3, breakFree: 2.0, throwMinSpeed: 2.0, throwMult: 2.5, throwAssistDeg: 25, headbuttSpeed: 1.3 },
   weapons: {
-    bottle: { dmg: 8, poiseMult: 1.0, durability: 1, grabRadius: 0.16, hitRadius: 0.08, reach: 0.2 },
+    bottle: { dmg: 8, poiseMult: 1.0, durability: 1, grabRadius: 0.16, hitRadius: 0.08, reach: 0.2, playerDmg: 8, lob: 8 },
     stool:  { dmg: 6, poiseMult: 1.5, durability: 3, grabRadius: 0.3,  hitRadius: 0.22, reach: 0.6 },
     bat:    { dmg: 10, poiseMult: 1.8, durability: 8, grabRadius: 0.22, hitRadius: 0.1, reach: 0.75, length: 0.75 },
     pipe:   { dmg: 12, poiseMult: 2.0, durability: 99, grabRadius: 0.22, hitRadius: 0.09, reach: 0.8, length: 0.8 },   // the laborer's: steel, never breaks
@@ -67,6 +67,9 @@ const CFG = {
     // the brass band's: cymbals fly flat and spin (a frisbee), drumsticks tumble. lob: how fast they fly (m/s over the ground)
     cymbal:    { dmg: 8, poiseMult: 1.6, durability: 99, grabRadius: 0.22, hitRadius: 0.14, playerDmg: 9, lob: 10, lobT: [0.32, 0.7], spinRate: 0.35, radius: 0.15 },
     drumstick: { dmg: 4, poiseMult: 1.0, durability: 3, grabRadius: 0.17, hitRadius: 0.06, playerDmg: 5, lob: 8, lobT: [0.38, 0.75], spinRate: 0.12, length: 0.4 },
+    // the soda jerk's: diner plates fly flat and spin, and shatter on anything harder than shatters m/s (shards, cheap fx). His cola
+    // bottles are the bar's bottles (bottle.playerDmg, lob): catch one and you can drink it, or swat it
+    plate:     { dmg: 6, poiseMult: 1.2, durability: 1, grabRadius: 0.2, hitRadius: 0.12, playerDmg: 7, lob: 9, lobT: [0.35, 0.75], spinRate: 0.3, radius: 0.12, shatters: 2.0 },
     swingMult: { stool: 1.2, bat: 1.3, pipe: 1.25, sign: 1.25, bin: 1.1, flagpole: 1.3, baton: 1.2 },   // big things hit as if swung a bit faster
     drinkHeal: 30, drinkTime: 0.8, mouthRadius: 0.16,
     thrownHitSpeed: 3.0,
@@ -77,7 +80,8 @@ const CFG = {
   player: { health: 100, clinchDps: 5, clinchTime: 3.0, clinchSlam: 15, armHitsToBreak: 2, standHeight: 1.68 },
   ai: { kickStrikeTime: 0.2, tokens: 2, circleRadius: 2.0, attackCooldown: [1.2, 2.2], strikeTime: 0.16, lungeTime: 0.25, batStrikeTime: 0.22,
         dodgeSpeed: 2.4, dodgeRange: 0.8, dodgeTime: 0.32, dodgeStep: 3.2, dodgeCooldown: 0.7,   // the specialist's slip: fists this fast, this close
-        shoveTime: 0.35 },                                                                        // the lifter's punch pushes you over this long
+        shoveTime: 0.35,                                                                          // the lifter's punch pushes you over this long
+        maxViewStep: 0.055 },                                                                     // m: a tackle's shove never moves your view more than this a frame (VR comfort: ~60 mm)
   enemies: {
     // scale: the art-set models are built ~2 m tall; this brings them to ~1.75–1.8 m
     boso:     { hp: 40, poise: 40, speed: 1.3,  reach: 0.78, windup: 0.75, dmg: 10, combo: 1, scale: 0.86 },
@@ -128,12 +132,29 @@ const CFG = {
     harmony:   { hp: 40, poise: 40, speed: 1.3, reach: 0.78, windup: 0.75, dmg: 9, combo: 1, scale: 0.87 },   // Columbia's Civic Harmony officer: fodder
     enforcer:  { hp: 60, poise: 58, speed: 1.65, reach: 0.74, windup: 0.46, dmg: 7, combo: 3, comboWindup: 0.26, highGuard: true, scale: 0.9 },   // a boxer in a fedora
     aokiagent: { hp: 45, poise: 40, speed: 2.4, reach: 1.0, windup: 0.5, dmg: 8, combo: 2, comboWindup: 0.4, kicker: true, retreat: 2.6, scale: 0.88 },   // Aoki's man: kicks
-    // ---- Act 2, Columbia's regulars: looks only so far. Placeholder stats near their nearest kin; no special moves yet
-    // (the soda jerk's bottles and plates, the linebacker's tackle, the agent's counter come once the looks are approved)
-    cadet:      { hp: 40, poise: 38, speed: 1.6, reach: 0.78, windup: 0.6, dmg: 8, combo: 2, comboWindup: 0.35, scale: 0.86 },   // eager fodder
-    sodajerk:   { hp: 40, poise: 35, speed: 1.35, reach: 0.78, windup: 0.7, dmg: 8, combo: 1, scale: 0.87 },                    // fodder (thrower later)
-    linebacker: { hp: 120, poise: 130, speed: 1.15, reach: 0.86, windup: 1.0, dmg: 14, combo: 1, scale: 0.96 },                 // the heavy (tackle later)
-    agent:      { hp: 70, poise: 65, speed: 1.6, reach: 0.76, windup: 0.45, dmg: 9, combo: 2, comboWindup: 0.3, scale: 0.9 },   // a quick boxer (counters later)
+    // ---- Act 2, Columbia's regulars (in no level yet: there are no Act 2 levels)
+    // the cadet: eager fodder. Quick weak jabs off a short windup, low poise. rally: a cadet near another cadet who's attacking
+    // joins in (one attacker over the token cap) and closes faster
+    cadet:      { hp: 35, poise: 22, speed: 2.1, reach: 0.76, windup: 0.38, dmg: 5, combo: 2, comboWindup: 0.22, rally: { radius: 3.0, speedMult: 1.2 }, scale: 0.86 },
+    // the soda jerk: a thrower (the bandsman's system): keeps 3-5 m off, lobs plates (they shatter) and cola bottles (catch one: it's a
+    // drink); up close he swings the bottle
+    sodajerk:   { hp: 40, poise: 35, speed: 1.4, reach: 0.78, windup: 0.6, dmg: 9, combo: 1, thrower: true, throws: ['plate', 'bottle'], keepAway: [3.0, 5.0],
+                  throwWindup: 0.75, throwCooldown: [1.6, 2.6], scale: 0.87 },
+    // the linebacker: the heavy. Heavy punches that move you (shovePlayer), high poise; from 2.2-7 m out he crouches (windup, s) and
+    // charges in a straight line at where you stood. Caught: a tackle (dmg) throws you back (knockback m over shoveTime s, never more
+    // than CFG.ai.maxViewStep a frame). Sidestep and he runs on: into a wall or the bar he staggers (wallStagger s); goons in his path
+    // are bowled over (bowlDmg). Hits don't stop a charge
+    linebacker: { hp: 130, poise: 150, speed: 1.15, reach: 0.86, windup: 0.95, dmg: 14, combo: 1, shovePlayer: 0.5, scale: 0.96,
+                  charge: { minDist: 2.2, maxDist: 7, windup: 0.8, speed: 5.2, overshoot: 2.4, maxTime: 2.2, hitRadius: 0.62, dmg: 18,
+                            knockback: 1.3, shoveTime: 0.75, cooldown: [3.5, 5.5], wallStagger: 2.8, wallDmg: 6, bowlDmg: 10, recover: 0.9 } },
+    // the marshal: elite. counter: a punch he can see coming (from his front, in range, while he isn't attacking) he may parry
+    // (chance, +sameHand per repeat of the same hand up to +sameHandMax, -hurtDrop just after he's been hit, fading over hurtDecay s),
+    // then riposte off a short windup. At most one parry per cooldown s. A feint (a punch that never lands while he's parrying)
+    // leaves him open for openTime s. Side and back hits, grabs and thrown props get through. bait: in reach, he holds his stance
+    // this long, inviting a punch, before he throws his own
+    marshal:    { hp: 90, poise: 80, speed: 1.6, reach: 0.76, windup: 0.42, dmg: 9, combo: 2, comboWindup: 0.28, scale: 0.9,
+                  counter: { chance: 0.5, sameHand: 0.2, sameHandMax: 0.4, hurtDrop: 0.3, hurtDecay: 1.5, cooldown: 1.5, watchSpeed: 2.0, range: 0.85,
+                             parryTime: 0.32, openTime: 0.7, riposteWindup: 0.2, bait: 0.7 } },
   },
   boss: { tagCooldown: 4.0, benchRadius: 2.9, enrageSpeed: 1.25, enrageWindup: 0.75 },
   // the bar's four rounds: the officials of the three countries (Columbia's Civic Harmony, Krasnovia's Ministry, Aoki's men), then their bouncers

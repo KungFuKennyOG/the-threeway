@@ -38,6 +38,9 @@ require('./load.js')(ctx);
 const run = (code) => vm.runInContext(code, ctx);
 const key = (type, code, extra = {}) => { for (const f of listeners[type] || []) f(Object.assign({ code, repeat: false, shiftKey: false, preventDefault() {} }, extra)); };
 
+// --waves=cadet+cadet,marshal: the bar's rounds replaced (rounds split by commas, goons by +): a quick fight against any goons
+const WAVES = (process.argv.find(a => a.startsWith('--waves=')) || '').slice(8);
+if (WAVES) run(`CFG.waves = ${JSON.stringify(WAVES.split(',').map(w => w.split('+')))}`);
 // start desktop mode
 els.deskBtn.fire('click');
 const TW = ctx.__tw;
@@ -154,6 +157,7 @@ const out = { mode: MODE, level: LEVEL, seed: SEED, levelNow: TW.level.name, enc
   closestToHead: +(stats.closest ?? 9).toFixed(3), closestWhat: stats.closestWhat, clinchFrames: stats.clinchFrames || 0, lostFrames: stats.lost || 0, enemiesLeft: TW.enemies.length, props: TW.props.length,
   roomTris: TW.roomTris(), enemyTris: ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'secguard', 'kicker', 'rocco', 'ivan', 'volkov'].map(t => { const e = new TW.Enemy(t); const n = e.tris; e.remove(); return t + ':' + n; }).join(' '),
   errors: stats.errors };
+out.columbia = ['charges', 'tackles', 'wallHits', 'bowled', 'counters', 'feints', 'plates'].filter(k => TW.game[k]).map(k => k + ':' + TW.game[k]).join(' ');   // Act 2's goons' moves, when they came up
 if (VERBOSE) out.states = stats.states;
 console.log(JSON.stringify(out, null, 1));
 if (process.argv.includes('--where')) console.log('PLAYER', TW.player.head.x.toFixed(2), TW.player.head.z.toFixed(2), TW.game.state, JSON.stringify(TW.level.arena), run('keys.has("KeyW")'), run('desk.yaw').toFixed(2));

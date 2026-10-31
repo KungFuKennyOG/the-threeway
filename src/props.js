@@ -3,7 +3,7 @@
 const props = [];
 const _spinAxis = new V3();
 const BAT_LIKE = new Set(['bat', 'pipe', 'flagpole', 'baton']);   // long things held by one end
-const THROWN = new Set(['potato', 'pot', 'cymbal', 'drumstick']);   // what throwers lob (they pile up on the floor; see updateProjectiles)
+const THROWN = new Set(['potato', 'pot', 'cymbal', 'drumstick', 'plate']);   // what throwers lob (they pile up on the floor; see updateProjectiles)
 class Prop {
   constructor(type, pos) {
     this.type = type; this.isProp = true; this.cfg = CFG.weapons[type]; this.alive = true;
@@ -77,10 +77,10 @@ class Prop {
       body.add('knob', pos.clone().add(new V3(0, 0.05, 0)), 0.04, 3);
       body.add('tip', pos.clone().add(new V3(0, L - 0.15, 0)), 0.14, 3);
       body.stick('knob', 'tip');
-    } else {                         // potato / pot / cymbal / drumstick: one particle that spins as it flies
+    } else {                         // potato / pot / cymbal / plate / drumstick: one particle that spins as it flies
       const acc = new GeoAcc();
       if (type === 'potato') { box('potato', [-0.05, -0.04, -0.065], [0.05, 0.04, 0.065], { acc, uvs: { '*': [0, 0, 1, 1] } }); body.add('c', pos.clone(), 0.055, 2); }
-      else if (type === 'cymbal') {   // a brass disc (two squares at 45°: an octagon) with a dome in the middle
+      else if (type === 'cymbal' || type === 'plate') {   // a brass disc (two squares at 45°: an octagon) with a dome in the middle; a diner plate is just the disc
         const R = this.cfg.radius, a = R * 1.414 * 0.92;
         for (const rot of [0, Math.PI / 4]) {
           const v0 = acc.p.length;
@@ -88,7 +88,7 @@ class Prop {
           const c = Math.cos(rot), sn = Math.sin(rot);
           for (const A of [acc.p, acc.n]) for (let i = v0; i < A.length; i += 3) { const x = A[i], z = A[i + 2]; A[i] = x * c - z * sn; A[i + 2] = x * sn + z * c; }
         }
-        tbox(acc, null, 0.006, 0.03, 0.08, 0.08, 0.04, 0.04, { '*': [6, 6, 10, 10] }, { sheetW: 16, sheetH: 16, faces: 'fblrt' });
+        if (type === 'cymbal') tbox(acc, null, 0.006, 0.03, 0.08, 0.08, 0.04, 0.04, { '*': [6, 6, 10, 10] }, { sheetW: 16, sheetH: 16, faces: 'fblrt' });
         body.add('c', pos.clone(), 0.055, 2);   // a small particle (like a potato's), so a squeezed hand catches it before a forearm bats it away
       } else if (type === 'drumstick') {
         const L = this.cfg.length;
@@ -102,7 +102,7 @@ class Prop {
       }
       geo = acc.geometry(); mat = sharedMat(type);
       this.spinQ = new Q(); this.spinAxis = new V3();
-      if (type === 'cymbal') this.spinAxis.set(rand(-0.12, 0.12), 1, rand(-0.12, 0.12)).normalize();   // flat, like a frisbee
+      if (type === 'cymbal' || type === 'plate') this.spinAxis.set(rand(-0.12, 0.12), 1, rand(-0.12, 0.12)).normalize();   // flat, like a frisbee
       else if (type === 'drumstick') this.spinAxis.set(1, rand(-0.2, 0.2), rand(-0.3, 0.3)).normalize();   // end over end
       else this.spinAxis.copy(_spinAxis.set(rand(-1, 1), 1, rand(-1, 1)).normalize());
     }
@@ -176,7 +176,11 @@ class Prop {
     if (!this.alive) return;
     this.alive = false;
     const p = at ? at.clone() : this.body.ps[0].x.clone();
-    if (this.type === 'bottle' || this.type === 'stool') {
+    if (this.type === 'plate') {   // a diner plate: smashed to a few white shards
+      AU.glass();
+      for (let i = 0; i < 5; i++) fx(['fx_glass'], p.clone().add(new V3(rand(-0.12, 0.12), rand(-0.05, 0.12), rand(-0.12, 0.12))), { life: 0.45, rise: rand(-0.7, 0.3), scale: 0.011 });
+      game.plates = (game.plates || 0) + 1;
+    } else if (this.type === 'bottle' || this.type === 'stool') {
       AU.glass();
       for (let i = 0; i < (this.type === 'bottle' ? 7 : 4); i++)
         fx(['fx_glass'], p.clone().add(new V3(rand(-0.15, 0.15), rand(-0.1, 0.15), rand(-0.15, 0.15))), { life: 0.5, rise: rand(-0.6, 0.4), scale: 0.012 });
@@ -267,6 +271,7 @@ function updateProjectiles() {
       p.hostile = false; p.thrown = false;
       q.v.multiplyScalar(-0.3); q.v.y = Math.abs(q.v.y) + 1.0;
       AU.clank(); buzz(blocked, 0.6, 50); label('block', q.x.clone().add(new V3(0, 0.15, 0)));
+      if (p.cfg.shatters) p.break(q.x);   // a plate breaks on your forearm
       continue;
     }
     // swept against the head, then the body below it
@@ -279,14 +284,14 @@ function updateProjectiles() {
       p.hostile = false; p.thrown = false;
       hurtPlayer(Math.round(p.cfg.playerDmg * (headHit ? 1 : 0.7)));
       fx(['fx_burst0', 'fx_burst1', 'fx_burst2'], _cs.clone(), { frameTime: 0.05 });
-      if (p.type === 'potato') { p.break(_cs); continue; }
+      if (p.type === 'potato' || p.type === 'bottle' || p.cfg.shatters) { p.break(_cs); continue; }   // potatoes splat, bottles and plates smash
       AU.clank();
       q.x.copy(_cs); q.v.multiplyScalar(-0.25); q.v.y = 0.5;
       continue;
     }
     if (q.x.y < floorAt(q.x.x, q.x.z, q.x.y - r) + r + 0.03 || p.body.sleep || NOW - (p.releasedAt || 0) > 3) {
       p.hostile = false;
-      if (p.type === 'potato' && q.v.length() > 5) p.break(q.x);
+      if ((p.type === 'potato' && q.v.length() > 5) || p.cfg.shatters) p.break(q.x);
     }
   }
   // don't let the floor fill up with kitchenware

@@ -13,6 +13,8 @@ function playerHit(e, zone, speed, travel, hand, point, weapon, dirVec) {
   if (dir.lengthSq() < 1e-6) dir.set(e.pos.x - player.head.x, 0, e.pos.z - player.head.z);
   dir.normalize();
   const isArm = zone === 'armL' || zone === 'armR';
+  // the marshal's forearm is up: a punch (or a swing) into his front is parried and answered. Thrown things and side or back hits get through
+  if (e.cfg.counter && hand && e.state === 'parry' && dir.dot(e.facing()) < -0.3 && tierFor(speed, travel).name !== 'shove') { e.parried(hand, point); return; }
   // parry: hit the attacking arm mid-swing
   if (isArm && !e.cfg.kicker && speed >= CFG.defense.parryMinSpeed && zone === 'arm' + e.side.toUpperCase() &&
       ((e.state === 'windup' && e.timer >= e.windupTime - CFG.defense.parryWindow) || e.state === 'strike')) {
@@ -48,6 +50,7 @@ function playerHit(e, zone, speed, travel, hand, point, weapon, dirVec) {
   if (weapon) { dmg += weapon.cfg.dmg; pd *= weapon.cfg.poiseMult; }
   if (e.state === 'stagger') dmg *= P.staggerBonus;
   e.hp -= dmg; e.poise -= pd;
+  if (e.cfg.counter) e.hurtT = e.cfg.counter.hurtDecay;   // the marshal just got tagged: he's slower to read the next one
   e.shove(point, dir, shoveMag);   // a real push at the spot you hit; it lands after the hitstop
   e.hitstop(); e.setFace('hurt', 0.5);
   if (hand) buzz(hand, { light: 0.35, solid: 0.65, heavy: 1.0 }[tier.name], { light: 30, solid: 50, heavy: 80 }[tier.name]);
@@ -62,7 +65,7 @@ function playerHit(e, zone, speed, travel, hand, point, weapon, dirVec) {
   if (e.hp <= 0) { e.knockdown(dir, speed >= P.launchSpeed ? 'launch' : 'knockdown', true, point); return; }
   if (tier.name === 'heavy' && (e.state === 'stagger' || e.poise <= 0)) { e.knockdown(dir, speed >= P.launchSpeed ? 'launch' : 'knockdown', false, point); return; }
   if (e.poise <= 0) { if (e.state !== 'held') e.stagger(); return; }
-  if (e.state === 'held' || e.state === 'clinch') return;
+  if (e.state === 'held' || e.state === 'clinch' || e.state === 'charge') return;   // a charging linebacker doesn't stop for punches
   if (tier.name !== 'light' || e.state !== 'windup') {   // light hits don't interrupt a windup
     if (e.state !== 'stagger') { e.releaseToken(); e.setState('flinch'); }
     e.pos.addScaledVector(dir, 0.05 * tier.knock * CFG.reactions.knockbackMult);

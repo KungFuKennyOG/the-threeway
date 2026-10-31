@@ -185,11 +185,12 @@ function contactEvent(A, B, speed, at) {
     }
     // bottles shatter on hard knocks
     if (X.kind === 'prop' && ex.type === 'bottle' && ex.alive && !ex.heldBy && speed > CFG.physics.bottleBreakSpeed) ex.break(at);
+    if (X.kind === 'prop' && ex.cfg.shatters && ex.alive && !ex.heldBy && !ex.heldByEnemy && speed > ex.cfg.shatters) ex.break(at);   // plates: anything harder than a nudge
   }
 }
 function afterPhysicsStep() {
   for (const e of enemies) e.afterStep();
-  for (const p of props) if (p.alive && !p.heldBy && p.body.impact > CFG.physics.bottleBreakSpeed && p.type === 'bottle') p.break();
+  for (const p of props) if (p.alive && !p.heldBy && !p.heldByEnemy && p.body.impact > (p.cfg.shatters || (p.type === 'bottle' ? CFG.physics.bottleBreakSpeed : 1e9))) p.break();
 }
 
 // frames for drawing rigid parts from particles

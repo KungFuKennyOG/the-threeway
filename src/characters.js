@@ -13,9 +13,10 @@ const HEADT = [33, 65, 37, 68];   // the top of the head: a patch of HEADS' top 
 const SW = (i) => [48 + (i % 4) * 4, 112 + (i >> 2) * 4, 52 + (i % 4) * 4, 116 + (i >> 2) * 4];
 const SLEEVE = [32, 48, 48, 59], HAND = [32, 60, 48, 64];   // TC split: sleeve (rows 0-10), hand (rows 12-15)
 const FACE_OFFSET = { normal: [0, 0], hurt: [32 / SHEET_W, 0], ko: [0, 32 / SHEET_H] };
-// Act 2's Columbian regulars (tools/goons_columbia.py) register their sheets here, with their bodies
+// Act 2's Columbian regulars (tools/goons_columbia.py) register their sheets here, with their bodies (and the soda jerk's plate)
 Object.assign(TEX, { sheet_cadet: 'assets/tex/sheet_cadet.png', sheet_sodajerk: 'assets/tex/sheet_sodajerk.png',
-  sheet_linebacker: 'assets/tex/sheet_linebacker.png', sheet_agent: 'assets/tex/sheet_agent.png' });
+  sheet_linebacker: 'assets/tex/sheet_linebacker.png', sheet_marshal: 'assets/tex/sheet_marshal.png', plate: 'assets/tex/plate.png',
+  sign_charge: 'assets/tex/sign_charge.png', sign_tackled: 'assets/tex/sign_tackled.png', sign_counter: 'assets/tex/sign_counter.png' });
 // uvs for a box textured from the torso panel (or a slice of it): the front keeps it, the back and the sides
 // read the same slice of the back and side panels, so ties, buttons, zips and logos stay on the front
 function chest(r) {
@@ -360,13 +361,14 @@ const BODIES = {
     bx(r, 'head', 0.035, 0.135, 0.025, 0.025, 0.025, 0.025, { '*': SW(1) }, { z: 0.19, faces: 'fblr' });   // and its upright
     return r;
   },
-  agent() {     // SIGNATURE: a big white Stetson, its brim curled up. A square cleft jaw, silver sideburns, a bolo tie, arms folded: go on, swing
+  marshal() {   // SIGNATURE: a big white Stetson, its brim curled up, and a gold marshal's star. A square cleft jaw, silver sideburns, a bolo tie, arms folded: go on, swing
     const r = goon({ shoulder: 0.74, chestD: 0.34, waist: 0.3, head: [0.24, 0.29, 0.26], thighW: 0.17, neckW: 0.14, armK: 1.05, farmK: 1.05, legK: 0.95 });
-    bx(r, 'head', 0.25, 0.55, 0.3, 0.32, 0.26, 0.26, { '*': X1, t: SW(0) }, { z: -0.02, faces: 'fblrt' });   // the ten-gallon crown
-    bx(r, 'head', 0.24, 0.27, 0.42, 0.62, 0.42, 0.62, { '*': X2 }, { z: -0.01 });   // its brim
-    for (const s of [-1, 1]) bx(r, 'head', 0.25, 0.34, 0.11, 0.6, 0.06, 0.5, { '*': X2 }, { x: s * 0.2, x1: s * 0.035, z: -0.01, faces: 'fblrt' });   // curled up at the sides
+    bx(r, 'head', 0.27, 0.57, 0.3, 0.32, 0.26, 0.26, { '*': X1, t: SW(0) }, { z: -0.03, faces: 'fblrt' });   // the ten-gallon crown, pushed back
+    bx(r, 'head', 0.26, 0.29, 0.42, 0.6, 0.42, 0.6, { '*': X2 }, { z: -0.03 });   // its brim, high off his brow
+    for (const s of [-1, 1]) bx(r, 'head', 0.27, 0.36, 0.11, 0.58, 0.06, 0.48, { '*': X2 }, { x: s * 0.2, x1: s * 0.035, z: -0.03, faces: 'fblrt' });   // curled up at the sides
     bx(r, 'head', -0.035, 0.065, 0.26, 0.22, 0.25, 0.22, { '*': X3 }, { z: 0.045, faces: 'fblrd' });   // the jaw, square and jutting
     bx(r, 'hips', 0.08, -0.2, 0.42, 0.3, 0.46, 0.32, { '*': X12 }, { faces: 'fblr' });   // the jacket's skirt
+    bx(r, 'torso', 0.3, 0.48, 0.18, 0.025, 0.18, 0.025, { f: X4, '*': SW(1) }, { x: 0.17, z: 0.175, faces: 'fblrt' });   // the marshal's star, over his heart
     return r;
   },
   ivan() {     // Krasnovian bouncer: wrestler frame in a tracksuit
@@ -472,14 +474,30 @@ Object.assign(POSES, {   // the newer goons' idle poses: every one has attitude 
     thighl: [-4, 0, -2], thighr: [-8, 0, 12], shinr: [10, 0, 0], footr: [0, 20, 0] },
   linebacker: { torso: [14, 0, 0], head: [-18, 0, 0], uarml: [-50, 0, -30], farml: [-74, 0, 0], uarmr: [-50, 0, 30], farmr: [-74, 0, 0],   // set to tackle
     thighl: [-34, 0, -18], shinl: [44, 0, 4], thighr: [-34, 0, 18], shinr: [44, 0, -4], footl: [-10, -12, 0], footr: [-10, 12, 0] },
-  agent: { hips: [0, 14, 0], torso: [-6, -8, 0], head: [-10, 12, 6], uarml: [-10, 86, -4], farml: [-94, 0, 0], uarmr: [-24, -86, 4], farmr: [-94, 0, 0],   // arms folded
+  marshal: { hips: [0, 14, 0], torso: [-6, -8, 0], head: [-10, 12, 6], uarml: [-10, 86, -4], farml: [-94, 0, 0], uarmr: [-24, -86, 4], farmr: [-94, 0, 0],   // arms folded
     thighl: [-2, 0, -6], thighr: [6, 0, 8], shinr: [6, 0, 0] },
+  // their fighting stances (attackPose starts from <type>Fight when there is one: no saluting or folded arms mid-punch)
+  cadetFight: { hips: [0, 12, 0], torso: [8, -8, 0], head: [-6, 8, 0], uarml: [-56, 0, -24], farml: [-100, 0, 0], uarmr: [-44, 0, 24], farmr: [-106, 0, 0],
+    thighl: [-18, 0, -6], shinl: [22, 0, 0], thighr: [14, 0, 6], shinr: [10, 0, 0] },
+  marshalFight: { hips: [0, 22, 0], torso: [4, -16, 0], head: [-4, 12, 0], uarml: [-64, 0, -22], farml: [-104, 0, 0], uarmr: [-40, 0, 26], farmr: [-112, 0, 0],
+    thighl: [-16, 0, -6], shinl: [18, 0, 0], thighr: [12, 0, 8], shinr: [10, 0, 0] },
+  // the soda jerk throws one-handed: the plates stay up on his other palm
+  sodajerkLob: { torso: [-14, 20, 0], head: [-10, -15, 0], uarmr: [-160, 0, 20], farmr: [-50, 0, 0], uarml: [-8, 0, -158], farml: [0, 0, -14], thighr: [8, 0, 6], thighl: [-10, 0, -6] },
+  sodajerkLobRelease: { torso: [16, -10, 0], head: [6, 0, 0], uarmr: [-110, 0, 6], farmr: [-6, 0, 0], uarml: [-8, 0, -150], farml: [0, 0, -14], thighl: [-18, 0, -6], shinl: [18, 0, 0] },
+  // the marshal's parry: the lead forearm snapped up across his face, the rear hand cocked for the riposte
+  marshalParry: { hips: [0, 26, 0], torso: [-10, -24, 0], head: [-8, 16, 0], uarml: [-96, 30, -20], farml: [-86, 0, 30], uarmr: [-24, 0, 34], farmr: [-118, 0, 0],
+    thighl: [-20, 0, -8], shinl: [22, 0, 0], thighr: [16, 0, 8], shinr: [8, 0, 0] },
+  // the linebacker's charge: a deep three-point-ish crouch (the telegraph), then head down, arms out, running
+  lbCrouch: { torso: [38, 0, 0], head: [-46, 0, 0], uarml: [-20, 0, -42], farml: [-62, 0, 0], uarmr: [-20, 0, 42], farmr: [-62, 0, 0],
+    thighl: [-64, 0, -20], shinl: [74, 0, 6], thighr: [-64, 0, 20], shinr: [74, 0, -6], footl: [-10, -12, 0], footr: [-10, 12, 0] },
+  lbCharge: { torso: [44, 0, 0], head: [-48, 0, 0], uarml: [-74, 0, -34], farml: [-28, 0, 0], uarmr: [-74, 0, 34], farmr: [-28, 0, 0],
+    thighl: [-30, 0, -8], shinl: [34, 0, 0], thighr: [-12, 0, 8], shinr: [24, 0, 0] },
 });
 function attackPose(type, side, phase) {   // phase: 'windup' | 'strike'
   if (type === 'batboy-bat') return phase === 'windup' ? POSES.batWind : POSES.batStrike;
   if (type === 'pole-bat') return phase === 'windup' ? POSES.poleWind : POSES.poleStrike;
   if (type === 'kickHigh' || type === 'kickLow') return POSES[type + (phase === 'windup' ? 'Wind' : 'Strike')];
-  const base = Object.assign({}, POSES[type]);
+  const base = Object.assign({}, POSES[type + 'Fight'] || POSES[type]);
   const s = side === 'r' ? 1 : -1, n = side;
   if (phase === 'windup') { base.torso = [4, 25 * s, 0]; base['uarm' + n] = [25, 0, 35 * s]; base['farm' + n] = [-110, 0, 0]; }
   else { base.torso = [6, -22 * s, 0]; base['uarm' + n] = [-88, 0, 6 * s]; base['farm' + n] = [-8, 0, 0]; }

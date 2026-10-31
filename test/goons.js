@@ -73,7 +73,7 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
     // real height in their idle pose, and aren't in any fight yet
     {
       run('clearEnemies()');
-      const COL = ['cadet', 'sodajerk', 'linebacker', 'agent'], bad = [], info = [];
+      const COL = ['cadet', 'sodajerk', 'linebacker', 'marshal'], bad = [], info = [];
       for (const t of COL) {
         if (!TW.CFG.enemies[t] || !run(`typeof BODIES.${t} === 'function' && !!POSES.${t} && !!TEX.sheet_${t}`)) { bad.push(t + ':missing'); continue; }
         const e = new TW.Enemy(t); e.cfg = Object.assign({}, e.cfg, { speed: 0 }); e.cooldown = 1e9; e.placeAt(0, -2.5, 0); e.state = 'circle'; TW.enemies.push(e); step(90);
@@ -82,9 +82,9 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
         if (meshes.length !== 1 || e.tris < 250 || e.tris > 340 || top < 1.6 || top > 1.92 || run(`enemyType('${t}')`) !== t) bad.push(t);
         e.remove();
       }
-      check('Act 2\'s Columbian regulars (cadet, soda jerk, linebacker, agent) load: one mesh on their own sheet, 250-340 tris, 1.6-1.92 m tall', bad.length === 0, bad.join(',') + ' | ' + info.join(' '));
+      check('Act 2\'s Columbian regulars (cadet, soda jerk, linebacker, marshal) load: one mesh on their own sheet, 250-340 tris, 1.6-1.92 m tall', bad.length === 0, bad.join(',') + ' | ' + info.join(' '));
       const cfgNoEnemies = JSON.stringify(Object.assign({}, TW.CFG, { enemies: null }));
-      check('and none of them is in a fight yet (looks first)', COL.every(t => !cfgNoEnemies.includes(`"${t}"`)), COL.filter(t => cfgNoEnemies.includes(`"${t}"`)).join(','));
+      check('and none of them is in any level\'s fight yet (there are no Act 2 levels)', COL.every(t => !cfgNoEnemies.includes(`"${t}"`)), COL.filter(t => cfgNoEnemies.includes(`"${t}"`)).join(','));
     }
 
     // ---- the honour guard's flagpole: upright at rest, levelled at you to lunge; swat it mid-lunge and it's yours

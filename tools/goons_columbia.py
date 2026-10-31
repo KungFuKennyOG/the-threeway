@@ -1,10 +1,10 @@
 """Paints Act 2's Columbian regulars (64x128 sheets, the layout in src/characters.js and tools/goonkit.py): the academy cadet,
-the Liberty Diner's soda jerk, the linebacker and the government agent. Invented people, each a character with one loud
+the Liberty Diner's soda jerk, the linebacker and the Columbian marshal. Invented people, each a character with one loud
 signature (docs/goon-style.md); the panel layout is goon()'s (see tools/goons_palace.py): upper arm X6, forearm X7, hand X8,
 thigh X9, shin X10, foot X11, hips TB, neck SW(15), head sides/back/top HEADS; signature boxes on X1-X5, X12, TC, TD, swatches.
 Columbia: red, white, navy #1a2a5a, gold trim; art-deco city, Americana people.
-Run from the repo root: python3 tools/goons_columbia.py [cadet sodajerk linebacker agent]"""
-from goonkit import Sheet, Pane, swatch, H, faces3, eye, mouth_hurt, mouth_ko, remap
+Run from the repo root: python3 tools/goons_columbia.py [cadet sodajerk linebacker marshal props]"""
+from goonkit import Sheet, Pane, swatch, sign, H, faces3, eye, mouth_hurt, mouth_ko, remap
 from goons_palace import limb, skin_face, bare_hand, shoe
 
 W_, Wd_, WH, BLK = '#f4f1ea', '#c8c2b8', '#ffffff', '#141014'
@@ -283,21 +283,36 @@ def linebacker():
     remap(S, {'#3a2a20': '#3e2214', '#2a1810': '#3e2214', '#3a3a48': Cd})
     return S.save('assets/tex/sheet_linebacker.png', 32)
 
-# =============================================================== the government agent
-# SIGNATURE: a big white Stetson with its brim curled up at the sides (X1 the crown, SW(0) its top, X2 the brim). A square
-# cleft jaw jutting out (X3), steely crow's-feet squint, silver sideburns, a smirk; a navy suit with a gold flag pin and a
-# bolo tie with a gold sunburst slide, a big belt buckle, tan cowboy boots. Arms folded: go on, take a swing.
-def agent():
+# =============================================================== the Columbian marshal
+# SIGNATURE: a big white Stetson with its brim curled up at the sides (X1 the crown, SW(0) its top, X2 the brim), and a gold
+# marshal's star over his heart (X4, its edges SW(1)): a lawman's star, outlined dark so it reads in the bar's light. A square
+# cleft jaw jutting out (X3), an ice-blue squint, silver sideburns, a smirk; an ivory western suit with navy yokes, a red shirt,
+# a bolo tie with a gold sunburst slide, a big belt buckle, tan cowboy boots. Arms folded: go on, take a swing.
+def star(P, cx, cy, ro, ri, fill, edge, hi, bg=None):   # a five-point star: fill, a dark outline, a lit upper-left edge
+    import math
+    pts = [(cx + (ro if k % 2 == 0 else ri) * math.sin(k * math.pi / 5), cy - (ro if k % 2 == 0 else ri) * math.cos(k * math.pi / 5)) for k in range(10)]
+    def inside(x, y):
+        c = False
+        for i in range(10):
+            (x1, y1), (x2, y2) = pts[i], pts[(i + 1) % 10]
+            if (y1 > y) != (y2 > y) and x < x1 + (y - y1) * (x2 - x1) / (y2 - y1): c = not c
+        return c
+    cells = {(x, y) for y in range(16) for x in range(16) if inside(x + 0.5, y + 0.5)}
+    for (x, y) in cells:
+        edge_px = any((x + dx, y + dy) not in cells for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)))
+        P.px(x, y, edge if edge_px else (hi if (x - cx) + (y - cy) < -3 else fill))
+def marshal():
     S = Sheet()
-    sk, sh, dk, hi = '#e2b292', '#b88468', '#6a4232', '#f6d4b6'
+    sk, sh, dk, hi = '#eab896', '#b88468', '#5a3426', '#fad8ba'
     sv, svd = '#c4c4cc', '#7a7a88'
     Cr, Crd, Crh = '#fbf8f0', '#cfc6b0', WH
     T, Td, Th = '#b8763e', '#7a4a24', '#e0a060'
     def fc(P, v):
         skin_face(P, sk, sh)
-        P.rect(0, 0, 32, 7, Cr); P.hl(0, 5, 32, N); P.hl(0, 6, 32, Crd)   # the hatband over his brow
-        P.rect(0, 7, 4, 15, sv); P.rect(28, 7, 4, 15, sv); P.checker(0, 7, 4, 15, svd); P.checker(28, 7, 4, 15, svd, 1)   # silver sideburns
-        P.rect(4, 7, 24, 2, sh)   # the hat's shadow over his brow
+        P.rect(0, 0, 32, 4, Cr); P.hl(0, 3, 32, N)   # the hatband, pushed back off his brow
+        P.rect(0, 4, 32, 1, sh)   # its shadow line
+        P.rect(0, 5, 4, 17, sv); P.rect(28, 5, 4, 17, sv); P.checker(0, 5, 4, 17, svd); P.checker(28, 5, 4, 17, svd, 1)   # silver sideburns
+        P.hl(6, 6, 20, hi); P.hl(9, 7, 4, sh); P.hl(19, 7, 4, sh)   # a lit, lined forehead
         l = -1 if v == 1 else 0
         P.map(['########', '########'], {'#': '#3a2a24'}, 5, 10 + l); P.map(['    ####', '########', '####    '], {'#': '#3a2a24'}, 19, 8 + l)   # heavy brows: one level, one cocked
         if v == 0:   # a narrowed, steely squint: ice-blue eyes, crow's feet
@@ -347,10 +362,25 @@ def agent():
     fo = S.at('X11'); shoe(fo, T, Th, Td, Td); fo.map(['  #  #  ', ' # ## # ', '#      #'], {'#': Th}, 4, 3)   # stitched toes
     swatch(S, 15, sk)
     remap(S, {'#9a6c54': sh, '#3a5a7a': Nh, '#4a3a34': dk, '#8a6a58': sh})
-    return S.save('assets/tex/sheet_agent.png', 32)
+    st = S.at('X4'); st.fill(Gy); star(st, 7.5, 8.2, 7.6, 3.1, G, '#5a3a12', Gh)   # the marshal's star, on a scrap of ivory lapel
+    st.disc(7.5, 8.6, 1.3, Gd); st.px(7, 8, Gh)   # its engraved boss
+    for (x, y) in ((7, 0), (0, 5), (15, 5), (2, 15), (13, 15)): st.px(x, y, Gh)   # ball tips
+    swatch(S, 1, Gd); S.rect(52, 112, 4, 1, G)
+    return S.save('assets/tex/sheet_marshal.png', 32)
+
+# =============================================================== the soda jerk's plate (16x16), the new labels
+def props():
+    S = Sheet(16, 16); P = Pane(S, 0, 0)   # a diner plate: white, a red rim line, a shine; rows 14-15 its edge (the disc's sides)
+    P.fill('#c8c2b8'); P.disc(7.5, 7.5, 7.6, W_); P.disc(7.5, 7.5, 6.4, R); P.disc(7.5, 7.5, 5.6, W_); P.disc(7.5, 7.5, 4.2, WH)
+    P.px(4, 4, WH); P.px(5, 3, WH); P.hl(0, 14, 16, W_); P.hl(0, 15, 16, R)
+    S.save('assets/tex/plate.png')
+    sign('CHARGE!', '#ff9a3c', 'assets/tex/sign_charge.png')
+    sign('TACKLED!', '#ff4f4f', 'assets/tex/sign_tackled.png')
+    sign('COUNTER!', '#f2c14e', 'assets/tex/sign_counter.png')
 
 if __name__ == '__main__':
     import sys
     only = sys.argv[1:]
-    for f in (cadet, sodajerk, linebacker, agent):
+    for f in (cadet, sodajerk, linebacker, marshal):
         if not only or f.__name__ in only: print(f.__name__, f(), 'colours')
+    if not only or 'props' in only: props(); print('props ok')

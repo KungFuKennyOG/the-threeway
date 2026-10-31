@@ -88,6 +88,9 @@ class Enemy {
     if (this.cfg.throws) this.lobType = this.cfg.throws[0];
     this.shieldHp = this.cfg.shield || 0; this.counterCd = 0; this.kickLow = false;
     this.dodgeCd = 0; this.dodgeDir = new V3(); this.shoveV = new V3(); this.shoveT = 1e9; this.nextWindup = 0;
+    this.shoveOwed = new V3(); this.shoveDur = 0; this.shoveCap = 0;   // a capped shove (the tackle) pays out at most shoveCap m a frame
+    this.chargeCd = this.cfg.charge ? rand(0.6, 1.4) : 0; this.chargeDir = new V3(); this.chargeFrom = new V3(); this.chargeLen = 0; this.chargeHit = new Set();   // the linebacker
+    this.hurtT = 0; this.watchCd = 0; this.handStreak = 0; this.lastHand = null; this.lastHandT = -9; this.counterOdds = 0;   // the marshal
     if (this.cfg.weapon) this.equip(new Prop(this.cfg.weapon, this.pos));
     this.drawParts();
   }
@@ -142,6 +145,10 @@ class Enemy {
   updateCarry() {
     const p = this.carry; if (!p) return;
     p.body.ps[0].pin.copy(this.body.by.wrR.x).addScaledVector(_pa.set(Math.sin(this.yaw), 0, Math.cos(this.yaw)), 0.06);
+    if (p.body.by.neck) {   // a bottle, held by the neck: the body sticks up out of his fist
+      p.body.by.neck.pin.copy(this.body.by.wrR.x);
+      p.body.by.base.pin.copy(this.body.by.wrR.x).addScaledVector(_pb.subVectors(this.body.by.wrR.x, this.body.by.elR.x).normalize(), 0.26);
+    }
     p.body.wake();
   }
   // lob what he's holding on a ballistic arc that lands on your head
@@ -203,9 +210,10 @@ class Enemy {
   // ---------- state helpers
   setState(s) {
     if (s === 'approach' && this.cfg.thrower) s = 'keepaway';   // throwers never walk up to you on purpose
-    if (this.state === 'windup' || this.state === 'strike' || this.state === 'lobWind') { killFx(this.windFx); this.windFx = null; }
+    if (['windup', 'strike', 'lobWind', 'chargeWind', 'charge'].includes(this.state)) { killFx(this.windFx); this.windFx = null; }
     if (this.state === 'lobWind' && s !== 'lobRelease') this.dropCarry();
     if (this.state === 'stagger' && s !== 'stagger') { killFx(this.starsFx); this.starsFx = null; }
+    if ((this.state === 'chargeWind' || this.state === 'charge') && s !== 'charge') this.rootY = 0;
     this.state = s; this.timer = 0;
   }
   releaseToken() { this.hasToken = false; }
@@ -217,7 +225,7 @@ class Enemy {
     uv.needsUpdate = true;
   }
   hittable() { return this.alive && !['ragdoll', 'ko', 'getup', 'dead'].includes(this.state) && !(this.state === 'dodge' && this.timer < (this.cfg.dodgeIframes || 0.2)); }
-  grabbable() { return this.alive && ['enter', 'approach', 'circle', 'windup', 'recover', 'whiff', 'flinch', 'stagger', 'keepaway', 'lobWind', 'lobRelease', 'retreat'].includes(this.state); }
+  grabbable() { return this.alive && ['enter', 'approach', 'circle', 'windup', 'recover', 'whiff', 'flinch', 'stagger', 'keepaway', 'lobWind', 'lobRelease', 'retreat', 'chargeWind', 'parry', 'open'].includes(this.state); }
   guarding() { return this.cfg.highGuard && ['enter', 'approach', 'circle', 'recover'].includes(this.state); }
   shieldUp() { return this.shieldHp > 0 && ['enter', 'approach', 'circle', 'windup', 'recover', 'whiff', 'flinch'].includes(this.state); }
   facing() { return new V3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
@@ -341,9 +349,11 @@ class Enemy {
     if (this.cooldown > 0) this.cooldown -= dt;
     if (this.impactCd > 0) this.impactCd -= dt;
     if (this.counterCd > 0) this.counterCd -= dt;
-    if (this.shoveT < CFG.ai.shoveTime) this.pushPlayer(dt);   // the lifter's punch is still moving you
+    if (this.shoveT < (this.shoveDur || CFG.ai.shoveTime) || this.shoveOwed.lengthSq() > 1e-8) this.pushPlayer(dt);   // the lifter's punch (or a tackle) is still moving you
     if (this.dodgeCd > 0) this.dodgeCd -= dt;
     if (this.cfg.dodgeChance && this.dodgeCd <= 0 && (this.state === 'approach' || this.state === 'circle' || this.state === 'recover')) this.watchFists();
+    if (this.chargeCd > 0) this.chargeCd -= dt;
+    if (this.cfg.counter) this.watchCounter(dt);
 
     const toP = _v1.set(player.head.x - this.pos.x, 0, player.head.z - this.pos.z);
     const dist = toP.length();
@@ -360,12 +370,46 @@ class Enemy {
         break;
       }
       case 'approach': {
-        if (!this.hasToken && !this.benched && this.cooldown <= 0 && tokensInUse() < CFG.ai.tokens) this.hasToken = true;
+        if (!this.hasToken && !this.benched && this.cooldown <= 0 && (tokensInUse() < CFG.ai.tokens || this.rallies())) this.hasToken = true;
         if (!this.hasToken) { this.setState('circle'); break; }
         if (this.followDetour(dt)) { moving = true; break; }
         this.faceToward(toP, dt);
-        if (dist > c.reach + 0.25) { moving = this.moveTo(_v2.copy(player.head).setY(0), c.speed, dt, c.reach); }
-        else this.startWindup();
+        const ch = c.charge;
+        if (ch && this.chargeCd <= 0 && dist > ch.minDist && dist < ch.maxDist && Math.abs(this.pos.y - player.floorY) < 0.3) { this.startChargeWind(); break; }
+        if (dist > c.reach + 0.25) { moving = this.moveTo(_v2.copy(player.head).setY(0), c.speed * (c.rally && this.rallies() ? c.rally.speedMult : 1), dt, c.reach); }
+        else if (c.counter && (this.baitT = (this.baitT || 0) + dt) < c.counter.bait) pose = POSES.marshalFight;   // the marshal squares up and waits for you to swing
+        else { this.baitT = 0; this.startWindup(); }
+        break;
+      }
+      case 'chargeWind': {   // the linebacker sinks into a deep crouch, scraping a foot: a charge is coming
+        this.faceToward(toP, dt);
+        pose = POSES.lbCrouch; rate = 7; this.rootY = -0.17 * this.s * Math.min(1, this.timer / 0.3);   // sinking into it
+        if (this.timer >= c.charge.windup) this.startCharge(toP);
+        break;
+      }
+      case 'charge': {       // straight at where you stood, head down; he doesn't turn and he doesn't stop for punches
+        const ch = c.charge;
+        pose = POSES.lbCharge; rate = 12; moving = true; this.walkPhase += dt * 9; this.rootY = -0.07 * this.s;
+        this.yaw = Math.atan2(this.chargeDir.x, this.chargeDir.z);
+        this.pos.addScaledVector(this.chargeDir, ch.speed * dt);
+        this.bowlOver();
+        if (Math.hypot(player.head.x - this.pos.x, player.head.z - this.pos.z) < ch.hitRadius * this.s / 0.96 && Math.abs(this.pos.y - player.floorY) < 0.5) { this.resolveTackle(); break; }
+        if (pushOutXZ(this.pos, 0.32) && this.timer > 0.12) { this.hitWall(); break; }   // ran into a wall, the bar, a table
+        if (this.timer > ch.maxTime || _v2.subVectors(this.pos, this.chargeFrom).setY(0).length() > this.chargeLen) {   // ran past: skid to a stop
+          this.releaseToken(); this.chargeCd = rand(...ch.cooldown); this.setState('recover'); this.recoverTime = ch.recover;
+        }
+        break;
+      }
+      case 'parry': {        // the marshal's forearm is up: a punch that lands now from his front gets parried and answered
+        this.faceToward(toP, dt);
+        pose = POSES.marshalParry; rate = 26;
+        if (this.timer >= c.counter.parryTime) { this.setState('open'); game.feints = (game.feints || 0) + 1; }   // nothing came: a feint, and he bit
+        break;
+      }
+      case 'open': {         // he bit on a feint: wide open for a moment
+        this.faceToward(toP, dt);
+        pose = POSES.stagger; rate = 10;
+        if (this.timer >= c.counter.openTime) { this.releaseToken(); this.setState('approach'); }
         break;
       }
       case 'circle': {
@@ -375,7 +419,7 @@ class Enemy {
         const R = this.benched ? CFG.boss.benchRadius : CFG.ai.circleRadius + (c.grabber ? 0.3 : 0);
         _v2.set(player.head.x + Math.sin(ang) * R, 0, player.head.z + Math.cos(ang) * R);
         moving = this.moveTo(_v2, c.speed * 0.6, dt);
-        if (this.timer > 0.5 && !this.benched && this.cooldown <= 0 && tokensInUse() < CFG.ai.tokens) { this.hasToken = true; this.setState('approach'); }
+        if (this.timer > 0.5 && !this.benched && this.cooldown <= 0 && (tokensInUse() < CFG.ai.tokens || this.rallies())) { this.hasToken = true; this.setState('approach'); }
         if (!moving) pose = this.tauntPose();
         break;
       }
@@ -495,12 +539,12 @@ class Enemy {
         break;
       }
       case 'lobWind': {
-        this.faceToward(toP, dt); pose = POSES.lob; rate = 7;
+        this.faceToward(toP, dt); pose = POSES[this.type + 'Lob'] || POSES.lob; rate = 7;
         if (this.timer >= c.throwWindup) { killFx(this.windFx); this.windFx = null; this.release(); this.setState('lobRelease'); }
         break;
       }
       case 'lobRelease': {
-        pose = POSES.lobRelease; rate = 16;
+        pose = POSES[this.type + 'LobRelease'] || POSES.lobRelease; rate = 16;
         if (this.timer >= 0.4) { this.throwCd = rand(...c.throwCooldown); this.setState('keepaway'); }
         break;
       }
@@ -637,17 +681,103 @@ class Enemy {
     }
   }
   // ---- the lifter's punch: you're pushed back along the punch, eased out (walls hold you), over CFG.ai.shoveTime
-  startShove(m) {
-    this.shoveV.set(player.head.x - this.pos.x, 0, player.head.z - this.pos.z); if (this.shoveV.lengthSq() < 1e-6) this.shoveV.copy(this.facing());
-    this.shoveV.normalize().multiplyScalar(m); this.shoveT = 0;
+  // (the tackle passes a duration, a direction and a cap: eased over T, never more than cap m a frame, the rest paid out after)
+  startShove(m, T, dir, cap) {
+    if (dir) this.shoveV.copy(dir).setY(0);
+    else this.shoveV.set(player.head.x - this.pos.x, 0, player.head.z - this.pos.z);
+    if (this.shoveV.lengthSq() < 1e-6) this.shoveV.copy(this.facing());
+    this.shoveV.normalize().multiplyScalar(m); this.shoveT = 0; this.shoveDur = T || 0; this.shoveCap = cap || 0; this.shoveOwed.set(0, 0, 0);
   }
   pushPlayer(dt) {
-    const T = CFG.ai.shoveTime, t0 = this.shoveT, t1 = Math.min(T, t0 + dt); this.shoveT = t1;
+    const T = this.shoveDur || CFG.ai.shoveTime, t0 = this.shoveT, t1 = Math.min(T, t0 + dt); this.shoveT = t1;
     const ease = (t) => 1 - (1 - t / T) * (1 - t / T), k = ease(t1) - ease(t0);
-    const p = _v3.set(player.head.x + this.shoveV.x * k, player.floorY, player.head.z + this.shoveV.z * k);
+    const o = this.shoveOwed.addScaledVector(this.shoveV, k), L = o.length(), cap = this.shoveCap || Infinity;
+    const f = L > cap ? cap / L : 1, mx = o.x * f, mz = o.z * f; o.multiplyScalar(1 - f);
+    const p = _v3.set(player.head.x + mx, player.floorY, player.head.z + mz);
     keepPlayerIn(p, 0.25);
     rig.position.x += p.x - player.head.x; rig.position.z += p.z - player.head.z;
     player.head.x = p.x; player.head.z = p.z;
+  }
+  // ---- the cadets: one near another who's attacking joins in (one over the token cap) and closes faster
+  rallies() {
+    const R = this.cfg.rally; if (!R || tokensInUse() >= CFG.ai.tokens + 1) return false;
+    for (const o of enemies) if (o !== this && o.type === this.type && o.alive && o.hasToken && Math.hypot(o.pos.x - this.pos.x, o.pos.z - this.pos.z) < R.radius) return true;
+    return false;
+  }
+  // ---- the linebacker's charge
+  startChargeWind() {
+    this.setState('chargeWind'); AU.grunt();
+    if (CFG.debugLabels) fx(['sign_charge'], this.body.by.head.x.clone().add(_v3.set(0, 0.45, 0)), { life: 1.0, rise: 0.25, scale: CFG.labelScale * 2.2, onTop: true });   // big: it's the telegraph, read from metres away
+    const ch = this.body.by.chest;
+    this.windFx = loopFx(['fx_windup', 'fx_windup', 'fx_spark', 'fx_windup'], () => _pb.copy(ch.x).add(_pc.set(0, 0.25, 0)), 0.07);
+  }
+  startCharge(toP) {
+    this.chargeDir.copy(toP).setY(0); if (this.chargeDir.lengthSq() < 1e-6) this.chargeDir.copy(this.facing()); this.chargeDir.normalize();
+    this.chargeFrom.copy(this.pos); this.chargeLen = toP.length() + this.cfg.charge.overshoot; this.chargeHit.clear();
+    this.setState('charge'); AU.roar(); game.charges = (game.charges || 0) + 1;
+  }
+  bowlOver() {   // goons in his path go flying
+    const ch = this.cfg.charge;
+    for (const o of enemies) {
+      if (o === this || !o.hittable() || o.state === 'held' || this.chargeHit.has(o)) continue;
+      if (Math.hypot(o.pos.x - this.pos.x, o.pos.z - this.pos.z) > 0.62 * (this.s + o.s) / 1.76 + 0.1) continue;
+      this.chargeHit.add(o); o.hp -= ch.bowlDmg; o.setFace('hurt', 0.6); AU.thud('heavy');
+      fx(['fx_heavy', 'fx_dust'], o.body.by.chest.x.clone(), { frameTime: 0.06 });
+      o.knockdown(_pa.copy(this.chargeDir).multiplyScalar(1.4).add(_pb.set(o.pos.x - this.pos.x, 0, o.pos.z - this.pos.z).normalize()), 'knockdown', o.hp <= 0, o.body.by.chest.x);
+      game.bowled = (game.bowled || 0) + 1;
+    }
+  }
+  resolveTackle() {
+    const ch = this.cfg.charge;
+    hurtPlayer(ch.dmg);
+    this.startShove(ch.knockback, ch.shoveTime, this.chargeDir, CFG.ai.maxViewStep);
+    AU.thud('heavy'); for (const h of handList) buzz(h, 1.0, 260);
+    fx(['fx_heavy', 'fx_heavy', 'fx_dust'], player.head.clone().addScaledVector(this.chargeDir, -0.25).add(_v3.set(0, -0.45, 0)), { frameTime: 0.06 });
+    if (CFG.debugLabels) {   // rides along in front of your view while you're thrown back (he'd hide it otherwise)
+      const at = new V3(), d = new V3(), follow = () => at.copy(player.head).addScaledVector(camera.getWorldDirection(d), 0.85).add(d.set(0, -0.1, 0));
+      fx(['sign_tackled'], follow(), { life: 1.0, scale: CFG.labelScale * 1.3, onTop: true, followFn: follow });
+    }
+    this.releaseToken(); this.chargeCd = rand(...ch.cooldown); this.setState('recover'); this.recoverTime = ch.recover;
+    game.tackles = (game.tackles || 0) + 1;
+  }
+  hitWall() {    // you sidestepped and he ran into something solid: dazed, wide open
+    const ch = this.cfg.charge;
+    this.hp -= ch.wallDmg; AU.thud('heavy'); for (const h of handList) buzz(h, 0.4, 80);
+    fx(['fx_heavy', 'fx_dust', 'fx_dust'], this.body.by.head.x.clone().addScaledVector(this.chargeDir, 0.2), { frameTime: 0.07 });
+    this.chargeCd = rand(...ch.cooldown); game.wallHits = (game.wallHits || 0) + 1;
+    if (this.hp <= 0) { this.knockdown(_pa.copy(this.chargeDir).negate(), 'knockdown', true); return; }
+    this.stagger(ch.wallStagger);
+  }
+  // ---- the marshal: sees your punch coming and, sometimes, parries it and answers
+  watchCounter(dt) {
+    const C = this.cfg.counter;
+    if (this.hurtT > 0) this.hurtT -= dt;
+    if (this.watchCd > 0) { this.watchCd -= dt; return; }
+    if (this.counterCd > 0 || !['approach', 'circle', 'recover', 'flinch'].includes(this.state)) return;
+    const f = this.facing();
+    for (const h of handList) {
+      if ((h.held && !h.held.isProp) || h.speed < C.watchSpeed) continue;
+      const to = _v2.subVectors(this.body.by.chest.x, h.fist), d = to.length();
+      if (d > C.range * this.s / 0.9 || h.vel.dot(to) < 0.6 * h.speed * d) continue;   // in range and coming at him
+      if (_v3.set(h.fist.x - this.pos.x, 0, h.fist.z - this.pos.z).normalize().dot(f) < 0.35) continue;   // only what he can see: from his front
+      this.watchCd = 0.35;
+      this.handStreak = (this.lastHand === h && NOW - this.lastHandT < 2.0) ? this.handStreak + 1 : 0;   // the same hand again and again: he reads it
+      this.lastHand = h; this.lastHandT = NOW;
+      const odds = clamp(C.chance + Math.min(C.sameHandMax, this.handStreak * C.sameHand) - (this.hurtT > 0 ? C.hurtDrop * this.hurtT / C.hurtDecay : 0), 0.05, Math.max(0.95, C.chance));   // (a configured chance of 1: always)
+      this.counterOdds = odds;
+      if (Math.random() < odds) { this.counterCd = C.cooldown; this.hasToken = true; this.setState('parry'); }
+      return;
+    }
+  }
+  parried(h, point) {   // the punch landed on his raised forearm: deflected, and he fires straight back
+    const C = this.cfg.counter;
+    AU.parry(); if (h) { buzz(h, 0.8, 70); h.cd.set(this, NOW + 0.6); }   // the parried fist is dead for a moment (no tagging him as he steps in)
+    fx(['fx_burst0', 'fx_burst1', 'fx_burst2'], point);
+    label('parry', point.clone().add(_v3.set(0, 0.2, 0)));
+    label('counter', this.body.by.head.x.clone().add(_v3.set(0, 0.42, 0)));
+    this.hasToken = true; this.combo = (this.cfg.combo || 1) - 1; this.side = h && h.left ? 'r' : 'l';
+    this.windupTime = C.riposteWindup; this.setState('windup'); this.attachWindFx();
+    game.counters = (game.counters || 0) + 1;
   }
   // ---- the specialist: a fast fist coming at him in reach, and sometimes he slips it (back or to the side)
   watchFists() {
@@ -709,7 +839,7 @@ class Enemy {
     const L = d.length();
     if (L <= stopAt) return false;
     this.pos.addScaledVector(d.divideScalar(L), Math.min(L - stopAt, speed * dt));
-    if ((this.state === 'enter' || this.state === 'circle') && !this.cfg.shield) this.faceToward(d, dt);   // the guard strafes, shield kept on you
+    if ((this.state === 'enter' || this.state === 'circle') && !this.cfg.shield && !this.cfg.counter) this.faceToward(d, dt);   // the guard strafes, shield kept on you; the marshal keeps his eyes on you
     return true;
   }
   faceToward(dir, dt) {
