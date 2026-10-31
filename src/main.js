@@ -68,10 +68,10 @@ function boot() {
   ST.streetGroup = [ST.litMesh, ST.skylineMesh, ST.skyMesh, boomPivot];
   // rooms: the bar, the depot's hall and workshop are interiors; everything else is outside (src/rooms.js)
   addRoom('bar', (p) => p.z < STREET.fz - 0.05 && p.z > -5.6 && Math.abs(p.x) < 5.6);
-  depotRooms(); podezdRooms();
+  depotRooms(); for (const D of levelList()) if (D.rooms) D.rooms();
   addRoom('outside', () => true);
   roomMeshes('bar', ...ST.barGroup);
-  roomMeshes('outside', ...ST.streetGroup, ST.beaconMesh, ...DP.outside, SBX.mesh, PZ.outMesh, CRADLE.mesh, ...LIFTS.map(L => L.group));
+  roomMeshes('outside', ...ST.streetGroup, ST.beaconMesh, ...DP.outside, ...levelList().flatMap(D => D.outside ? D.outside() : []));
   addPortal('bar', 'outside', [0, 1.2, STREET.fz], () => DOOR.open > 0.02);
   for (const h of handList) { h.anchor.rotation.order = 'XYZ'; h.anchor.position.set(...DH.guard[h.side]); }
   attachHandsDesktop();
@@ -82,12 +82,16 @@ function boot() {
   loadTune();
   renderer.setAnimationLoop(frame);
   window.__tw = { CFG, game, player, enemies, props, bodies, hands, scene, camera, rig, renderer, playerHit, startGame, Enemy, Prop, updatePhysics,
-    perf, perfPanel, TUNE, bossBars, roomTris: () => roomTris, level, startStreet, STREET, ST, WALK, DOOR, keepInWalk, pushOutXZ, WORLD_BOXES, BLOCKERS, desk, DEPOT, DP, startDepot, SB, SBX, startSuperblock, PZ, LIFTS, CRADLE, LOCKED, startPodezd, ROOMS, roomState, updateRooms };
+    perf, perfPanel, TUNE, bossBars, roomTris: () => roomTris, level, startStreet, STREET, ST, WALK, DOOR, keepInWalk, pushOutXZ, WORLD_BOXES, BLOCKERS, desk, DEPOT, DP, startDepot, SB, SBX, startSuperblock, PZ, LIFTS, CRADLE, LOCKED, startPodezd, LEVELS, ROOMS, roomState, updateRooms };
 }
 
 const levelSel = document.getElementById('levelSel');
-{ const m = /[?&]level=(street|superblock|podezd|depot)/.exec((window.location && window.location.search) || ''); if (levelSel && m) levelSel.value = m[1]; }
-const begin = () => { const v = levelSel ? levelSel.value : 'bar'; if (v === 'street') startStreet(false); else if (v === 'superblock') startSuperblock(false); else if (v === 'podezd') startPodezd(false); else if (v === 'depot') startDepot(false); else startGame(); };
+if (levelSel && document.createElement) {   // the registered levels join the menu, before the old depot
+  const old = [...(levelSel.options || [])].find(o => o.value === 'depot');
+  for (const D of levelList()) if (D.menu) { const o = document.createElement('option'); o.value = D.name; o.textContent = D.menu; if (old) levelSel.insertBefore(o, old); else levelSel.appendChild(o); }
+}
+{ const m = /[?&]level=([a-z0-9]+)/.exec((window.location && window.location.search) || ''); if (levelSel && m) levelSel.value = m[1]; }
+const begin = () => { const v = levelSel ? levelSel.value : 'bar'; if (v === 'street') startStreet(false); else if (LEVELS[v]) LEVELS[v].start(false); else if (v === 'depot') startDepot(false); else startGame(); };
 const menu = document.getElementById('menu'), vrBtn = document.getElementById('vrBtn'), deskBtn = document.getElementById('deskBtn'), vrNote = document.getElementById('vrNote');
 deskBtn.addEventListener('click', () => {
   AU.init(); menu.hidden = true; hudEl.hidden = false; xrMode = false;

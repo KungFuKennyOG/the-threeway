@@ -243,6 +243,15 @@ function updatePodezd(dt) {
   CRADLE.rect.y = CRADLE.y;
   placeRides();
 }
+defineLevel('podezd', {
+  menu: '4 · Podezd 3 (the lifts, the 7th, the roof)', cfg: () => CFG.podezd, build: buildPodezd, rooms: podezdRooms,
+  outside: () => [PZ.outMesh, CRADLE.mesh, ...LIFTS.map(L => L.group)], rects: [PZ.rail],
+  start: (f) => startPodezd(f), update: (dt) => updatePodezd(dt),
+  after: 'superblock', enter: () => player.head.z > SB.door[1] + 0.5,                        // through the street door
+  signs: { lobby: ['FIGHT!', '#f2c14e'], seventh: ['FIGHT!', '#f2c14e'], kitchen: ['THE KITCHEN', '#ff9a3c'], roofFight: ['THE ROOF', '#ff4f9a'],
+           liftBroke: ['THE LIFT IS DEAD', '#e8352b'], wingRoof: ['THE ROOF', '#33e0d0'], cradle: ['GOING DOWN', '#33e0d0'], railway: ['TO THE PALACE OF SPORT', '#33e0d0'] },
+  hud: { walk: 'Podezd 3 — take the lift', won: 'Down at the railway — the Palace of Sport is next (R to restart)', short: 'Podezd' },
+});
 function startPodezd(fromCourtyard) {
   level.name = 'podezd'; level.encounter = -1; level.arena = null; LOCKED.clear();
   clearEnemies(); resetPodezdRides('start');

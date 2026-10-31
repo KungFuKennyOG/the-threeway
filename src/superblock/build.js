@@ -132,3 +132,11 @@ function buildSuperblock() {
   ].forEach(addWalk);
   return m;
 }
+defineLevel('superblock', {
+  menu: '3 · The gate & Superblock 14', cfg: () => CFG.superblock, build: buildSuperblock, outside: () => [SBX.mesh], rects: [SB.rect],
+  start: (f) => startSuperblock(f),
+  after: 'street', enter: () => player.head.z > STREET.chk.z + CFG.street.exitPast,          // on past the lifted boom
+  finish: (z) => z > CFG.superblock.finishZ && Math.abs(player.head.x - SB.door[0]) < 3, wonSign: 'stairwell',
+  signs: { krasnovia: ['KRASNOVIA', '#ff9a3c'], gate: ['FIGHT!', '#f2c14e'], courtyard: ['SUPERBLOCK 14', '#ff9a3c'], podezd: ['PODEZD 3', '#ff4f9a'], stairwell: ['INTO PODEZD 3', '#33e0d0'] },
+  hud: { walk: 'Krasnovia — through the gate, through the arch', last: 'Walk up to podezd 3', won: 'Superblock 14 cleared — walk into podezd 3 (R to restart)', short: 'Superblock' },
+});
