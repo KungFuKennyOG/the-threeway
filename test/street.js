@@ -32,8 +32,8 @@ try {
   // ---- the build: one atlas, a handful of meshes, a sane triangle budget
   const atlasKeys = Object.keys(run('PAINT')), rect = TW.ST.atlas.rect;
   check('every street painting is in the atlas', atlasKeys.every(k => rect[k] && rect[k][2] > rect[k][0] && rect[k][3] > rect[k][1] && rect[k][2] <= 1 && rect[k][3] <= 1), atlasKeys.length + ' paintings, ' + TW.ST.atlas.W + 'x' + TW.ST.atlas.H);
-  const streetMeshes = TW.scene.children.filter(o => o.material && o.material.uniforms && o.material.uniforms.map && o.material.uniforms.map.value === TW.ST.atlas.tex && !o.parent.isProp);
-  check('the outdoor levels are a few meshes (street, skylines, sky, beacons, depot outside/hall/workshop, Superblock 14, podezd 3 inside/outside, the cradle)', streetMeshes.length <= 11, streetMeshes.length + ' static street + depot meshes');
+  const streetMeshes = TW.scene.children.filter(o => o.material && o.material.uniforms && o.material.uniforms.map && o.material.uniforms.map.value === TW.ST.atlas.tex && !o.parent.isProp && !o.userData.small);   // small: set pieces drawn only while they're on (the train, the crossing lamps)
+  check('the outdoor levels are a few meshes (street, skylines, sky, beacons, depot outside/hall/workshop, Superblock 14, podezd 3 inside/outside, the cradle, the Palace inside/outside)', streetMeshes.length <= 13, streetMeshes.length + ' static street + depot meshes');
   const litTris = run('ST.lit.tris'), skyTris = run('ST.sky.tris');
   check('street + skylines under the triangle budget', litTris + skyTris < 80000, `${litTris} street + ${skyTris} skyline tris`);
   const baked = TW.scene.children.filter(o => o.geometry && o.geometry.attributes && o.geometry.attributes.bake);

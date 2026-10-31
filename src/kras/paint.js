@@ -61,4 +61,23 @@ Object.assign(PAINT, {
     p.rect(0, 0, 1, 16, '#14201a'); p.rect(63, 0, 1, 16, '#14201a'); return p;
   },
   crossSign() { const p = new Pix(16, 16); p.fill('#000000', 0); for (let k = 0; k < 16; k++) { p.rect(k, k, 2, 2, k % 4 < 2 ? '#b8231e' : '#f2ede4'); p.rect(15 - k, k, 2, 2, k % 4 < 2 ? '#b8231e' : '#f2ede4'); } return p; },
+  trainFront() {   // the cab end: two windscreens, a headlight, a red nose stripe (one repeat = the 3.2 m x 4 m end)
+    const p = new Pix(16, 20); p.fill('#2e5a3a'); p.rect(0, 13, 16, 2, '#e6dac0'); p.rect(0, 16, 16, 2, '#b8231e');
+    p.rect(1, 3, 6, 6, '#a8c8d8', EM); p.rect(9, 3, 6, 6, '#a8c8d8', EM); p.rect(7, 2, 2, 8, '#1a2a1e');
+    p.rect(6, 11, 4, 2, '#fff4d0', EM); p.rect(1, 18, 3, 1, '#ffd890', EM); p.rect(12, 18, 3, 1, '#ffd890', EM); return p;
+  },
+  paving() { const p = new Pix(32, 32); p.fill('#6a6660'); for (let y = 0; y < 32; y += 8) for (let x = (y / 8 % 2) * 8; x < 32; x += 16) p.rect(x, y, 8, 8, '#625e58'); for (let k = 0; k < 32; k += 8) { p.rect(0, k, 32, 1, '#4a4640'); p.rect(k, 0, 1, 32, '#4a4640'); } p.speck('#7a766e', 24); p.speck('#56524c', 18); return p; },
+  sportWall() { const p = new Pix(16, 32); p.fill('#d8d2c0'); p.speck('#ccc6b4', 16); p.rect(0, 18, 16, 14, '#3a5a8a'); p.rect(0, 18, 16, 1, '#b8231e'); p.speck('#466698', 12); return p; },   // one repeat = 2 m x 4 m: cream over a blue dado
+  arenaBoard() {   // the boards round the floor: slogans, red and cream (one repeat = 4 m x 1.1 m)
+    const p = new Pix(32, 9); const w = ['SPORT', 'HEALTH', 'LABOUR', 'GLORY', 'VOSTOK'][Math.floor(prng() * 5)], red = prng() < 0.5;
+    p.fill(red ? '#b8231e' : '#e6dac0'); p.rect(0, 0, 32, 1, '#2a2226'); p.rect(0, 8, 32, 1, '#2a2226');
+    p.text(w, Math.floor((32 - w.length * 6) / 2) + 1, 2, red ? '#f4ead0' : '#b8231e'); return p;
+  },
+  scoreboard() {   // amber bulbs on black: the Bear against the guest
+    const p = new Pix(40, 24); p.fill('#141214', EM); p.rect(0, 0, 40, 1, '#b8231e', EM); p.rect(0, 23, 40, 1, '#b8231e', EM);
+    p.text('VOLKOV', 2, 3, '#ffb040', EM); p.text('GUEST', 5, 14, '#ffb040', EM); p.text('9', 34, 3, '#ff6040', EM); p.text('0', 34, 14, '#ff6040', EM); return p;
+  },
+  ticketWin() { const p = new Pix(16, 16); p.fill('#5a4a3a'); p.rect(2, 3, 12, 8, '#ffe0a0', EM); p.rect(2, 7, 12, 1, '#8a7a6a'); p.rect(4, 12, 8, 2, '#2a2226'); p.rect(5, 0, 6, 2, '#b8231e'); return p; },
+  trophy() { const p = new Pix(16, 16); p.fill('#1e2a34', EM); p.rect(0, 0, 16, 1, '#8a6a3a'); p.rect(0, 8, 16, 1, '#8a6a3a'); p.rect(0, 15, 16, 1, '#8a6a3a');
+    for (const [x, y] of [[2, 3], [7, 2], [12, 4], [3, 10], [9, 10]]) { p.rect(x, y, 3, 3, '#f2c14e', EM); p.rect(x + 1, y + 3, 1, 2, '#c9a04a', EM); } return p; },
 });
