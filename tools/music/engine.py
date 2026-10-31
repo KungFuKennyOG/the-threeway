@@ -322,3 +322,111 @@ class Song:
 # Main theme ("the Threeway motif"), in minor-scale semitones from the tonic, 4 bars.
 THEME = [(0, 1.5, 7), (1.5, 0.5, 5), (2, 1, 3), (3, 1, 5), (4, 1.5, 7), (5.5, 0.5, 10), (6, 2, 12),
          (8, 1.5, 10), (9.5, 0.5, 8), (10, 1, 7), (11, 1, 5), (12, 1.5, 3), (13.5, 0.5, 2), (14, 2, 0)]
+
+# ---------------- Act 1 additions: places and crowds ----------------
+def crowd(f, dur, v, bright=1200):  # arena/street crowd bed: murmuring noise with slow swells
+    n = int((dur + 1.0) * SR); t = secs(n)
+    x = biquad(biquad(noise(n), 'bp', bright, 0.6), 'lp', 3500)
+    x += biquad(noise(n), 'bp', bright * 1.8, 2.5) * 0.4
+    sw = 1 + 0.25 * np.sin(2 * np.pi * 0.37 * t + 1) + 0.15 * np.sin(2 * np.pi * 1.3 * t)
+    e = np.clip(t / 0.6, 0, 1) * np.where(t < dur, 1, np.exp(-(t - dur) / 0.35))
+    return x * sw * e * v
+
+def roar(f, dur, v):  # crowd erupts
+    n = int((dur + 1.5) * SR); t = secs(n)
+    x = biquad(noise(n), 'bp', 1500, 0.5) + biquad(noise(n), 'bp', 700, 0.8) * 0.6
+    e = np.minimum(t / 0.08, 1) * (0.5 + 0.5 * np.exp(-t / 0.5)) * np.where(t < dur, 1, np.exp(-(t - dur) / 0.5))
+    return x * e * v * 1.6
+
+def stomp(f, dur, v, people=7):  # a stand of people stamping on bleachers
+    n = int(0.4 * SR); x = np.zeros(n)
+    for _ in range(people):
+        o = int(RNG.uniform(0, 0.028) * SR); m = n - o; t = secs(m)
+        th = np.sin(2 * np.pi * np.cumsum(70 + 60 * np.exp(-t / 0.02)) / SR) * dec(m, 0.07)
+        th += biquad(noise(m), 'lp', 900) * dec(m, 0.02) * 0.6
+        x[o:] += th * RNG.uniform(0.6, 1.0)
+    return x / np.sqrt(people) * v * 1.4
+
+def crowdclap(f, dur, v, people=9):
+    n = int(0.3 * SR); x = np.zeros(n)
+    for _ in range(people):
+        o = int(RNG.uniform(0, 0.03) * SR); m = n - o
+        x[o:] += biquad(noise(m), 'bp', RNG.uniform(1000, 2200), 1.5) * dec(m, 0.012) * RNG.uniform(0.6, 1)
+    return x / np.sqrt(people) * v * 2.4
+
+def hey(f, dur, v, people=6):  # a crowd shouting one syllable on pitch-ish
+    out = None
+    for k in range(people):
+        y = chant(f * RNG.uniform(0.94, 1.08), dur, 1.0)
+        o = int(RNG.uniform(0, 0.03) * SR); y = np.concatenate([np.zeros(o), y])
+        out = y if out is None else (np.pad(out, (0, max(0, len(y) - len(out)))) + np.pad(y, (0, max(0, len(out) - len(y)))))
+    return out / np.sqrt(people) * v
+
+def whistle(f, dur, v):  # referee's pea whistle: a trilled sine
+    e = adsr(dur, 0.01, 0.05, 0.9, 0.04); n = len(e); t = secs(n)
+    fr = 2900 * (1 + 0.035 * np.sign(np.sin(2 * np.pi * 28 * t)))
+    return (sine(fr, n) + biquad(noise(n), 'bp', 2900, 3) * 0.3) * e * v
+
+def typewriter(f, dur, v):  # one key strike
+    n = int(0.09 * SR); t = secs(n)
+    x = biquad(noise(n), 'hp', 2500) * dec(n, 0.003) * 1.2
+    x += np.sin(2 * np.pi * (220 + 400 * np.exp(-t / 0.004)) * t) * dec(n, 0.012) * 0.6
+    x += biquad(noise(n), 'bp', 4200, 4) * dec(n, 0.02) * 0.3
+    return x * v
+
+def carriage(f, dur, v):  # typewriter bell + return
+    n = int(0.8 * SR); t = secs(n)
+    x = bell(2600, 0.1, 0.6, ratio=2.1, idx=0.5, tau=0.25)[:n]; x = np.pad(x, (0, n - len(x)))
+    sl = biquad(noise(n), 'bp', 1800, 1.5) * np.where((t > 0.12) & (t < 0.42), 1, 0) * 0.35
+    return (x + sl) * v
+
+def stamp(f, dur, v):  # rubber stamp on a desk
+    n = int(0.25 * SR); t = secs(n)
+    x = np.sin(2 * np.pi * np.cumsum(110 + 90 * np.exp(-t / 0.01)) / SR) * dec(n, 0.05)
+    return (x + biquad(noise(n), 'bp', 700, 1) * dec(n, 0.015)) * v
+
+def motor(f, dur, v, glide=0.0):  # lift motor / cable drone; glide in semitones over the note
+    n = int((dur + 0.5) * SR); t = secs(n)
+    fr = f * 2 ** (glide * np.clip(t / max(dur, 1e-3), 0, 1) / 12)
+    x = saw(fr, n) + saw(fr * 1.007, n) + 0.5 * pulse(fr * 2, n, 0.3)
+    x = biquad(x, 'lp', 260, 1.2) * (1 + 0.18 * np.sin(2 * np.pi * 7.5 * t))
+    e = np.clip(t / 0.4, 0, 1) * np.where(t < dur, 1, np.exp(-(t - dur) / 0.12))
+    return x * e * v
+
+def hum(f, dur, v):  # fluorescent tubes
+    n = int(dur * SR); t = secs(n)
+    x = sine(100, n) + 0.5 * sine(200, n) + 0.25 * sine(300, n) + biquad(pulse(100, n, 0.1), 'bp', 2400, 3) * 0.25
+    return x * np.clip(t / 0.3, 0, 1) * np.clip((dur - t) / 0.3, 0, 1) * v
+
+def sparks(f, dur, v):  # electrical arcing
+    n = int((dur + 0.2) * SR); x = np.zeros(n)
+    for _ in range(int(dur * 60)):
+        i = RNG.integers(0, max(1, n - 3000)); m = RNG.integers(200, 2500)
+        x[i:i + m] += biquad(noise(m), 'hp', 3000) * dec(m, RNG.uniform(0.002, 0.02)) * RNG.uniform(0.3, 1)
+    return x * v
+
+def wind(f, dur, v):
+    n = int((dur + 1) * SR); t = secs(n)
+    x = biquad(noise(n), 'bp', 500, 0.7) * (0.6 + 0.4 * np.sin(2 * np.pi * 0.21 * t) * np.sin(2 * np.pi * 0.07 * t + 2))
+    x += biquad(noise(n), 'bp', 1400, 4) * 0.25 * (0.5 + 0.5 * np.sin(2 * np.pi * 0.13 * t))
+    return x * np.clip(t / 1.0, 0, 1) * np.where(t < dur, 1, np.exp(-(t - dur) / 0.4)) * v
+
+def ringbell(f, dur, v):  # boxing/wrestling ring bell
+    a = bell(1180, 0.1, v, ratio=2.43, idx=1.1, tau=1.2); b = bell(3190, 0.1, v * 0.3, ratio=1.0, idx=0.0, tau=0.4)
+    a[:len(b)] += b; return a
+
+def glock(f, dur, v):
+    return bell(f, 0.1, v, ratio=3.98, idx=0.7, tau=0.7)
+
+def tuba(f, dur, v):
+    return brass(f, dur, v, bright=0.45, swell=0.03)
+
+def anvil(f, dur, v):  # metallic industrial hit
+    n = int(0.9 * SR); t = secs(n)
+    x = sum(np.sin(2 * np.pi * fr * t) * dec(n, tau) * g for fr, tau, g in ((517, .5, 1), (1213, .3, .7), (1871, .2, .5), (2733, .12, .4)))
+    x += biquad(noise(n), 'hp', 2000) * dec(n, 0.01)
+    return np.tanh(x * 1.5) * v
+
+def chime(f, dur, v):  # lift arrival chime
+    return bell(f, 0.1, v, ratio=1.0, idx=0.35, tau=1.0)
+
