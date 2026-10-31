@@ -72,6 +72,16 @@ Clear the road and the checkpoint boom lifts. Keep walking: there's no cut and n
 - **Podezd 3:** the 22-storey point block's door, its stairwell windows lit all the way up. Walk up to it and the level ends; the stairwell is next.
 - **Krasnovian goons only:** the **conscript** (fodder: an oversized greatcoat, a fur ushanka, half asleep, slow windups) and the **laborer** (a steel pipe swung like Bat Boy's bat but slower and heavier; swat it loose and it's yours, and it never breaks), plus the wrestler and the cook.
 
+## Act 1, level 4: podezd 3 (inside Superblock 14)
+
+There are no stairs anywhere (VR): lifts and a cradle do the climbing, so your view only moves up or down in an enclosed or eased ride.
+
+- **The lobby:** through the street door from the courtyard. Mailboxes, a radiator, the stairs padlocked shut. A fight with the door shut behind you.
+- **Lift A** climbs once the lobby is clear and **breaks at the 7th**: sparks, the doors jam half open, and it's dead from then on.
+- **The 7th:** fight on the landing, then through the party wall into the **north wing's corridor**: padded doors, bare bulbs, laundry, a communal kitchen halfway along. A corridor fight with the cook, a laborer, the wrestler and a conscript.
+- **Lift B** at the far end takes you to **the wing's roof**, 34 m up, with the 22-storey point block towering beside you and the whole city around. A roof fight.
+- **The cradle:** step into the window-cleaner's cradle and it lowers you down the north face to the railway bank. The Palace of Sport is next.
+
 The old level 3, Tram Depot 7, is still on the menu as "Old: Tram Depot 7". The location is scrapped, and Volkov's ring moves to the Palace of Sport.
 
 ## Quest performance
@@ -97,6 +107,7 @@ No headset needed. The tests run the real game script against a small stand-in f
 ```
 node test/street.js    # 41 checks: one-mesh bar room, prop batches, LOD stand-ins, portal culling, the door opens and leads outside, walls and crossings, baked light and the live lights outside/inside, the stretches (trigger, spawn, arena lock, clear, lose + restart), the boom, crates/bins/signs, draw calls + triangle budget, street physics cost
 node test/floors.js     # 29 checks: raised floors, ramps and stairs (a test staircase): the bar unchanged bit for bit, easing up a flight, landing edges, goons fighting, falling and getting up on a landing, props on floors
+node test/podezd.js     # 30 checks: in from the courtyard (no cut), the lobby, lift A breaks at the 7th, the landing, the link, the corridor fight, lift B, the roof (respawn on the roof), the cradle down; rides smooth (mm per frame), goons on their floors, rooms, physics cost
 node test/superblock.js  # 29 checks: past the boom with no cut, one baked mesh + triangle budget, nothing from the skylines on it, the gate/arch/slabs/garages as walls, Krasnovian-only fights in order, restart a stretch, the door ends the level, physics cost
 node test/depot.js     # 29 checks (the old level 3): the depot's three baked meshes + triangle budget, nothing from the skylines on it, walls, track doors, workshop door, solid trams, rooms + portals (hall/workshop drawn only through doorways), the yard and hall fights (trigger, spawn, arena lock, clear, lose + restart), Volkov (boss bar, enrage, clear), street boom → depot, hall physics cost
 node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street; --level=superblock: the gate and the courtyard; --level=road: the street, through the boom, on into Superblock 14; --level=depot: the old depot)
@@ -119,6 +130,7 @@ Three.js r149 from jsDelivr, WebXR, synthesized placeholder audio. Plain script 
 | `src/geometry.js` | mesh builders, static batching, light baking |
 | `src/bar.js`, `src/bar_atlas.js` | the bar room (one mesh on one atlas: `tools/bar_atlas.py`), walkable areas, the door |
 | `src/street/` | level 2: `paint.js` (painted street atlas), `build.js` (the square, the road, the checkpoint), `skylines.js` (the three sectors, the far city, the sky), `fight.js` (stretches, portals, signs) |
+| `src/kras/` | Krasnovian interiors: `paint.js` (stairwell paint, padded doors, mailboxes, kitchen tiles, the lift), `podezd.js` (podezd 3: the lobby, the 7th, the wing's corridor and roof, two lifts, the cradle, the railway bank) |
 | `src/superblock/` | Act 1's walk into Krasnovia: `paint.js` (slabs, garages, the gate's signs, in the street atlas), `build.js` (the gate, the forecourt, the arch, Superblock 14's courtyard and podezd 3; one baked mesh) |
 | `src/depot/` | the old level 3: `paint.js` (its paintings, in the same street atlas), `build.js` (the yard, the hall, the workshop, the ring; its rooms and doorways) |
 | `src/rooms.js` | rooms + portals: what's drawn from where |

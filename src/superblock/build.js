@@ -11,7 +11,7 @@ const SB = {
   west: [-46, -34, 92, 118, 33.6], north: [-46, -20, 118, 130, 33.6], point: [-20, -6, 118, 132, 61.6],
   court: [-34, -8, 92, 118], garages: [-8, -4, 92, 118, 2.6],
   door: [-13, 118],
-  rect: [-50, -1, 72, 136],                                              // keep the skylines and far city off it
+  rect: [-50, -1, 72, 136],   // (the railway bank behind it: PZ.rail in src/kras/podezd.js)                                              // keep the skylines and far city off it
 };
 const SBX = { acc: null, mesh: null, lamps: [] };
 const onSuperblock = (x, z, m = 0) => x > SB.rect[0] - m && x < SB.rect[1] + m && z > SB.rect[2] - m && z < SB.rect[3] + m;
@@ -68,12 +68,15 @@ function superblock14(acc) {
   plate(acc, 'banner', -9, 12, sz0, 2.4, 9, Math.PI, 0.05);
   // the wings around the courtyard and the point block
   slabBlock(acc, ...SB.west.slice(0, 4), 0, SB.west[4]);
-  slabBlock(acc, ...SB.north.slice(0, 4), 0, SB.north[4]);
-  slabBlock(acc, ...SB.point.slice(0, 4), 0, SB.point[4]);
+  slabBlock(acc, ...SB.north.slice(0, 4), 0, SB.north[4], { solid: false });   // hollow: its 7th floor and roof are walked (src/kras/podezd.js)
+  { const [px0, px1, pz0, , ph] = SB.point, [dx] = SB.door, u = (x) => (px1 - x) / 12;   // south face: around the street door (podezd 3 is inside)
+    slabBlock(acc, ...SB.point.slice(0, 4), 0, ph, { skip: 'b', solid: false });
+    wall(acc, 'slab', px1, pz0, dx + 0.6, pz0, 0, ph, 12, 11.2, { u0: 0, cell: 4 }); wall(acc, 'slab', dx - 0.6, pz0, px0, pz0, 0, ph, 12, 11.2, { u0: u(dx - 0.6), cell: 4 });
+    wall(acc, 'slab', dx + 0.6, pz0, dx - 0.6, pz0, 2.2, ph, 12, 11.2, { u0: u(dx + 0.6), cell: 4 });
+    for (const [a, b] of [[px0, dx - 0.6], [dx + 0.6, px1]]) sbSolid(a, pz0, b, pz0 + 0.3, ph); }
   for (let k = 0; k < 21; k++) sbox(acc, 'litWarm', -8.6, 4.2 + k * 2.8, SB.point[2] - 0.04, 1.2, 0.08, 1.0, 0, { u: 1, v: 1, top: false });   // the stairwell's windows, one per landing
   // podezd 3: a steel door, a concrete canopy, a lamp, the house number
   const [dx, dz] = SB.door;
-  plate(acc, 'steelDoor', dx, 1.1, dz, 1.3, 2.2, Math.PI, 0.03);
   sbox(acc, 'concrete', dx, 2.55, dz - 0.8, 2.8, 1.6, 0.18, 0, { u: 2, v: 1 });
   for (const s of [-1, 1]) { sbox(acc, 'iron', dx + s * 1.25, 0, dz - 1.45, 0.08, 0.08, 2.55, 0, { u: 1, v: 1, top: false }); sbSolid(dx + s * 1.25 - 0.06, dz - 1.51, dx + s * 1.25 + 0.06, dz - 1.39, 2.55); }
   sbox(acc, 'litWarm', dx, 2.47, dz - 0.8, 0.4, 0.4, 0.08, 0, { u: 1, v: 1 });

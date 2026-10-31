@@ -32,12 +32,16 @@ function startStreet(fromBar) {
 }
 // The street and the depot share one flow: stretches with arena locks, spawns, clear, lose + restart, finish.
 // Their configs (CFG.street, CFG.depot) use positions relative to the level's origin.
-const stageCfg = () => level.name === 'depot' ? CFG.depot : level.name === 'superblock' ? CFG.superblock : CFG.street;
+const stageCfg = () => level.name === 'depot' ? CFG.depot : level.name === 'superblock' ? CFG.superblock : level.name === 'podezd' ? CFG.podezd : CFG.street;
 const stageOrigin = () => level.name === 'depot' ? [DEPOT.x, DEPOT.z] : [0, 0];
-const STAGES = new Set(['street', 'superblock', 'depot']);   // levels run by updateStreet()
+const STAGES = new Set(['street', 'superblock', 'podezd', 'depot']);   // levels run by updateStreet()
+// an encounter starts when you walk past its `trigger` (z, along the level), or, with `at: [x0, x1, z0, z1, y0, y1]`, when you
+// stand inside that box on a floor between y0 and y1 (levels that climb). `lock`: walk areas shut while it's on.
+const triggered = (E, z) => E.at ? (player.head.x > E.at[0] && player.head.x < E.at[1] && player.head.z > E.at[2] && player.head.z < E.at[3] && player.floorY >= E.at[4] && player.floorY <= E.at[5]) : z > E.trigger;
 function startEncounter(i) {
   const E = stageCfg().encounters[i];
-  level.encounter = i; level.arena = E.arena;
+  level.encounter = i; level.arena = E.arena || null;
+  if (typeof LOCKED !== 'undefined') { LOCKED.clear(); for (const a of E.lock || []) LOCKED.add(a); }
   game.state = 'intro'; game.timer = 0; game.queue = E.spawn.slice(); game.spawnT = 0.3; game.bosses = [];
   showSign(E.sign || 'fight', E.boss ? 2.2 : 1.4); if (E.boss) AU.roar(); else AU.bell();
 }
@@ -70,14 +74,15 @@ function startSuperblock(fromStreet) {
 }
 function updateStreet(dt) {   // the stage flow for whichever level you're in (street or depot)
   const S = stageCfg(), enc = S.encounters, [ox, oz] = stageOrigin(), z = player.head.z - oz;
+  if (level.name === 'podezd') updatePodezd(dt);   // the lifts and the cradle
   if (game.state === 'walk') {
     const next = level.encounter + 1;
-    if (next < enc.length && z > enc[next].trigger) startEncounter(next);
+    if (next < enc.length && triggered(enc[next], z)) startEncounter(next);
     else if (level.name === 'street' && next >= enc.length && z > S.finishZ) {
       game.state = 'won'; game.timer = 0; showSign('checkpoint', 1e9); AU.bell();
     }
     else if (level.name === 'superblock' && next >= enc.length && z > S.finishZ && Math.abs(player.head.x - SB.door[0]) < 3) {
-      game.state = 'won'; game.timer = 0; showSign('stairwell', 1e9); AU.bell();   // the stairwell is the next level
+      game.state = 'won'; game.timer = 0; showSign('stairwell', 1e9); AU.bell();   // podezd 3 is the next level: walk in
     }
     return;
   }
@@ -85,8 +90,8 @@ function updateStreet(dt) {   // the stage flow for whichever level you're in (s
   if (game.state === 'fight') {
     game.spawnT -= dt;
     if (game.queue.length && game.spawnT <= 0) {
-      const [type, lx, lz] = game.queue.shift(), x = ox + lx, zz = oz + lz, e = new Enemy(type);
-      e.placeAt(x, zz, Math.atan2(player.head.x - x, player.head.z - zz));
+      const [type, lx, lz, ly] = game.queue.shift(), x = ox + lx, zz = oz + lz, e = new Enemy(type);
+      e.placeAt(x, zz, Math.atan2(player.head.x - x, player.head.z - zz), ly);
       const d = _v1.set(player.head.x - x, 0, player.head.z - zz); const L = d.length();
       e.target.set(x, 0, zz).addScaledVector(d.divideScalar(L || 1), Math.min(2.5, L * 0.5));
       enemies.push(e); game.spawnT = S.spawnGap;
@@ -100,7 +105,7 @@ function updateStreet(dt) {   // the stage flow for whichever level you're in (s
     return;
   }
   if (game.state === 'cleared' && game.timer > S.clearedPause) {
-    level.arena = null; game.state = 'walk'; game.timer = 0;
+    level.arena = null; game.state = 'walk'; game.timer = 0; if (typeof LOCKED !== 'undefined') LOCKED.clear();
     player.hp = Math.min(CFG.player.health, player.hp + S.healBetween);
     showSign(level.encounter + 1 < enc.length ? 'go' : 'goCheck', 2.0);
     return;
@@ -108,13 +113,15 @@ function updateStreet(dt) {   // the stage flow for whichever level you're in (s
   if (game.state === 'lost' && game.timer > 3.5) {   // back to the start of this stretch, full health
     const E = enc[level.encounter];
     clearEnemies(); player.hp = CFG.player.health;
-    placePlayer(ox + E.respawn[0], oz + E.respawn[1], Math.PI);
+    placePlayer(ox + E.respawn[0], oz + E.respawn[1], E.respawn[3] !== undefined ? E.respawn[3] : Math.PI);
+    if (E.respawn[2] !== undefined) rig.position.y = E.respawn[2];   // a floor in a stack
     startEncounter(level.encounter);
   }
   if (game.state === 'won' && level.name === 'street') {   // the boom lifts; walk on through it into Krasnovia
     if (boomPivot) boomPivot.rotation.z = Math.max(-1.35, boomPivot.rotation.z - dt * 0.9);
     if (player.head.z > STREET.chk.z + CFG.street.exitPast) startSuperblock(true);
   }
+  if (game.state === 'won' && level.name === 'superblock' && player.head.z > SB.door[1] + 0.5) startPodezd(true);   // through the street door
 }
 // a boss loses it: faster, shorter windups, red
 function enrage(s) {
@@ -139,7 +146,8 @@ function updateArea(dt) {
   if (hz < STREET.fz - 0.4 && Math.abs(player.head.x) < 6 && hz > -6) applyLights(BAR_LIGHT.lights, BAR_LIGHT.ambient);
   else {
     _lampD.length = 0;
-    for (const L of ST.lamps) _lampD.push([(L[0][0] - player.head.x) ** 2 + (L[0][2] - hz) ** 2, L]);
+    const hy = player.head.y;
+    for (const L of ST.lamps) { const dy = Math.max(0, Math.abs(L[0][1] - hy) - 4); _lampD.push([(L[0][0] - player.head.x) ** 2 + (L[0][2] - hz) ** 2 + dy * dy * 9, L]); }
     _lampD.sort((a, b) => a[0] - b[0]);
     applyLights(_lampD.slice(0, MAXL).map(d => d[1]), CFG.street.light.ambient);
   }
@@ -193,7 +201,9 @@ function doorInView() {
 const SIGN_TEXT = { depot: ['TRAM DEPOT 7', '#ff9a3c'], yard: ['FIGHT!', '#f2c14e'], hall: ['FIGHT!', '#f2c14e'], volkov: ['THE BEAR', '#e8352b'],
   depotClear: ['DEPOT CLEARED', '#33e0d0'], street: ['TRIPOINT SQUARE', '#c9a04a'], go: ['GO!', '#33e0d0'], goCheck: ['TO THE CHECKPOINT', '#33e0d0'],
   checkpoint: ['CHECKPOINT', '#f2ede4'], krasnovia: ['KRASNOVIA', '#ff9a3c'], gate: ['FIGHT!', '#f2c14e'], courtyard: ['SUPERBLOCK 14', '#ff9a3c'],
-  podezd: ['PODEZD 3', '#ff4f9a'], stairwell: ['TO THE STAIRWELL', '#33e0d0'], doorOpen: ['THE DOOR IS OPEN', '#ff9a3c'], square: ['FIGHT!', '#f2c14e'], road: ['FIGHT!', '#f2c14e'], last: ['LAST STRETCH', '#ff4f9a'] };
+  podezd: ['PODEZD 3', '#ff4f9a'], stairwell: ['INTO PODEZD 3', '#33e0d0'], lobby: ['FIGHT!', '#f2c14e'], seventh: ['FIGHT!', '#f2c14e'],
+  kitchen: ['THE KITCHEN', '#ff9a3c'], roofFight: ['THE ROOF', '#ff4f9a'], liftBroke: ['THE LIFT IS DEAD', '#e8352b'], wingRoof: ['THE ROOF', '#33e0d0'],
+  cradle: ['GOING DOWN', '#33e0d0'], railway: ['TO THE PALACE OF SPORT', '#33e0d0'], doorOpen: ['THE DOOR IS OPEN', '#ff9a3c'], square: ['FIGHT!', '#f2c14e'], road: ['FIGHT!', '#f2c14e'], last: ['LAST STRETCH', '#ff4f9a'] };
 function paintSign(text, col) {
   const s = 3, w = textW(text) * s + 6, h = 7 * s + 6, p = new Pix(w, h);
   for (const [dx, dy, c] of [[3, 3, '#000000'], [0, 0, col]]) {

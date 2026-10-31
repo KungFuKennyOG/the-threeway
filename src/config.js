@@ -164,6 +164,27 @@ const CFG = {
             ['crate', -32.6, 94], ['bottle', -31.6, 99.2], ['bottle', -11.2, 106.6], ['crate', -21.5, 116.6]],
     light: { sodiumRadius: 14, sodiumK: 1.5, floodRadius: 18, floodK: 1.4 },
   },
+  // ---- Act 1: podezd 3, inside Superblock 14 (world positions; see src/kras/podezd.js). No stairs: lift A climbs from the
+  // lobby and breaks at the 7th; cross into the north wing and down its corridor to lift B; up to the wing's roof; the
+  // cradle down to the railway. Spawns are [type, x, z, floor y]; respawns [x, z, floor y, facing].
+  podezd: {
+    start: [-13, 119.4],
+    spawnGap: 1.0, clearedPause: 1.6, healBetween: 25,
+    liftSpeed: 4.0, cradleSpeed: 2.4, doorTime: 1.0, restRise: 2.4,   // m/s; your view may follow a ride faster than you'd climb
+    encounters: [
+      { name: 'lobby', at: [-19.7, -6.3, 118.7, 125.5, -1, 1.5], respawn: [-13, 119.6, 0, Math.PI], sign: 'lobby', lock: ['pzDoor'],
+        spawn: [['conscript', -8, 124, 0], ['conscript', -18.5, 123.8, 0], ['laborer', -16.5, 119.4, 0]] },
+      { name: 'seventh', at: [-19.7, -6.3, 118.3, 124.9, 19, 20.6], respawn: [-10, 124.3, 19.6, 0], sign: 'seventh', lock: ['nwLink'],
+        spawn: [['conscript', -8, 119.6, 19.6], ['laborer', -17.8, 120, 19.6], ['conscript', -16, 124.6, 19.6]] },
+      { name: 'kitchen', at: [-40, -21.5, 118.3, 125.5, 19, 20.6], respawn: [-21.5, 124, 19.6, Math.PI / 2], sign: 'kitchen', lock: ['nwLink', 'pzLiftB'],
+        spawn: [['cook', -30, 119.4, 19.6], ['laborer', -40, 124, 19.6], ['wrestler', -36.5, 123.4, 19.6], ['conscript', -44.6, 124.2, 19.6]] },
+      { name: 'roof', at: [-45.7, -20.3, 118.3, 124.9, 33, 35], respawn: [-44.1, 124.4, 33.6, 0], sign: 'roofFight', lock: ['pzLiftB', 'pzCradle'],
+        spawn: [['laborer', -30, 120, 33.6], ['conscript', -24, 128, 33.6], ['conscript', -36, 126.6, 33.6], ['laborer', -22, 119.6, 33.6], ['cook', -28, 128.6, 33.6]] },
+    ],
+    props: [['bin', -7.3, 123.8, 0], ['crate', -19, 119.2, 0], ['bottle', -29.9, 120.3, 20.4], ['bottle', -29.2, 120.5, 20.4], ['bin', -45, 123.2, 19.6],
+            ['crate', -41, 119, 33.6], ['crate', -40.2, 119.2, 33.6], ['bin', -21, 128.8, 33.6]],
+    light: { inAmbient: [0.1, 0.095, 0.1] },
+  },
   // ---- the old level 3: Tram Depot 7, Krasnovia (scrapped as a location; its ring moves to the Palace of Sport) (positions are local to the depot gate: lx across, lz in; see src/depot/build.js)
   depot: {
     start: [0, 2.2],                           // where you arrive (through the gate), facing into the yard
