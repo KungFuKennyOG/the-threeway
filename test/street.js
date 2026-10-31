@@ -37,6 +37,53 @@ try {
     check('the outdoor levels are a few meshes (street, skylines, sky, beacons, and at most two per level after the street)', streetMeshes.length <= 5 + 2 * nL, streetMeshes.length + ' static meshes for ' + nL + ' levels'); }
   const litTris = run('ST.lit.tris'), skyTris = run('ST.sky.tris');
   check('street + skylines under the triangle budget', litTris + skyTris < 80000, `${litTris} street + ${skyTris} skyline tris`);
+  // ---- the skylines: the scale ladder, the moving lights, the Halcyon, all inside the camera's reach
+  { const SKY = run('SKY'), H = SKY.heights, towerTop = run('typeof TWR !== "undefined" ? TWR.spire : 252'), far = TW.CFG.render.camFar;
+    check('the skylines\' own share stays lean (big texture repeats, not geometry)', TW.ST.skylineTris < 16000, TW.ST.skylineTris + ' tris (was 16744 before the pass)');
+    check('the scale ladder: Aoki > Civic Harmony\'s mast > the Tower of Labor > Liberty Avenue\'s ridge', H.aoki >= 390 && H.civic >= 300 && H.aoki > H.civic + 50 && H.civic > towerTop + 40 && H.ridge < towerTop,
+      `Aoki ${H.aoki} m, Civic Harmony ${H.civic} m, Tower of Labor ${towerTop} m, ridge ${H.ridge.toFixed(0)} m`);
+    const P = TW.ST.skylineMesh.geometry.attributes.position.array; let top = 0, at = null;
+    for (let i = 1; i < P.length; i += 3) if (P[i] > top) { top = P[i]; at = [P[i - 1], P[i + 1]]; }
+    check('Aoki Development is the tallest thing in the city', Math.abs(top - SKY.aoki.top) < 0.5 && Math.hypot(at[0] - SKY.aoki.at[0], at[1] - SKY.aoki.at[1]) < 5, `top ${top.toFixed(1)} m at ${at.map(v => v.toFixed(0))}`);
+    const eye = { square: [0, 1.6, 15], door: [2, 1.6, 7], crossing: [-40, 1.6, 140], parade: [-190, 1.6, 198], towerTop: [-234.6, 232, 198] };
+    const reach = (p) => Object.entries(eye).map(([k, e]) => [k, Math.hypot(p[0] - e[0], p[1] - e[1], p[2] - e[2])]);
+    const tip = [SKY.aoki.at[0], SKY.aoki.top, SKY.aoki.at[1]], mast = [SKY.civic.at[0], SKY.civic.top, SKY.civic.at[1]];
+    check('Aoki\'s tip and Civic Harmony\'s mast are inside the camera\'s far plane from the square, the door, the crossing, Parade Square and the Tower\'s top',
+      reach(tip).concat(reach(mast)).every(([, d]) => d < far * 0.97), reach(tip).map(([k, d]) => k + ' ' + d.toFixed(0)).join(', ') + ' (far ' + far + ')');
+    const el = Math.atan2(352 - 1.6, Math.hypot(SKY.aoki.at[0], SKY.aoki.at[1] - 15)) * 180 / Math.PI;
+    check('from Tripoint Square Aoki\'s crown stands high but doesn\'t swallow the sky', el > 40 && el < 62, el.toFixed(0) + '° up');
+    const skyR = Math.max(...Array.from(TW.ST.skyMesh.geometry.attributes.position.array).reduce((a, v, i, A) => (i % 3 === 0 && a.push(Math.hypot(A[i], A[i + 1], A[i + 2])), a), []));
+    check('the sky band fits inside the far plane (no dark disc overhead)', skyR < far * 0.97, skyR.toFixed(0) + ' m');
+    // the moving lights and the zeppelin: children of the skyline mesh (hidden with it), one draw call each
+    const BM = TW.ST.beamMesh, Z = run('ZEP'), beams = run('ST.beams');
+    check('the moving lights are one small additive mesh riding on the skyline mesh', BM && BM.parent === TW.ST.skylineMesh && BM.geometry.attributes.position.count / 3 <= 120 && BM.material.depthWrite === false,
+      (BM.geometry.attributes.position.count / 3) + ' tris');
+    check('Columbia\'s gold searchlights: a few sweeping, two finding the zeppelin', beams.filter(b => !b.track).length >= 4 && beams.filter(b => b.track).length === 2, beams.length + ' beams');
+    const snap = () => Array.from(BM.geometry.attributes.position.array);
+    run('skyTick(12, 0, 1.6, 15)'); const a0 = snap(), z0 = Z.pos.slice(); run('skyTick(14, 0, 1.6, 15)'); const a1 = snap();
+    const moved = beams.filter(b => !b.track).every((b, i) => { let d = 0; for (let k = i * 18; k < i * 18 + 18; k++) d = Math.max(d, Math.abs(a1[k] - a0[k])); return d > 1; });
+    check('the searchlights sweep (a cheap per-frame tick)', moved);
+    const zm = Z.mesh;
+    check('the Halcyon: one fogged mesh on the skyline mesh, cheap', zm && zm.parent === TW.ST.skylineMesh && Z.tris < 450 && zm.material.uniforms.uFogOn.value === TW.CFG.street.skylineFog && zm.frustumCulled === false, Z.tris + ' tris');
+    check('it flies (moved in the tick)', Math.hypot(Z.pos[0] - z0[0], Z.pos[2] - z0[2]) > 2 && zm.position.x === Z.pos[0], `${Math.hypot(Z.pos[0] - z0[0], Z.pos[2] - z0[2]).toFixed(1)} m in 2 s`);
+    let low = 1e9, near = 1e9, out = 0, lapBack = 1e9;
+    run('zepAt(0, ZEP.pos)'); const p0 = Z.pos.slice(); run('zepAt(' + Z.lap + ', ZEP.pos)'); lapBack = Math.hypot(Z.pos[0] - p0[0], Z.pos[2] - p0[2]);
+    for (let t = 0; t < Z.lap; t += 2) {
+      run(`ZEP.head = zepAt(${t}, ZEP.pos)`);
+      low = Math.min(low, Z.pos[1] - Z.R - 8); near = Math.min(near, Math.hypot(Z.pos[0] - SKY.civic.at[0], Z.pos[2] - SKY.civic.at[1]));
+      out = Math.max(out, ...reach(Z.pos).map(([, d]) => d));
+    }
+    check('it circles Liberty Avenue well above the crowns and never moors at Civic Harmony\'s mast', low > H.civic + 15 && low > H.ridge + 60 && near > 20 && Z.lap >= 180 && Z.lap <= 240 && lapBack < 1,
+      `lowest point ${low.toFixed(0)} m, nearest the mast ${near.toFixed(0)} m, a lap every ${Z.lap} s`);
+    check('it stays in view: inside the far plane from the square, the street, the crossing, Parade Square and the Tower\'s top all lap', out < far * 0.97, 'farthest ' + out.toFixed(0) + ' m');
+    run('skyTick(30, 0, 1.6, 15)');
+    const off = beams.map((b, i) => [b, i]).filter(([b]) => b.track).map(([b, i]) => {
+      const A = a1.length && Array.from(BM.geometry.attributes.position.array), m = (j) => [0, 1, 2].map(c => A[i * 18 + j * 3 + c]);
+      const base = m(0).map((v, c) => (v + m(1)[c]) / 2), end = m(2).map((v, c) => (v + m(5)[c]) / 2), d = end.map((v, c) => v - base[c]), w = Z.pos.map((v, c) => v - base[c]);
+      return Math.acos((d[0] * w[0] + d[1] * w[1] + d[2] * w[2]) / Math.hypot(...d) / Math.hypot(...w)) * 180 / Math.PI;
+    });
+    check('the two tracking searchlights point at the hull', off.every(a => a < 20), off.map(a => a.toFixed(0) + '°').join(', '));
+  }
   const baked = TW.scene.children.filter(o => o.geometry && o.geometry.attributes && o.geometry.attributes.bake);
   const lit = baked.filter(o => !o.material.uniforms.uEmissive.value);
   check('static geometry carries baked light (bar + street)', lit.length >= 3 && lit.every(o => o.material.uniforms.uBaked.value === 1), lit.length + ' baked meshes');
