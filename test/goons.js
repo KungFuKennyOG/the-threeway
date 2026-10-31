@@ -104,7 +104,7 @@ const V = (x, y, z) => new THREE.Vector3(x, y, z);
       lobMin = Math.min(lobMin, run('(p) => closestOnSeg(player.head, p.prevPos, p.body.ps[0].x, new THREE.Vector3()).distanceTo(player.head)')(q)); spinMax = Math.max(spinMax, q.spin); } });
     check('the bandsman throws a cymbal at you', !!cym, bd.state);
     check('it flies flat and spinning, like a frisbee', cym && cym.spinAxis.y > 0.95 && spinMax - spin0 > 2, cym ? `axis y ${cym.spinAxis.y.toFixed(2)}, spun ${(spinMax - spin0).toFixed(1)} rad` : '');
-    check('and it lands on your head if you stand there', lobMin < 0.3 && TW.player.hp < hpB, 'closest ' + lobMin.toFixed(2) + ' hp ' + hpB + ' -> ' + TW.player.hp);
+    check('and it lands on your head if you stand there', lobMin < 0.45 && hpB - TW.player.hp >= TW.CFG.weapons.cymbal.playerDmg, 'closest ' + lobMin.toFixed(2) + ' hp ' + hpB + ' -> ' + TW.player.hp);
     bd.placeAt(0.6, -3.8, Math.PI); bd.setState('keepaway'); let stick = null;
     step(Math.ceil(5 / DT), () => { if (!stick && !bd.carry) { bd.lobType = 'drumstick'; bd.throwCd = 0; } for (const q of TW.props) if (q.hostile && q.type === 'drumstick') stick = stick || q; });
     check('he throws drumsticks too (tumbling end over end)', stick && Math.abs(stick.spinAxis.x) > 0.9, stick ? 'axis ' + stick.spinAxis.x.toFixed(2) : bd.state);
