@@ -664,6 +664,9 @@ function buildPalace() {
     ...round,
     { x0: g0 + 0.3, x1: g1 - 0.3, z0: cz + Rw - 1, z1: PL.northZ + 1.2, pad: P, area: 'plNorth', on: () => level.name === 'parade' || (on() && palaceNorthOpen()) },
   ].forEach(addWalk);
+  // the glass doors into the foyer: shut till the boulevard's fight is won, then they swing in (src/doors.js)
+  addDoor({ name: 'palaceFoyer', levels: ['palace'], tex: 'plDoors', x0: d0, x1: d1, z: PL.foyer[2], y: 0, h: 2.8, th: 0.06,
+    ambient: [0.9, 0.82, 0.7], open: () => foughtPast('palace', 0) });
   ACT1_WEST.end();
   // the crossing's mesh last, so the boulevard's lamps (world now) light the square's west edge too
   PL.crossMesh = mk(xAcc, { ambient: Lt.ambient, sky: Lt.sky, lights: PL.crossLamps.concat(SBX.lamps.filter(l => l[0][2] > 128), PL.outLamps, bake) }); PL.crossTris = xAcc.tris;

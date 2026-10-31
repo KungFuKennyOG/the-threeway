@@ -126,7 +126,7 @@ function physicsStep(dt) {
       if (b.gravity) p.v.y += g * dt;
       p.v.multiplyScalar(Math.max(0, 1 - b.drag * dt));
       p.p.copy(p.x).addScaledVector(p.v, dt); p.ground = false;
-      p.fy = floorAt(p.p.x, p.p.z, p.p.y - p.r);   // a low particle can't be pushed onto a higher floor mid-step (its edge is a wall), so this holds for the step
+      p.fy = floorAt(p.p.x, p.p.z, p.p.y - p.r, b.floorMode);   // a low particle can't be pushed onto a higher floor mid-step (its edge is a wall), so this holds for the step
     }
   }
   for (let it = 0; it < CFG.physics.iterations; it++) {

@@ -29,6 +29,7 @@ function frame() {
   if (game.state !== 'menu' && !frozen) {
     if (!xrMode) updateDesktopHands(dt);
     updateLocomotion(dt);
+    updateDoors(dt);                                  // building entrances swing open once their fight's cleared (src/doors.js)
     if (xrMode && renderer.xr.isPresenting && renderer.xr.updateCamera) renderer.xr.updateCamera(camera);
     scene.updateMatrixWorld();
     updateKinematics(NOW);

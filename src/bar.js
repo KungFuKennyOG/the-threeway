@@ -52,21 +52,39 @@ function walkHeight(w, x, z) {
 // The floor under x, z for something standing at height y (feet; omit for the top floor there): among the rects over
 // that spot, the nearest one you could step onto (no more than CFG.floors.step above y), the highest if several.
 // A rect's pad lets you reach its edge but doesn't hold you up: past its edge you're over whatever is below.
-function floorAt(x, z, y) {
+// mode 'stand' (you): a rect's pad does hold you up. Walking can take your feet that far past its edge (a pad wider than
+//   your radius), and a story below must never win over the floor you're standing on.
+// mode 'body' (goons and their ragdolls): never drop more than CFG.floors.maxDrop onto a story below while a rect of the
+//   floor you're on is within CFG.floors.ledge (a desk, a shelf row, a balustrade's edge): small ledges still drop you.
+function floorAt(x, z, y, mode) {
   const list = floorBands ? floorBands.get(Math.floor(z / BAND)) : WALK;
   if (!list || list.flat) return 0;   // no rect over this band, or none raised
-  const lim = (y === undefined ? Infinity : y) + CFG.floors.step;
+  const lim = (y === undefined ? Infinity : y) + CFG.floors.step, stand = mode === 'stand';
   let bestH = -Infinity, bestD = Infinity, above = Infinity;
   for (let i = 0; i < list.length; i++) {
     const w = list[i];
     if (x < w.fx0 || x > w.fx1 || z < w.fz0 || z > w.fz1 || (w.on && !w.on())) continue;
     const h = walkHeight(w, x, z);
     if (h > lim) { if (h < above) above = h; continue; }
-    const dx = x < w.x0 ? w.x0 - x : x > w.x1 ? x - w.x1 : 0, dz = z < w.z0 ? w.z0 - z : z > w.z1 ? z - w.z1 : 0, d = dx > dz ? dx : dz;
+    const dx = x < w.x0 ? w.x0 - x : x > w.x1 ? x - w.x1 : 0, dz = z < w.z0 ? w.z0 - z : z > w.z1 ? z - w.z1 : 0;
+    let d = dx > dz ? dx : dz; if (stand) d = Math.max(0, d - w.pad);
     if (d < bestD - 1e-6 || (d < bestD + 1e-6 && h > bestH)) { bestD = d; bestH = h; }
   }
+  if (mode === 'body' && y !== undefined && bestH < y - CFG.floors.maxDrop) { const h = ledgeFloor(x, z, y); if (h !== null) return h; }
   if (bestH > -Infinity) return bestH;
   return above < Infinity ? above : 0;   // below every floor here (spawned under it): the floor above; off every rect: y 0
+}
+// the floor at about height y (no more than maxDrop below it, no more than a step above) with a rect within ledge of x, z
+function ledgeFloor(x, z, y) {
+  const F = CFG.floors, list = (walkBands && walkBands.get(Math.floor(z / BAND))) || WALK;
+  let best = null;
+  for (const w of list) {
+    if (w.on && !w.on()) continue;
+    const h = walkHeight(w, x, z); if (h > y + F.step || h < y - F.maxDrop) continue;
+    const dx = Math.max(w.x0 - x, 0, x - w.x1), dz = Math.max(w.z0 - z, 0, z - w.z1);
+    if (Math.hypot(dx, dz) <= F.ledge && (best === null || h > best)) best = h;
+  }
+  return best;
 }
 // the treads of a flight, for drawing: n boxes [x0, y0, z0, x1, y1, z1] over its run, each top crossing the walk ramp at
 // the tread's middle (feet sink or float at most half a riser). Feed them to box() in the level's build.

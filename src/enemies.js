@@ -73,6 +73,7 @@ class Enemy {
     this.targets = {}; for (const j of JOINTS) this.targets[j[0]] = new V3();
     this.syncRig(); this.computeTargets();
     const body = this.body = new Body('enemy', this);
+    body.floorMode = 'body';   // his ragdoll never drops a story through a desk or past a balustrade (floorAt)
     for (const [n, , , r] of JOINTS) body.add(n, this.targets[n], r * this.s, 1);
     for (const [a, b, k] of BONES) body.stick(a, b, k);
     for (const [a, b, d] of LIMITS) body.minDist(a, b, d * this.s);
@@ -550,6 +551,7 @@ class Enemy {
       }
       case 'ragdoll': {
         this.rootAtPelvis();
+        if (this.body.by.pelvis.x.y < player.floorY - CFG.floors.maxDrop - 1) this.backOnYourFloor();   // thrown clear of every ledge: no long fall to a story below
         return;
       }
       case 'signed': {   // beaten, he kneels where he is and stays (he isn't going anywhere: he has a permit to sign)
@@ -590,7 +592,7 @@ class Enemy {
     }
     this.separate();
     this.collideRoot();
-    this.pos.y = floorAt(this.pos.x, this.pos.z, this.pos.y);   // up and down ramps and stairs (the ragdoll pull smooths any step)
+    this.pos.y = floorAt(this.pos.x, this.pos.z, this.pos.y, 'body');   // up and down ramps and stairs (the ragdoll pull smooths any step)
     this.pull = pull; this.body.pull = pull; this.body.drag = 0.6;
     this.applyPose(pose, rate, dt);
     this.updateWeapon(dt); this.updateCarry();
@@ -619,8 +621,8 @@ class Enemy {
   }
   startGetup() {
     if (!this.alive) { if (this.cfg.signs) this.signDown(); else this.setState('ko'); return; }
-    this.rootAtPelvis();
-    if (pushOutXZ(this.pos, 0.32)) this.pos.y = floorAt(this.pos.x, this.pos.z, this.pos.y);
+    this.rootAtPelvis(); this.backOnYourFloor();
+    if (pushOutXZ(this.pos, 0.32)) this.pos.y = floorAt(this.pos.x, this.pos.z, this.pos.y, 'body');
     this.yaw = Math.atan2(player.head.x - this.pos.x, player.head.z - this.pos.z);
     this.setState('getup'); this.pull = 0; this.flying = false;
   }
@@ -653,7 +655,8 @@ class Enemy {
   }
   resolveStrike() {
     killFx(this.windFx); this.windFx = null;
-    const dodged = player.head.distanceTo(this.lockTarget) > CFG.defense.dodgeDistance;
+    const dodged = player.head.distanceTo(this.lockTarget) > CFG.defense.dodgeDistance
+      || Math.abs(this.pos.y - player.floorY) > CFG.floors.goonGap;   // or he's on another floor: nothing reaches you
     const S = this.side.toUpperCase(), low = this.cfg.kicker && this.kickLow;
     const shoulder = this.body.by[(this.cfg.kicker ? 'an' : 'sh') + S].x.clone();
     const block = low ? lowBlockHand() : blockingHand(shoulder, this.lockTarget);
@@ -820,7 +823,7 @@ class Enemy {
   }
   resolveGrab() {
     const flat = _v2.set(player.head.x - this.pos.x, 0, player.head.z - this.pos.z).length();
-    const dodged = player.head.distanceTo(this.lockTarget) > CFG.defense.dodgeDistance + 0.1;
+    const dodged = player.head.distanceTo(this.lockTarget) > CFG.defense.dodgeDistance + 0.1 || Math.abs(this.pos.y - player.floorY) > CFG.floors.goonGap;
     if (flat < 1.0 && !dodged && !player.clinchedBy) {
       player.clinchedBy = this; this.armHits = 0; this.setState('clinch');
       label('grabbed', player.head.clone().add(_v3.set(0, 0.2, 0)).addScaledVector(camera.getWorldDirection(new V3()), 0.8));
@@ -861,7 +864,14 @@ class Enemy {
     if (L < minD && L > 1e-4) this.pos.addScaledVector(d.divideScalar(L), minD - L);
   }
   rootAtPelvis() {   // a limp or dangling goon's root: under his pelvis, on the floor he's over
-    const P = this.body.by.pelvis.x; this.pos.set(P.x, floorAt(P.x, P.z, P.y), P.z);
+    const P = this.body.by.pelvis.x; this.pos.set(P.x, floorAt(P.x, P.z, P.y, 'body'), P.z);
+  }
+  backOnYourFloor() {   // fallen a story below the fight (thrown clear of every ledge): back on your floor, at its nearest spot
+    if (this.body.by.pelvis.x.y > player.floorY - CFG.floors.maxDrop && this.pos.y > player.floorY - CFG.floors.maxDrop) return;
+    const q = _v3.set(this.pos.x, player.floorY, this.pos.z); keepInWalk(q, 0.32);
+    const P = this.body.by.pelvis.x, d = _v2.set(q.x - P.x, player.floorY + 0.35 - P.y, q.z - P.z);   // his pelvis just over your floor, limbs as they lie
+    for (const p of this.body.ps) { p.x.add(d); p.p.add(d); p.v.set(0, 0, 0); p.wk = null; }
+    this.pos.set(q.x, player.floorY, q.z);
   }
   collideRoot() {
     const hit = pushOutXZ(this.pos, 0.32);

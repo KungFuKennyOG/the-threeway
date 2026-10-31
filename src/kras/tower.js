@@ -187,8 +187,7 @@ function towerLobby(acc, lamps) {
   twFloor(acc, 'marble', F.r, 0.004, 2); twCeil(acc, 'coffer', F.r, H, 2.4);
   for (const [a, b, c, d] of [[x0, x1, z0, z0 + 0.5], [x0, x1, z1 - 0.5, z1], [x0, x0 + 0.5, z0, z1], [x1 - 0.5, x1, z0, z1]]) sbox(acc, 'gilt', (a + b) / 2, H - 0.45, (c + d) / 2, b - a, d - c, 0.45, 0, twO({ top: false }));   // a gilt cornice
   aq(acc, 'carpetRed', [-41.3, 0.014, 328.2], [-38.7, 0.014, 328.2], [-38.7, 0.014, z0], [-41.3, 0.014, z0], [0, 0, 1, (328.2 - z0) / 2.6], [0, 1, 0], 2.6);
-  // the doors stand open, folded back against the wall inside; the lintel over them
-  for (const [x, s] of [[d0 - 2, 1], [d1 + 2, -1]]) plate(acc, 'bronzeDoor', x, dh / 2, z0, 4, dh, 0, 0.06, s > 0 ? [0, 0, 1, 1] : [1, 0, 0, 1]);
+  // the lintel over the doors (the doors themselves swing: src/doors.js, added with the walk rects below)
   aq(acc, 'marbleWall', [d0, dh, z0 - 0.6], [d1, dh, z0 - 0.6], [d1, dh, z0], [d0, dh, z0], [0, 0, 2, 0.1], [0, -1, 0], 4);
   // six marble columns, full height, gilt capitals and bases (holes in the walk area: TW_HOLES.lobby)
   for (const x of [-46.5, -33.5]) for (const z of [317, 322.5, 328]) {
@@ -347,7 +346,6 @@ function towerTop(acc, lamps, live) {
   twWalls(acc, 'oakPanel', F.r, y, H, { s: [[o0, o1, oh]] }, 2, H);
   for (const x of [o0, o1]) wall(acc, 'darkwood', x, x === o0 ? z0 : z, x, x === o0 ? z : z0, y, y + oh, 1, 1);   // the reveals through the stage's wall
   aq(acc, 'darkwood', [o0, y + oh, z], [o1, y + oh, z], [o1, y + oh, z0], [o0, y + oh, z0], [0, 0, 1, 1], [0, -1, 0], 4);
-  for (const [x, u] of [[o0 - 0.85, [0, 0, 1, 1]], [o1 + 0.85, [1, 0, 0, 1]]]) plate(acc, 'bronzeDoor', x, y + oh / 2, z0, 1.6, oh, 0, 0.05, u);   // the doors, folded back open
   twFloor(acc, 'parquet', [x0, x1, z0 - 0.3, z1], y + 0.004, 1.6); twCeil(acc, 'ceilTile', F.r, y + H, 1.6);
   aq(acc, 'rugRed', [-44, y + 0.012, 326.4], [-36, y + 0.012, 326.4], [-36, y + 0.012, 333.2], [-44, y + 0.012, 333.2], [0, 0, 1, 1], [0, 1, 0], 2);
   // the desk (he sits north of it, facing the doors and the city), his chair, a lamp, the telephone, his nameplate
@@ -651,6 +649,12 @@ function buildTower() {
     sill(0, L3.stops[0]), sill(1, L3.stops[1]),
     ...TLIFTS.map(L => L.rect),
   ].forEach(addWalk);
+  // the south doors: shut on Parade Square till the band's beaten, then they swing in and fold back against the lobby's wall;
+  // the Chairman's doors: shut till you step onto the tribune, then they swing in and he comes out (src/doors.js)
+  addDoor({ name: 'towerFront', levels: ['parade', 'tower'], tex: 'bronzeDoor', x0: d0, x1: d1, z: TWR.lobby.r[2], y: 0, h: TWR.door[2], angle: Math.PI * 0.97, th: 0.12,
+    ambient: [0.78, 0.66, 0.5], open: () => level.name === 'tower' || foughtPast('parade', CFG.parade.encounters.length - 1) });
+  addDoor({ name: 'chairman', levels: ['tower'], tex: 'bronzeDoor', x0: o0, x1: o1, z: TWR.top.r[2], y: TY, h: TWR.odoor[2], th: 0.1,
+    ambient: [0.72, 0.62, 0.5], open: () => level.encounter >= CFG.tower.encounters.length - 1 });
   // Parade Square's own way up to the doors stays walkable while you're in here, so the doors are shut by a blocker
   // that only exists (has a height) while a fight holds them
   const shut = () => level.name === 'tower' && LOCKED.has('twDoor');
@@ -696,7 +700,7 @@ function towerRooms() {
   const M = TWR.meshes;
   roomMeshes('twLobby', M.low); roomMeshes('twOffice', M.low); roomMeshes('twArchive', M.high); roomMeshes('twTop', M.high);
   for (const L of TLIFTS) for (const r of L.rooms) roomMeshes(r, L.group);
-  addPortal('outside', 'twLobby', ACT1_WEST.pt([-40, 3, TWR.foot[2]]), () => (level.name === 'tower' && player.floorY < 6) || (level.name === 'parade' && game.state === 'won'));
+  addPortal('outside', 'twLobby', ACT1_WEST.pt([-40, 3, TWR.foot[2]]), () => (level.name === 'tower' && player.floorY < 6) || (level.name === 'parade' && (game.state === 'won' || doorOpen('towerFront'))));
   addPortal('twArchive', 'outside', ACT1_WEST.pt([-40, TWR.archive.y + 1.2, TWR.archive.r[2] - 0.15]), () => level.name === 'tower' && player.floorY > 30 && player.floorY < 70);
   addPortal('twTop', 'outside', ACT1_WEST.pt([-40, TWR.top.y + 1.9, TWR.stage[2] + 0.1]), () => level.name === 'tower' && player.floorY > 150);
 }

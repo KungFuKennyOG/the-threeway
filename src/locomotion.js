@@ -11,9 +11,9 @@ function followFloor(dt) {
   if (xrMode) { camera.getWorldPosition(_v1); x = _v1.x; z = _v1.z; }   // in VR you stand anywhere in your play space
   const F = CFG.floors, y = rig.position.y;
   let ny;
-  if (y !== player.floorY || Math.hypot(x - _fl.x, z - _fl.z) > F.snapDist) ny = floorAt(x, z, y);   // moved by someone else
+  if (y !== player.floorY || Math.hypot(x - _fl.x, z - _fl.z) > F.snapDist) ny = floorAt(x, z, y, 'stand');   // moved by someone else
   else {
-    const target = floorAt(x, z, y), m = F.maxRise * dt;
+    const target = floorAt(x, z, y, 'stand'), m = F.maxRise * dt;
     ny = y + clamp((target - y) * Math.min(1, dt * F.followRate), -m, m);
     if (Math.abs(target - ny) < 1e-4) ny = target;
   }

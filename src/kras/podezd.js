@@ -52,7 +52,7 @@ function buildPodezdInside(acc) {
   sbox(acc, 'radiator', -7.0, 0.3, 120.4, 0.2, 1.6, 0.6, 0, { u: 0.8, v: 0.6 }); pzSolid(-7.2, 119.6, -6.3, 121.2, 0, 0.9);
   sbox(acc, 'iron', -18.1, 0, 124.9, 3.2, 0.06, 2.4, 0, { u: 1, v: 1, top: false }); plate(acc, 'outOfOrder', -18.1, 1.6, 124.85, 1.3, 0.32, Math.PI, 0.03);   // the stair gate
   for (const x of [-17, -8.5]) plate(acc, 'padDoor', x, 1.05, z0, 0.95, 2.1, 0, 0.02);
-  plate(acc, 'steelDoor', dx - 0.62, 1.1, z0 + 0.62, 1.2, 2.2, Math.PI / 2, 0.02, [0, 0, 1, 1], true);   // the street door, swung in
+  // (the street door itself swings: src/doors.js, added by the Superblock's build)
   for (const s of [-1, 1]) wall(acc, 'concrete', dx + s * 0.6, dz + (s < 0 ? 0.3 : 0), dx + s * 0.6, dz + (s < 0 ? 0 : 0.3), 0, 2.2, 1, 1);
   aq(acc, 'concrete', [dx - 0.6, 2.2, dz], [dx + 0.6, 2.2, dz], [dx + 0.6, 2.2, z0], [dx - 0.6, 2.2, z0], [0, 0, 1, 1], [0, -1, 0], 2);
   sbox(acc, 'litWarm', -13, PZ.lobbyH - 0.15, 121.6, 0.25, 0.25, 0.15, 0, { u: 1, v: 1 });
@@ -192,7 +192,7 @@ function podezdRooms() {
   const inWing = (p) => p.x > PZ.nw[0] - 0.35 && p.x < PZ.x0 && p.z > PZ.z0 - 0.35 && p.z < 130 && p.y < PZ.wingRoof - 0.6;
   addRoom('podezd', (p) => inBlock(p) || inWing(p));
   roomMeshes('podezd', PZ.inMesh, ...LIFTS.map(L => L.group));
-  addPortal('outside', 'podezd', [SB.door[0], 1.2, SB.door[1]], () => level.name === 'podezd' || (level.name === 'superblock' && game.state === 'won'));
+  addPortal('outside', 'podezd', [SB.door[0], 1.2, SB.door[1]], () => level.name === 'podezd' || (level.name === 'superblock' && (game.state === 'won' || doorOpen('podezd3'))));
 }
 // ---- the rides
 const liftInCar = (L) => { const h = player.head, [a, b, c, d] = L.car; return h.x > a - 0.05 && h.x < b + 0.05 && h.z > c + 0.15 && h.z < d + 0.1 && Math.abs(player.floorY - L.y) < 0.8; };

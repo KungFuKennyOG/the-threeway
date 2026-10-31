@@ -77,6 +77,8 @@ function superblock14(acc) {
   for (let k = 0; k < 21; k++) sbox(acc, 'litWarm', -8.6, 4.2 + k * 2.8, SB.point[2] - 0.04, 1.2, 0.08, 1.0, 0, { u: 1, v: 1, top: false });   // the stairwell's windows, one per landing
   // podezd 3: a steel door, a concrete canopy, a lamp, the house number
   const [dx, dz] = SB.door;
+  addDoor({ name: 'podezd3', levels: ['superblock', 'podezd'], tex: 'steelDoor', x0: dx - 0.6, x1: dx + 0.6, z: PZ.z0, y: 0, h: 2.2, leaves: 1, side: 1,
+    ambient: [0.55, 0.52, 0.48], open: () => level.name === 'podezd' || foughtPast('superblock', CFG.superblock.encounters.length - 1) });   // shut till the last fight out here is won
   sbox(acc, 'concrete', dx, 2.55, dz - 0.8, 2.8, 1.6, 0.18, 0, { u: 2, v: 1 });
   for (const s of [-1, 1]) { sbox(acc, 'iron', dx + s * 1.25, 0, dz - 1.45, 0.08, 0.08, 2.55, 0, { u: 1, v: 1, top: false }); sbSolid(dx + s * 1.25 - 0.06, dz - 1.51, dx + s * 1.25 + 0.06, dz - 1.39, 2.55); }
   sbox(acc, 'litWarm', dx, 2.47, dz - 0.8, 0.4, 0.4, 0.08, 0, { u: 1, v: 1 });
