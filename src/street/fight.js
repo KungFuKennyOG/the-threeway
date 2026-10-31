@@ -34,10 +34,18 @@ function startStreet(fromBar) {
 // Their configs (CFG.street, CFG.<level>) use positions relative to the level's origin (world, unless it says otherwise).
 const stageCfg = () => LEVELS[level.name] ? LEVELS[level.name].cfg() : CFG.street;
 const stageOrigin = () => LEVELS[level.name] && LEVELS[level.name].origin ? LEVELS[level.name].origin() : [0, 0];
+// a level laid into the world by a frame (src/levels.js) keeps its encounters in its own coordinates
+const stageFrame = () => (LEVELS[level.name] && LEVELS[level.name].frame) || null;
+const stageHead = () => { const F = stageFrame(); return F ? F.head() : player.head; };   // your head in the level's coordinates
+function stageWorld(lx, lz) {   // a position in the level's encounter coordinates (its frame, less its origin) -> world [x, z]
+  const [ox, oz] = stageOrigin(), F = stageFrame();
+  return F ? F.toWorld(ox + lx, oz + lz) : [ox + lx, oz + lz];
+}
+const stageYaw = () => { const F = stageFrame(); return F ? F.yaw : 0; };   // a facing in the level's coordinates + this = world
 const STAGES = { has: (n) => n === 'street' || !!LEVELS[n] };   // levels run by updateStreet() (src/levels.js)
 // an encounter starts when you walk past its `trigger` (z, along the level), or, with `at: [x0, x1, z0, z1, y0, y1]`, when you
 // stand inside that box on a floor between y0 and y1 (levels that climb). `lock`: walk areas shut while it's on.
-const triggered = (E, z) => E.at ? (player.head.x > E.at[0] && player.head.x < E.at[1] && player.head.z > E.at[2] && player.head.z < E.at[3] && player.floorY >= E.at[4] && player.floorY <= E.at[5]) : z > E.trigger;
+const triggered = (E, z) => { if (!E.at) return z > E.trigger; const h = stageHead(); return h.x > E.at[0] && h.x < E.at[1] && h.z > E.at[2] && h.z < E.at[3] && player.floorY >= E.at[4] && player.floorY <= E.at[5]; };
 function startEncounter(i) {
   const E = stageCfg().encounters[i];
   level.encounter = i; level.arena = E.arena || null;
@@ -60,7 +68,7 @@ function startSuperblock(fromStreet) {
   showSign('krasnovia', 2.6);
 }
 function updateStreet(dt) {   // the stage flow for whichever level you're in (the street or a registered level)
-  const S = stageCfg(), enc = S.encounters, [ox, oz] = stageOrigin(), z = player.head.z - oz;
+  const S = stageCfg(), enc = S.encounters, oz = stageOrigin()[1], z = stageHead().z - oz;
   const D = LEVELS[level.name]; if (D && D.update) D.update(dt);   // the level's own rides and set pieces
   if (game.state === 'walk') {
     const next = level.encounter + 1;
@@ -75,7 +83,7 @@ function updateStreet(dt) {   // the stage flow for whichever level you're in (t
   if (game.state === 'fight') {
     game.spawnT -= dt;
     if (game.queue.length && game.spawnT <= 0) {
-      const [want, lx, lz, ly] = game.queue.shift(), type = enemyType(want), x = ox + lx, zz = oz + lz, e = new Enemy(type);   // not built yet: a stand-in (src/levels.js)
+      const [want, lx, lz, ly] = game.queue.shift(), type = enemyType(want), [x, zz] = stageWorld(lx, lz), e = new Enemy(type);   // not built yet: a stand-in (src/levels.js)
       e.placeAt(x, zz, Math.atan2(player.head.x - x, player.head.z - zz), ly);
       const d = _v1.set(player.head.x - x, 0, player.head.z - zz); const L = d.length();
       e.target.set(x, 0, zz).addScaledVector(d.divideScalar(L || 1), Math.min(2.5, L * 0.5));
@@ -97,7 +105,8 @@ function updateStreet(dt) {   // the stage flow for whichever level you're in (t
   if (game.state === 'lost' && game.timer > 3.5) {   // back to the start of this stretch, full health
     const E = enc[level.encounter];
     clearEnemies(); player.hp = CFG.player.health;
-    placePlayer(ox + E.respawn[0], oz + E.respawn[1], E.respawn[3] !== undefined ? E.respawn[3] : Math.PI);
+    const [rx, rz] = stageWorld(E.respawn[0], E.respawn[1]);
+    placePlayer(rx, rz, (E.respawn[3] !== undefined ? E.respawn[3] : Math.PI) + stageYaw());
     if (E.respawn[2] !== undefined) rig.position.y = E.respawn[2];   // a floor in a stack
     startEncounter(level.encounter);
   }
@@ -116,7 +125,11 @@ function enrage(s) {
 // encounter walls: only the player is held in; goons walk in from outside them
 function keepPlayerIn(p, r) {
   pushOutXZ(p, r);
-  if (STAGES.has(level.name) && level.arena) { const oz = stageOrigin()[1]; p.z = clamp(p.z, oz + level.arena[0] + r, oz + level.arena[1] - r); }
+  if (STAGES.has(level.name) && level.arena) {   // the arena runs along the level's own z
+    const oz = stageOrigin()[1], F = stageFrame();
+    if (!F) p.z = clamp(p.z, oz + level.arena[0] + r, oz + level.arena[1] - r);
+    else { const [lx, lz] = F.toLocal(p.x, p.z), [x, z] = F.toWorld(lx, clamp(lz, oz + level.arena[0] + r, oz + level.arena[1] - r)); p.x = x; p.z = z; }
+  }
 }
 // lights and fog follow you: the bar's six inside, the nearest six street lamps outside
 const _lampD = [];

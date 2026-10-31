@@ -5,7 +5,9 @@
 // both sides, portrait floats on wheeled platforms, the brass band's drums and music stands, the gymnasts' mats, empty
 // bleachers on the east side, the Ministry of Order's grey stepped front on the west, and the reviewing stand at the
 // north end in front of the Tower's doors (the Tower itself is its own level). One flat floor: no stairs, no ramps.
-// World coordinates (+z away from the Threeway, Krasnovia is -x); one baked mesh on the street atlas.
+// Authored running +z from the Palace's doors to the Tower's (the Ministry on the local west, -x), and laid into the world
+// running west into the sector by the ACT1_WEST frame (src/levels.js): there the Tower is due west, the Ministry on the
+// south side. CFG.parade is in the frame's coordinates. One baked mesh on the street atlas.
 CFG.parade = {
   start: [-40, 254.8],                         // "start here": just out of the Palace of Sport's doors, facing the Tower
   spawnGap: 1.1, clearedPause: 1.6, healBetween: 20,
@@ -218,6 +220,7 @@ function prMinistry(acc) {
 }
 // called from buildStreet(): one mesh on the street atlas, light baked in
 function buildParade() {
+  ACT1_WEST.begin();
   const acc = PR.acc = new GeoAcc(); PR.lamps = [];
   prSquare(acc); prMinistry(acc); prStand(acc); prBand(acc); prGym(acc); prBleachers(acc);
   for (const [x, z, key] of PR.floats) prFloat(acc, x, z, key);
@@ -226,7 +229,7 @@ function buildParade() {
   for (const [x, z, ax, az] of PR.masts) prMast(acc, x, z, ax, az);
   prSodium(acc, -46.5, 256.2, 1); prSodium(acc, -33.5, 256.2, -1);   // either side of the Palace's doors
   const Lt = CFG.street.light, F = CFG.street.fog, [a, b, c, d] = PR.rect;
-  const near = ST.lamps.filter(l => l[0][0] > a - 15 && l[0][0] < b + 15 && l[0][2] > c - 15 && l[0][2] < d + 15);   // a neighbour's lamps spill onto the edges
+  const near = ACT1_WEST.localLamps(ST.lamps).filter(l => l[0][0] > a - 15 && l[0][0] < b + 15 && l[0][2] > c - 15 && l[0][2] < d + 15);   // a neighbour's lamps spill onto the edges
   const m = new THREE.Mesh(acc.geometry({ ambient: Lt.ambient, sky: Lt.sky, lights: PR.lamps.concat(near) }), makeMat('street', { baked: true }));
   m.matrixAutoUpdate = false; m.updateMatrix(); m.frustumCulled = false;
   m.material.uniforms.uFogNear = { value: F.near }; m.material.uniforms.uFogFar = { value: F.far };
@@ -241,13 +244,14 @@ function buildParade() {
     { x0: s0, x1: s1, z0: sz0, z1: sz1, pad: P, area: 'prSquare', on: on('prSquare') },
     { x0: t0 + P, x1: t1 - P, z0: sz1 - 2, z1: tz + 0.6, pad: P, area: 'prTowerDoor', on: on('prTowerDoor') },
   ].forEach(addWalk);
+  ACT1_WEST.end();
   return m;
 }
 defineLevel('parade', {
-  menu: '6 · Parade Square', cfg: () => CFG.parade, build: buildParade, outside: () => [PR.mesh], rects: [PR.rect],
+  menu: '6 · Parade Square', cfg: () => CFG.parade, build: buildParade, outside: () => [PR.mesh], rects: () => [ACT1_WEST.rect(PR.rect)], frame: ACT1_WEST,
   start: (f) => startParade(f),
-  after: 'palace', enter: () => player.head.z > 253.2,                                        // out of the Palace's north doors
-  finish: () => player.head.z > 309.5 && Math.abs(player.head.x + 40) < 5, wonSign: 'tower',   // up to the Tower's doors
+  after: 'palace', enter: () => ACT1_WEST.head().z > 253.2,                                   // out of the Palace's north doors
+  finish: () => { const h = ACT1_WEST.head(); return h.z > 309.5 && Math.abs(h.x + 40) < 5; }, wonSign: 'tower',   // up to the Tower's doors
   signs: { parade: ['PARADE SQUARE', '#ff9a3c'], guardFight: ['HONOUR GUARD', '#e8352b'], gymFight: ['FIGHT!', '#f2c14e'],
            bandFight: ['THE BAND', '#f2c14e'], tower: ['THE TOWER OF LABOR', '#33e0d0'] },
   hud: { walk: 'Parade Square — cross to the Tower of Labor', last: 'Walk up to the Tower of Labor\'s doors', won: 'Parade Square cleared — into the Tower of Labor (R to restart)', short: 'Parade' },
@@ -258,8 +262,8 @@ function startParade(fromPalace) {
   const held = new Set(handList.map(h => h.held));
   if (!fromPalace) { DOOR.target = 1; DOOR.open = 1; player.hp = CFG.player.health; player.hurtT = 0; game.catches = 0; game.disarms = 0; }
   for (const p of props.slice()) if (!held.has(p)) { scene.remove(p.obj); p.body.remove(); p.alive = false; props.splice(props.indexOf(p), 1); }   // the Palace's props stay behind
-  for (const [type, x, z] of CFG.parade.props) new Prop(type, new V3(x, 0, z));
-  if (!fromPalace) { placePlayer(CFG.parade.start[0], CFG.parade.start[1], Math.PI); rig.position.y = 0; }
+  for (const [type, x, z] of CFG.parade.props) new Prop(type, ACT1_WEST.world(new V3(x, 0, z)));
+  if (!fromPalace) { placePlayer(...ACT1_WEST.toWorld(CFG.parade.start[0], CFG.parade.start[1]), Math.PI + ACT1_WEST.yaw); rig.position.y = 0; }
   game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
   showSign('parade', 2.6);
 }

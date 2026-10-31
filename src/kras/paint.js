@@ -82,3 +82,7 @@ Object.assign(PAINT, {
   trophy() { const p = new Pix(16, 16); p.fill('#1e2a34', EM); p.rect(0, 0, 16, 1, '#8a6a3a'); p.rect(0, 8, 16, 1, '#8a6a3a'); p.rect(0, 15, 16, 1, '#8a6a3a');
     for (const [x, y] of [[2, 3], [7, 2], [12, 4], [3, 10], [9, 10]]) { p.rect(x, y, 3, 3, '#f2c14e', EM); p.rect(x + 1, y + 3, 1, 2, '#c9a04a', EM); } return p; },
 });
+// ---- East Station, on Station Square north of the level crossing (src/kras/palace.js)
+Object.assign(PAINT, {
+  stationSign() { const p = new Pix(84, 13); p.fill('#1e3a6a', EM); p.rect(0, 0, 84, 1, '#f2c14e', EM); p.rect(0, 12, 84, 1, '#f2c14e', EM); p.text('EAST STATION', 6, 3, '#f2ede4', EM); return p; },
+});

@@ -24,14 +24,17 @@ const DT = 1 / 72;
 const step = (n, f) => { for (let i = 0; i < n; i++) { clock += DT; if (f) f(i); TW.renderer.loop(); } };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const PR = run('PR'), C = TW.CFG.parade, D = TW.LEVELS.parade;
-const at = (x, z, yaw) => { TW.rig.position.set(x, 0, z); run(`desk.yaw = ${yaw}; desk.pitch = 0;`); };   // yaw PI faces +z (toward the Tower)
-const walk = (x, z) => { const p = V(x, 0, z); TW.keepInWalk(p, 0.3); return [p.x, p.z]; };
-const solidAt = (x, z) => { const p = V(x, 0, z); TW.pushOutXZ(p, 0.3); return Math.hypot(p.x - x, p.z - z) > 0.2; };
-const stays = (x, z) => { const p = V(x, 0, z); TW.keepInWalk(p, 0.3); TW.pushOutXZ(p, 0.3); return Math.hypot(p.x - x, p.z - z) < 1e-6; };
+// The square is authored in the ACT1_WEST frame's coordinates (src/levels.js): +z from the Palace's doors to the Tower's.
+// Positions here are in the frame (local); W() takes them into the world, LH() is your head in the frame.
+const AW = run('ACT1_WEST'), W = (x, y, z) => { const [a, b] = AW.toWorld(x, z); return V(a, y, b); }, LH = () => AW.local(TW.player.head);
+const at = (x, z, yaw) => { TW.rig.position.copy(W(x, 0, z)); run(`desk.yaw = ${yaw + AW.yaw}; desk.pitch = 0;`); };   // yaw PI faces local +z (toward the Tower)
+const walk = (x, z) => { const p = W(x, 0, z); TW.keepInWalk(p, 0.3); const q = AW.local(p); return [q.x, q.z]; };
+const solidAt = (x, z) => { const p = W(x, 0, z); TW.pushOutXZ(p, 0.3); const q = AW.local(p); return Math.hypot(q.x - x, q.z - z) > 0.2; };
+const stays = (x, z) => { const p = W(x, 0, z); TW.keepInWalk(p, 0.3); TW.pushOutXZ(p, 0.3); const q = AW.local(p); return Math.hypot(q.x - x, q.z - z) < 1e-6; };
 const KRAS = new Set(['conscript', 'laborer', 'wrestler', 'cook', 'guard', 'gymnast', 'bandsman', 'specialist']);
 const kill = () => { for (const e of TW.enemies) { e.hp = 0; e.knockdown(V(0, 0, 1), 'knockdown', true); } };
-const walkTo = (x, z, sp = 0.035) => {   // walk in small steps, like the keyboard (walk rects and blockers apply)
-  let jump = 0;
+const walkTo = (lx, lz, sp = 0.035) => {   // walk in small steps, like the keyboard (walk rects and blockers apply); to a local point
+  let jump = 0; const { x, z } = W(lx, 0, lz);
   for (let k = 0; k < 3000; k++) {
     const dx = x - TW.rig.position.x, dz = z - TW.rig.position.z, d = Math.hypot(dx, dz); if (d < 0.02) break;
     const s = Math.min(sp, d), p0 = TW.rig.position.clone(); TW.rig.position.x += dx / d * s; TW.rig.position.z += dz / d * s;
@@ -52,7 +55,7 @@ try {
   check('Parade Square is one mesh on the street atlas, light baked in', PR.mesh && PR.mesh.geometry.attributes.bake && PR.mesh.material.uniforms.uBaked.value === 1 && D.outside().length === 1);
   check('its triangles stay within budget', PR.tris < 12000, PR.tris + ' tris');
   check('its lamps are baked (four flood masts, sodium, the floats, the stand) and pushed for goons to be lit by', PR.lamps.length >= 12 && PR.lamps.every(l => TW.ST.lamps.includes(l)), PR.lamps.length + ' lights');
-  { const P = TW.ST.skylineMesh.geometry.attributes.position.array, R = PR.rect; let n = 0;
+  { const P = TW.ST.skylineMesh.geometry.attributes.position.array, R = AW.rect(PR.rect); let n = 0;
     for (let i = 0; i < P.length; i += 3) if (P[i + 1] > 0.5 && P[i] > R[0] && P[i] < R[1] && P[i + 2] > R[2] && P[i + 2] < R[3]) n++;
     check('no skyline slab or far-city block sits on the square', n === 0, n + ' vertices'); }
   { const P = PR.acc.p; let east = 0, out = 0, door = 0;
@@ -72,17 +75,17 @@ try {
 
   // ---- from the menu
   run('clearEnemies(); LEVELS.parade.start(false)'); step(2);
-  check('starting here puts you just out of the Palace\'s doors, facing the Tower, at full health', TW.level.name === 'parade' && TW.game.state === 'walk' && Math.hypot(TW.player.head.x - C.start[0], TW.player.head.z - C.start[1]) < 0.6 && TW.player.hp === TW.CFG.player.health, `${TW.level.name} ${TW.player.head.x.toFixed(1)}, ${TW.player.head.z.toFixed(1)}`);
-  check('the square\'s props are stocked', TW.props.length === C.props.length && TW.props.every(p => p.body.ps[0].x.z > 253), TW.props.length + ' props');
+  check('starting here puts you just out of the Palace\'s doors, facing the Tower, at full health', TW.level.name === 'parade' && TW.game.state === 'walk' && Math.hypot(LH().x - C.start[0], LH().z - C.start[1]) < 0.6 && TW.player.hp === TW.CFG.player.health, `${TW.level.name} ${LH().x.toFixed(1)}, ${LH().z.toFixed(1)}`);
+  check('the square\'s props are stocked', TW.props.length === C.props.length && TW.props.every(p => AW.local(p.body.ps[0].x).z > 253), TW.props.length + ' props');
 
   // ---- walking in from the Palace of Sport, no cut
   run('clearEnemies(); LEVELS.palace.start(false); game.state = "won"; game.timer = 0;');
   at(-40, 251.9, Math.PI); step(3);
-  const before = [TW.rig.position.x, TW.rig.position.z];
+  const before = [AW.local(TW.rig.position).x, AW.local(TW.rig.position).z];
   check('in the Palace\'s doorway, the Palace still on', TW.level.name === 'palace' && TW.game.state === 'won', TW.level.name);
   const jump = walkTo(-40, 253.5);
-  check('walking out of its north doors puts you on Parade Square, right where you are', TW.level.name === 'parade' && Math.abs(TW.player.head.z - 253.5) < 0.1 && Math.abs(TW.rig.position.x - before[0]) < 0.05 && jump < 0.05,
-    `${TW.level.name} z ${TW.player.head.z.toFixed(2)}, biggest step ${(jump * 100).toFixed(1)} cm`);
+  check('walking out of its north doors puts you on Parade Square, right where you are', TW.level.name === 'parade' && Math.abs(LH().z - 253.5) < 0.1 && Math.abs(AW.local(TW.rig.position).x - before[0]) < 0.05 && jump < 0.05,
+    `${TW.level.name} z ${LH().z.toFixed(2)}, biggest step ${(jump * 100).toFixed(1)} cm`);
   check('the Palace\'s props stay behind; the square\'s are stocked', TW.props.length === C.props.length, TW.props.length + ' props');
 
   // ---- where you can walk
@@ -103,7 +106,7 @@ try {
   check('beside it, the square ends at the Tower\'s front', z <= PR.sq[3] + 1e-6, `z ${z.toFixed(2)}`);
   check('the floats are solid', PR.floats.every(([fx, fz]) => solidAt(fx, fz) && solidAt(fx, fz + 0.6)));
   check('so are the reviewing stand, the bass drum, the portico\'s pillars, the masts', solidAt(-55, 307) && solidAt(-25, 307) && solidAt(-24.5, 296.2) && solidAt(-71.2, 281) && solidAt(-69.6, 257.6));
-  check('ragdolls hit them too (world boxes)', [[-55, 1, 266], [-55, 4, 266.6], [-30, 2, 307], [-24.5, 1, 296.2]].every(([bx, by, bz]) => TW.WORLD_BOXES.some(b => bx > b[0] && bx < b[3] && by > b[1] && by < b[4] && bz > b[2] && bz < b[5])));
+  check('ragdolls hit them too (world boxes)', [[-55, 1, 266], [-55, 4, 266.6], [-30, 2, 307], [-24.5, 1, 296.2]].map(([x, y, z]) => W(x, y, z)).every(({ x: bx, y: by, z: bz }) => TW.WORLD_BOXES.some(b => bx > b[0] && bx < b[3] && by > b[1] && by < b[4] && bz > b[2] && bz < b[5])));
   check('the gymnasts\' mats are floor, not an obstacle', stays(-61, 285));
 
   // ---- the doors don't end it while the fights are on
@@ -118,12 +121,12 @@ try {
     check(`${E.name}: walking in starts the fight with its whole crew`, TW.level.encounter === i && TW.enemies.length === E.spawn.length && TW.enemies.every(e => e.alive), TW.enemies.map(e => e.type).join(','));
     check(`${E.name}: the Palace's doors are shut behind you while it's on`, TW.LOCKED.has('prDoor'));
     at(E.respawn[0], E.arena[1] + 4, Math.PI); step(2);
-    check(`${E.name}: it holds you until it's clear`, TW.player.head.z <= E.arena[1] + 1e-6, 'z ' + TW.player.head.z.toFixed(2));
+    check(`${E.name}: it holds you until it's clear`, LH().z <= E.arena[1] + 1e-6, 'z ' + LH().z.toFixed(2));
     at(E.respawn[0], E.arena[0] - 4, Math.PI); step(2);
-    check(`${E.name}: both ways`, TW.player.head.z >= E.arena[0] - 1e-6, 'z ' + TW.player.head.z.toFixed(2));
+    check(`${E.name}: both ways`, LH().z >= E.arena[0] - 1e-6, 'z ' + LH().z.toFixed(2));
     if (i === 1) {
       TW.player.hp = 0; run('loseRound()'); step(Math.ceil(3.7 / DT));
-      check('going down restarts the gymnasts\' fight at its start, full health', TW.level.encounter === 1 && TW.player.hp === TW.CFG.player.health && Math.abs(TW.player.head.z - E.respawn[1]) < 0.6 && TW.game.state !== 'lost', `z ${TW.player.head.z.toFixed(2)} ${TW.game.state}`);
+      check('going down restarts the gymnasts\' fight at its start, full health', TW.level.encounter === 1 && TW.player.hp === TW.CFG.player.health && Math.abs(LH().z - E.respawn[1]) < 0.6 && TW.game.state !== 'lost', `z ${LH().z.toFixed(2)} ${TW.game.state}`);
       step(Math.ceil((1 + C.spawnGap * (E.spawn.length + 1)) / DT));
       check('with its whole crew back', TW.enemies.filter(e => e.alive).length === E.spawn.length, TW.enemies.filter(e => e.alive).length + ' up');
     }
@@ -137,16 +140,16 @@ try {
 
   // ---- the hand-over to the Tower: whatever level walks on from here keeps you on the square's floor
   if (!Object.values(TW.LEVELS).some(L => L.after === 'parade')) {
-    run(`defineLevel('towerStub', { cfg: () => ({ encounters: [], spawnGap: 1, clearedPause: 1, healBetween: 0 }), after: 'parade', enter: () => player.head.z > 311.5,
+    run(`defineLevel('towerStub', { cfg: () => ({ encounters: [], spawnGap: 1, clearedPause: 1, healBetween: 0 }), after: 'parade', enter: () => ACT1_WEST.head().z > 311.5,
       start() { level.name = 'towerStub'; level.encounter = -1; level.arena = null; game.state = 'walk'; } })`);
     const j = walkTo(-40, 312.2);
-    check('walking on through the Tower\'s doors hands over with no jump, still on the floor', TW.level.name === 'towerStub' && Math.abs(TW.player.head.z - 312.2) < 0.1 && j < 0.05, `${TW.level.name} z ${TW.player.head.z.toFixed(2)}`);
+    check('walking on through the Tower\'s doors hands over with no jump, still on the floor', TW.level.name === 'towerStub' && Math.abs(LH().z - 312.2) < 0.1 && j < 0.05, `${TW.level.name} z ${LH().z.toFixed(2)}`);
     delete TW.LEVELS.towerStub;
   }
 
   // ---- physics cost among the floats (4 goons + props)
   run('clearEnemies(); LEVELS.parade.start(false); level.encounter = 99'); at(-40, 262, Math.PI); step(2);
-  for (const t of ['laborer', 'conscript', 'cook', 'wrestler']) { const e = new TW.Enemy(t); e.placeAt(-48 + rnd() * 16, 262 + rnd() * 8, 0); TW.enemies.push(e); }
+  for (const t of ['laborer', 'conscript', 'cook', 'wrestler']) { const e = new TW.Enemy(t); const q = W(-48 + rnd() * 16, 0, 262 + rnd() * 8); e.placeAt(q.x, q.z, 0); TW.enemies.push(e); }
   const t0 = process.hrtime.bigint(); for (let i = 0; i < 120; i++) TW.updatePhysics(1 / 72);
   const ms = Number(process.hrtime.bigint() - t0) / 1e6 / 120;
   check('square physics cost per frame (4 goons + props, Node on a server CPU)', ms < 4, ms.toFixed(2) + ' ms');

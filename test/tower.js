@@ -25,12 +25,16 @@ const DT = 1 / 72;
 const step = (n, f) => { for (let i = 0; i < n; i++) { clock += DT; if (f) f(i); TW.renderer.loop(); } };
 const V = (x, y, z) => new THREE.Vector3(x, y, z);
 const C = TW.CFG.tower, TWR = run('TWR'), L = run('TLIFTS'), M = TWR.meshes;
+// The tower is authored in the ACT1_WEST frame's coordinates (src/levels.js) and laid into the world at the west end of the
+// route: positions here are local (W() takes one into the world; LH() / RL() are your head and the rig in the frame).
+const AW = run('ACT1_WEST'), W = (x, y, z) => { const [a, b] = AW.toWorld(x, z); return V(a, y, b); }, LH = () => AW.local(TW.player.head), RL = () => AW.local(TW.rig.position);
+const setL = (x, y, z) => TW.rig.position.copy(W(x, y, z));
 const kill = () => { for (const e of TW.enemies) { e.hp = 0; e.knockdown(V(0, 0, 1), 'knockdown', true); } };
-const face = (yaw, pitch = 0) => run(`desk.yaw = ${yaw}; desk.pitch = ${pitch};`);
+const face = (yaw, pitch = 0) => run(`desk.yaw = ${yaw + AW.yaw}; desk.pitch = ${pitch};`);   // a facing in the frame
 let maxJump = 0;   // the most your view moved up or down in one frame (VR comfort)
 const frame = (n = 1) => { for (let i = 0; i < n; i++) { const y0 = TW.rig.position.y; step(1); maxJump = Math.max(maxJump, Math.abs(TW.rig.position.y - y0)); } };
-const walkTo = (x, z, sp = 0.035) => {   // walk in small steps (the walk rects and floors apply, like the keyboard)
-  let best = 1e9, stuck = 0;
+const walkTo = (lx, lz, sp = 0.035) => {   // walk in small steps (the walk rects and floors apply, like the keyboard) to a local point
+  let best = 1e9, stuck = 0; const { x, z } = W(lx, 0, lz);
   for (let k = 0; k < 2500; k++) {
     const dx = x - TW.rig.position.x, dz = z - TW.rig.position.z, d = Math.hypot(dx, dz); if (d < 0.02) break;
     if (d < best - 0.005) { best = d; stuck = 0; } else if (++stuck > 40) break;   // held by a wall: give up
@@ -48,31 +52,76 @@ const ride = (Li, F) => {   // step into a lift and ride it to the top of its ru
   return maxJump;
 };
 const inside = (x, z, [x0, x1, z0, z1], m = 0) => x > x0 + m && x < x1 - m && z > z0 + m && z < z1 - m;
-const inBlocker = (x, z, y) => TW.BLOCKERS.some(b => b.y1 !== undefined && y >= (b.y0 || 0) - 0.5 && y < b.y1 && x > b.x0 - 0.3 && x < b.x1 + 0.3 && z > b.z0 - 0.3 && z < b.z1 + 0.3);
+const inBlocker = (lx, lz, y) => { const { x, z } = W(lx, 0, lz); return TW.BLOCKERS.some(b => b.y1 !== undefined && y >= (b.y0 || 0) - 0.5 && y < b.y1 && x > b.x0 - 0.3 && x < b.x1 + 0.3 && z > b.z0 - 0.3 && z < b.z1 + 0.3); };
 const comfort = 0.06;   // m: the most your view may move in one frame of a ride
 
 try {
   // ---- the menu: the deskBtn starts whatever "Start at" picks
   check('the menu lists it as "7 · The Tower of Labor"', TW.LEVELS.tower && TW.LEVELS.tower.menu === '7 · The Tower of Labor' && TW.LEVELS.tower.after === 'parade');
   els.deskBtn.fire('click'); step(3);
-  check('starting it from the menu puts you just inside the south doors, on the ground floor', TW.level.name === 'tower' && Math.abs(TW.rig.position.z - C.start[1]) < 0.3 && Math.abs(TW.player.floorY) < 0.01, `${TW.level.name} z ${TW.rig.position.z.toFixed(2)}`);
+  check('starting it from the menu puts you just inside the south doors, on the ground floor', TW.level.name === 'tower' && Math.abs(RL().z - C.start[1]) < 0.3 && Math.abs(TW.player.floorY) < 0.01, `${TW.level.name} z ${RL().z.toFixed(2)}`);
 
   // ---- the build
-  check('the tower is a baked shell (outside, fogged like the skylines) + two baked meshes for its four floors + three lift cars + the permit',
-    ['low', 'high'].every(k => M[k] && M[k].geometry.attributes.bake) && TWR.shell.geometry.attributes.bake && TWR.shell.material.uniforms.uFogOn.value === TW.CFG.street.skylineFog
+  check('the tower is a baked shell (outside, fogged like the skylines but less) + two baked meshes for its four floors + three lift cars + the permit',
+    ['low', 'high'].every(k => M[k] && M[k].geometry.attributes.bake) && TWR.shell.geometry.attributes.bake && TWR.shell.material.uniforms.uFogOn.value === C.shellFog
     && L.length === 3 && L.every(Li => Li.group && Li.leaves.length === 2) && TWR.permit && !TWR.permit.visible);
   const T = TWR.tris, inTris = T.lobby + T.office + T.archive + T.top;
   check('each floor keeps its triangles modest', ['lobby', 'office', 'archive', 'top'].every(k => T[k] < 6000), ['lobby', 'office', 'archive', 'top'].map(k => k + ' ' + T[k]).join(', '));
   check('the shell stays cheap for something seen from across the city', T.shell < 8000, T.shell + ' shell tris');
-  { const P = TW.ST.skylineMesh.geometry.attributes.position.array, R = TWR.rect; let n = 0;
+  { const P = TW.ST.skylineMesh.geometry.attributes.position.array, R = AW.rect(TWR.rect); let n = 0;
     for (let i = 0; i < P.length; i += 3) if (P[i + 1] > 0.5 && P[i] > R[0] && P[i] < R[1] && P[i + 2] > R[2] && P[i + 2] < R[3]) n++;
     check('no skyline slab, TV tower or far-city block stands on the tower\'s ground', n === 0, n + ' vertices'); }
   { const B = TW.ST.beacons, [kx, kz] = TW.STREET.kras;
-    check('the old distant stepped tower is gone from the skylines; the Krasnovian beacon is on this spire', !B.some(b => b[0] === kx && b[2] === kz) && B.some(b => b[0] === -40 && b[2] === 330 && b[1] > TWR.spire), B.length + ' beacons'); }
+    check('the old distant stepped tower is gone from the skylines; the Krasnovian beacon is on this spire', !B.some(b => b[0] === kx && b[2] === kz) && B.some(b => Math.hypot(b[0] - W(-40, 0, 330).x, b[2] - W(-40, 0, 330).z) < 1e-6 && b[1] > TWR.spire), B.length + ' beacons'); }
   { const top = Math.max(...Array.from(TWR.shell.geometry.attributes.position.array).filter((v, i) => i % 3 === 1));
-    // from the road (eye 1.7 m at z 20) over Superblock 14's point block (61.6 m, its south face at z 118) to the tower (z 330)
-    const hidden = 1.7 + (TW.SB.point[4] - 1.7) / (TW.SB.point[2] - 20) * (330 - 20);
-    check('the gilded cog clears Superblock 14\'s point block as seen from Tripoint Square', TWR.cogY - TWR.cogD / 2 > hidden - 3 && top > hidden, `cog ${TWR.cogY} m, spire ${top.toFixed(0)} m, hidden below ${hidden.toFixed(0)} m`); }
+    check('MSU proportions: five stepped tiers to 146 m, the cog at 226 m, the spire\'s tip at 252 m', TWR.tiers.length === 5 && TWR.tiers[4][5] === 146 && TWR.cogY === 226 && Math.abs(top - TWR.spire) < 0.01, `top ${top.toFixed(1)} m`);
+    check('the shell is fogged less than the skylines, so it reads across the city', TWR.shell.material.uniforms.uFogOn.value === C.shellFog && C.shellFog < TW.CFG.street.skylineFog); }
+
+  // ---- Act 1 runs west: the frame, the route, the landmark
+  { const pts = [[-40, 151.4], [-40, 330], [-84, 253], [-6, 312], [12.5, -7.25]];
+    const rt = pts.every(([x, z]) => { const [a, b] = AW.toWorld(x, z), [p, q] = AW.toLocal(a, b); return Math.abs(p - x) < 1e-9 && Math.abs(q - z) < 1e-9; });
+    TW.scene.updateMatrixWorld(); const g = AW.group;
+    const grp = pts.every(([x, z]) => { const v = V(x, 3, z).applyMatrix4(g.matrixWorld), w = W(x, 3, z); return v.distanceTo(w) < 1e-9; });
+    check('the frame round-trips (local -> world -> local), and its group draws the meshes exactly where the walk rects are', rt && grp && Math.abs(AW.yaw + Math.PI / 2) < 1e-12);
+    const [bx, bz] = AW.toWorld(-40, 151.4), [tx, tz] = AW.toWorld(-40, 330);
+    check('past the crossing the route turns west: local +z runs to world -x, the boulevard starts at (-56, 198)', Math.abs(bx + 56) < 1e-9 && Math.abs(bz - 198) < 1e-9 && W(-40, 0, 200).x < W(-40, 0, 160).x);
+    check('the Tower of Labor stands dead ahead down the boulevard, ~180 m on, deep in the sector', Math.abs(tz - bz) < 1e-9 && tx < bx - 170 && tx < -200, `(${tx.toFixed(1)}, ${tz.toFixed(1)})`); }
+  { const PL = run('PL'), PR = run('PR'), Lv = TW.LEVELS;
+    const R = (D) => (typeof D.rects === 'function' ? D.rects() : D.rects);
+    const crossing = [PL.gap[0], PL.gap[1]], square = PL.square, palace = AW.rect(PL.rect), parade = R(Lv.parade)[0], tower = R(Lv.tower)[0];
+    const seq = [['the crossing', crossing], ['Station Square', square], ['the Palace', palace], ['Parade Square', parade], ['the Tower', tower]];
+    const mid = (r) => (r[0] + r[1]) / 2;   // each reaches further west, and from the square on each one's middle is west of the last's
+    const west = seq.every(([, r], i) => i === 0 || (r[0] < seq[i - 1][1][0] && (i < 2 || mid(r) < mid(seq[i - 1][1]))));
+    check('each place on the way is further west (-x, into Krasnovia) than the last: crossing, Station Square, Palace, Parade Square, Tower',
+      west && [palace, parade, tower].every(r => r[1] < -50 && r[2] > 151.4), seq.map(([n, r]) => `${n} x ${r[0].toFixed(0)}..${r[1].toFixed(0)}`).join(', '));
+    const all = Object.values(Lv).flatMap(D => (R(D) || []).map(r => [D.name, r])), P = TW.ST.skylineMesh.geometry.attributes.position.array, hit = {};
+    for (let i = 0; i < P.length; i += 3) if (P[i + 1] > 0.5) for (const [n, r] of all) if (P[i] > r[0] && P[i] < r[1] && P[i + 2] > r[2] && P[i + 2] < r[3]) hit[n] = (hit[n] || 0) + 1;
+    check('nothing from the far city (skyline slabs, the TV tower, far-field blocks) stands on any level\'s ground', !Object.keys(hit).length, JSON.stringify(hit) + ` (${all.length} rects)`); }
+  // Sightlines to the gilded cog: a segment from your eye to the cog against every triangle of the street, the far city,
+  // Superblock 14 and podezd 3, the crossing and the Palace and Parade Square (the tower's own shell left out)
+  { const PL = run('PL'), PR = run('PR'), PZ = TW.PZ, SBX = TW.SBX;
+    const meshes = [TW.ST.litMesh, TW.ST.skylineMesh, SBX.mesh, PZ.outMesh, PL.crossMesh, PL.outMesh, PR.mesh].filter(Boolean);
+    const tris = []; for (const m of meshes) { const a = m.geometry.attributes.position.array, fr = m.parent === AW.group;
+      for (let i = 0; i < a.length; i += 3) { if (fr) { const [x, z] = AW.toWorld(a[i], a[i + 2]); tris.push(x, a[i + 1], z); } else tris.push(a[i], a[i + 1], a[i + 2]); } }
+    const blocked = (o, t) => {   // does the segment o -> t cross a triangle? (Moller-Trumbore)
+      const dx = t.x - o.x, dy = t.y - o.y, dz = t.z - o.z;
+      for (let i = 0; i < tris.length; i += 9) {
+        const e1x = tris[i + 3] - tris[i], e1y = tris[i + 4] - tris[i + 1], e1z = tris[i + 5] - tris[i + 2], e2x = tris[i + 6] - tris[i], e2y = tris[i + 7] - tris[i + 1], e2z = tris[i + 8] - tris[i + 2];
+        const px = dy * e2z - dz * e2y, py = dz * e2x - dx * e2z, pz = dx * e2y - dy * e2x, det = e1x * px + e1y * py + e1z * pz;
+        if (Math.abs(det) < 1e-9) continue;
+        const sx = o.x - tris[i], sy = o.y - tris[i + 1], sz = o.z - tris[i + 2], u = (sx * px + sy * py + sz * pz) / det; if (u < 0 || u > 1) continue;
+        const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x, v = (dx * qx + dy * qy + dz * qz) / det; if (v < 0 || u + v > 1) continue;
+        const tt = (e2x * qx + e2y * qy + e2z * qz) / det; if (tt > 1e-4 && tt < 0.999) return true;
+      }
+      return false;
+    };
+    const cog = W(-40, TWR.cogY, 330), crown = W(-40, TWR.tiers[4][5] + 8, 330), PZr = PZ.wingRoof;
+    const views = [['Tripoint Square (by the Threeway\'s door)', V(2, 1.7, 7), [cog]], ['the Krasnovian gate', V(-3, 1.7, 62), [cog]],
+      ['podezd 3\'s wing roof', V(-36, PZr + 1.7, 129), [cog, crown]], ['the level crossing', V(-40, 1.7, 145), [cog, crown]],
+      ['the start of the boulevard', V(-58, 1.7, 198), [cog, crown]], ['Parade Square', W(-40, 1.7, 256), [cog, crown]]];
+    const res = views.map(([n, o, ts]) => [n, ts.every(t => !blocked(o, t))]);
+    check('the cog (and from the roof on, the crown) is in clear view from the square, the gate, the wing roof, the crossing, the boulevard, Parade Square',
+      res.every(r => r[1]), res.filter(r => !r[1]).map(r => r[0]).join(', ') + ` (${tris.length / 9} triangles)`); }
   check('every fight is on one floor: its spawns stand on that floor, inside its room, clear of the furniture',
     C.encounters.every(E => E.spawn.every(([, x, z, y]) => y >= E.at[4] && y <= E.at[5] && inside(x, z, E.at, 0.2) && !inBlocker(x, z, y))), C.encounters.map(E => E.name).join(', '));
   check('the cast: militia + inspectors, clerks + a bodyguard, Inspector Orlova (boss) + a bodyguard, the Chairman (boss)',
@@ -85,9 +134,9 @@ try {
   until(() => TW.game.state === 'fight' && !TW.game.queue.length, 900);
   check('the lobby crew stands on the ground floor', TW.enemies.length === C.encounters[0].spawn.length && onFloor(0), TW.enemies.map(e => e.type + '@' + e.pos.y.toFixed(1)).join(','));
   walkTo(-40, 310.6);
-  check('you can\'t leave through the doors mid-fight', TW.player.head.z > 311.9, 'z ' + TW.player.head.z.toFixed(2));
+  check('you can\'t leave through the doors mid-fight', LH().z > 311.9, 'z ' + LH().z.toFixed(2));
   walkTo(-31, 331); walkTo(-31, 335);
-  check('nor take lift 1', TW.player.head.z < L[0].car[2] + 0.5 && L[0].phase === 'open' && L[0].stop === 0, `z ${TW.player.head.z.toFixed(2)} ${L[0].phase}`);
+  check('nor take lift 1', LH().z < L[0].car[2] + 0.5 && L[0].phase === 'open' && L[0].stop === 0, `z ${LH().z.toFixed(2)} ${L[0].phase}`);
   kill(); until(() => TW.game.state === 'walk', 600);
 
   // ---- lift 1 to the offices
@@ -100,9 +149,9 @@ try {
   until(() => TW.game.state === 'fight' && !TW.game.queue.length, 900);
   check('the clerks and the bodyguard stand on the office floor', TW.enemies.length === C.encounters[1].spawn.length && onFloor(TWR.office.y), TW.enemies.map(e => e.type + '@' + e.pos.y.toFixed(1)).join(','));
   walkTo(-47, 331.5); walkTo(-47, 335);
-  check('lift 2 is shut while it\'s on', TW.player.head.z < L[1].car[2] + 0.5 && L[1].stop === 0, 'z ' + TW.player.head.z.toFixed(2));
+  check('lift 2 is shut while it\'s on', LH().z < L[1].car[2] + 0.5 && L[1].stop === 0, 'z ' + LH().z.toFixed(2));
   TW.player.hp = 0; run('loseRound()'); step(Math.ceil(3.7 / DT));
-  check('going down on the office floor puts you back on the office floor, by lift 1', TW.level.encounter === 1 && Math.abs(TW.player.floorY - TWR.office.y) < 0.05 && Math.abs(TW.rig.position.x - C.encounters[1].respawn[0]) < 0.5, `y ${TW.player.floorY.toFixed(2)}`);
+  check('going down on the office floor puts you back on the office floor, by lift 1', TW.level.encounter === 1 && Math.abs(TW.player.floorY - TWR.office.y) < 0.05 && Math.abs(RL().x - C.encounters[1].respawn[0]) < 0.5, `y ${TW.player.floorY.toFixed(2)}`);
   fightClear();
 
   // ---- lift 2 to the archive: Inspector Orlova
@@ -149,8 +198,8 @@ try {
 
   // ---- the leader hook: his own goon (signs: true) kneels and calls onLeaderSigned
   run('LEVELS.tower.start(false); level.encounter = 99'); step(2);
-  run('resetTowerLifts(3); clearEnemies(); level.encounter = 3; game.state = "fight"; game.queue = []; { const e = new Enemy(enemyType("chairman")); e.placeAt(-43, 325, 0, 80); e.cooldown = 1e9; enemies.push(e); }');
-  TW.rig.position.set(-40, TWR.top.y, 331); step(3);
+  run('resetTowerLifts(3); clearEnemies(); level.encounter = 3; game.state = "fight"; game.queue = []; { const e = new Enemy(enemyType("chairman")); e.placeAt(...ACT1_WEST.toWorld(-43, 325), 0, 80); e.cooldown = 1e9; enemies.push(e); }');
+  setL(-40, TWR.top.y, 331); step(3);
   run('onLeaderSigned({ type: "bodyguard", cfg: {} })'); step(1);
   check('the hook ignores goons who don\'t sign', !TWR.signed && TW.game.state === 'fight');
   run('onLeaderSigned({ type: "chairman", cfg: { signs: true }, alive: false })'); step(1);
@@ -158,21 +207,21 @@ try {
 
   // ---- walking in from Parade Square, once it's won
   run(`LEVELS.parade.start(false); clearEnemies(); level.encounter = CFG.parade.encounters.length - 1; game.state = 'won'; LOCKED.clear();`);
-  TW.rig.position.set(-40, 0, 304); face(Math.PI); step(4);
+  setL(-40, 0, 304); face(Math.PI); step(4);
   check('from the square, looking at the open doors, the lobby is drawn through them', TW.roomState.cur === 'outside' && M.low.visible && !M.high.visible);
   walkTo(-40, 315);
-  check('walking through the south doors carries you into the tower with no cut', TW.level.name === 'tower' && TW.player.head.z > 312.6 && TW.player.head.z < 316 && Math.abs(TW.player.floorY) < 0.01, `${TW.level.name} z ${TW.player.head.z.toFixed(2)}`);
+  check('walking through the south doors carries you into the tower with no cut', TW.level.name === 'tower' && LH().z > 312.6 && LH().z < 316 && Math.abs(TW.player.floorY) < 0.01, `${TW.level.name} z ${LH().z.toFixed(2)}`);
   until(() => TW.level.encounter === 0, 120);
   check('and the lobby fight starts', TW.level.encounter === 0 && TW.LOCKED.has('twDoor'));
   // inside the lobby facing in: no city
-  run('level.encounter = 99'); TW.rig.position.set(-40, 0, 320); face(Math.PI); step(3);
+  run('level.encounter = 99'); setL(-40, 0, 320); face(Math.PI); step(3);
   check('in the lobby facing in: only the inside is drawn', TW.roomState.cur === 'twLobby' && M.low.visible && !TW.ST.skylineMesh.visible && !TWR.shell.visible && !M.high.visible, TW.roomState.cur);
   face(0); step(3);
   check('turn round and the square shows through the doors', TW.ST.skylineMesh.visible && TWR.shell.visible);
 
   // ---- physics cost on the office floor (four goons among the desks)
-  run('clearEnemies(); resetTowerLifts(1); level.encounter = 99'); TW.rig.position.set(-40, TWR.office.y, 330); step(3);
-  for (const t of ['conscript', 'laborer', 'wrestler', 'cook']) { const e = new TW.Enemy(t); e.placeAt(-42 + rnd() * 4, 321 + rnd() * 6, 0, TWR.office.y); TW.enemies.push(e); }
+  run('clearEnemies(); resetTowerLifts(1); level.encounter = 99'); setL(-40, TWR.office.y, 330); step(3);
+  for (const t of ['conscript', 'laborer', 'wrestler', 'cook']) { const e = new TW.Enemy(t); const q = W(-42 + rnd() * 4, 0, 321 + rnd() * 6); e.placeAt(q.x, q.z, 0, TWR.office.y); TW.enemies.push(e); }
   const t0 = process.hrtime.bigint(); for (let i = 0; i < 120; i++) TW.updatePhysics(1 / 72);
   const ms = Number(process.hrtime.bigint() - t0) / 1e6 / 120;
   check('office physics cost per frame (4 goons on the office floor, Node on a server CPU)', ms < 4, ms.toFixed(2) + ' ms');

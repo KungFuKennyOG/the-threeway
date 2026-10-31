@@ -1,11 +1,14 @@
 'use strict';
 // ============================== Act 1, level 7: the Tower of Labor =========================
-// Krasnovia's seat of power, the end of Act 1: a stepped palace of offices (114 m to the top of its pinnacle) under a
-// tapering spire with a gilded cog at ~210 m. (So high because Superblock 14's 61.6 m point block stands right on the line
-// from the road to the tower: from Tripoint Square everything at the tower below ~191 m is hidden behind it.)
+// Krasnovia's seat of power, the end of Act 1: a stepped palace of offices (five tiers, 146 m, then a lit crown and pinnacle
+// to 159 m) under a tapering spire with a gilded cog at 226 m and its tip at 252 m (Moscow State University's proportions,
+// a little taller). It stands at the far west end of the route, dead ahead down the boulevard, ~300 m from Tripoint Square:
+// that height is what clears the Old Quarter's roofs from the square and Superblock 14's south slab from the gate.
 // In through the big south doors from Parade Square (no cut) into the marble lobby; lift 1 up to the Ministry's office floor; lift 2 up to the archive (Inspector Orlova); lift 3 up to the Chairman's office under the cog, a
 // panoramic window over the night city. Beat the Chairman and he signs the permit to reopen The Threeway: 1 of 3.
-// No stairs (VR): lifts do all the climbing, enclosed and eased. World coordinates (+z away from the Threeway).
+// No stairs (VR): lifts do all the climbing, enclosed and eased. Authored with +z running in from the square, and laid
+// into the world by the ACT1_WEST frame (src/levels.js): the south doors face east, back down the boulevard to Station
+// Square, and the tower stands at the sector's west end of Act 1. CFG.tower is in the frame's coordinates.
 //
 // The shell (one baked mesh, outside, fogged like the skylines) reads from across the city; each floor inside is its own
 // room (two floors to a baked mesh), drawn only when you're on it (or looking in through the south doors / out of the window).
@@ -14,6 +17,7 @@ CFG.tower = {
   spawnGap: 1.0, clearedPause: 1.6, healBetween: 25,
   liftSpeed: 4.0, doorTime: 1.0, restRise: 2.4,   // m/s (4 m/s = 56 mm a frame at 72 Hz: the comfort limit is ~60)
   signPause: 3.2,                          // s from 'SIGNED' to 'ACT 1 COMPLETE'
+  shellFog: 0.3,                           // the shell's fog cap: less than the skylines' (0.5), so the act's landmark reads from across the city
   // spawns [type, x, z, floor y]; respawns [x, z, floor y, facing]. One floor per fight (goon AI isn't floor-aware);
   // `lock`: the lift (and the doors) shut while it's on. `enrageAt` per encounter: Orlova loses it at half health.
   encounters: [
@@ -34,7 +38,7 @@ CFG.tower = {
 };
 const TWR = {
   foot: [-64, -16, 312, 348],                                          // the base tier's footprint
-  tiers: [[-64, -16, 312, 348, 0, 30], [-59, -21, 316, 344, 30, 54], [-54, -26, 320, 340, 54, 74], [-49, -31, 323, 337, 74, 92]],
+  tiers: [[-64, -16, 312, 348, 0, 30], [-59, -21, 316, 344, 30, 54], [-54, -26, 320, 340, 54, 74], [-52, -28, 323, 339, 74, 116], [-48, -32, 325, 337, 116, 146]],
   door: [-44, -36, 6.2],                                               // the south doors in the south face (z 312): x0, x1, height
   rect: [-70, -10, 310, 352],                                          // its ground: the far city and the skylines keep off it
   wallZ: 333.8,                                                        // every floor's north wall: the lifts open on it
@@ -44,7 +48,7 @@ const TWR = {
   top:     { r: [-48.4, -31.6, 323.6, 333.8], y: 80, h: 5.6 },
   window: [-47, -33, 0.9, 5.0],
   shelfRows: [321.4, 324.6, 327.8],                                   // the archive's shelving (0.7 m deep) off both side walls                                        // the Chairman's window: x0, x1, sill and head above his floor
-  spire: 236, cogY: 208, cogD: 22,
+  spire: 252, cogY: 226, cogD: 26,
   shell: null, meshes: {}, tris: {}, lamps: {}, permit: null,
   signed: false, signT: 0, act1: false,
 };
@@ -195,7 +199,7 @@ function towerTop(acc, lamps) {
   twLight(lamps, -40, y + 3.0, z0 + 0.3, '#ff9a5c', 7, 0.6); twLight(lamps, -45, y + 4.5, 331.5, '#ffd8a0', 5, 0.7); twLight(lamps, -35, y + 4.5, 331.5, '#ffd8a0', 5, 0.7);
   twLiftSigns(acc, F);
 }
-// ---- the shell: four stepped tiers of floodlit stone, gilt bands, banners, the doors; the crown, the cog and the spire
+// ---- the shell: five stepped tiers of floodlit stone, gilt bands, banners, the doors; the crown, the cog and the spire
 function towerShell(acc, lamps) {
   const T = TWR.tiers, [d0, d1, dh] = TWR.door, cx = -40, cz = 330, o = (top) => ({ u: 8, v: 8, top, tu: 4, cell: 8 });
   for (let i = 0; i < T.length; i++) {
@@ -205,7 +209,8 @@ function towerShell(acc, lamps) {
       wall(acc, 'towerFace', d0, c, a, c, y0, y1, 8, 8, { cell: 8 }); wall(acc, 'towerFace', b, c, d1, c, y0, y1, 8, 8, { cell: 8, u0: (d1 - a) / 8 });
       wall(acc, 'towerFace', d1, c, d0, c, dh, y1, 8, 8, { cell: 8, u0: (d0 - a) / 8 });
     } else sbox(acc, 'towerFace', cx, y0, (c + d) / 2, w, dd, y1 - y0, 0, o(i === T.length - 1 ? 'roofDark' : 'granite'));
-    sbox(acc, 'decoGold', cx, y1 - 0.9, (c + d) / 2, w + 0.5, dd + 0.5, 0.9, 0, { u: 4, v: 0.9, top: false, cell: 8 });   // a gilt band crowns each tier
+    const bh = i >= 3 ? 1.8 : 0.9;   // a gilt band crowns each tier (the upper ones broad, to read across the city at night)
+    sbox(acc, 'decoGold', cx, y1 - bh, (c + d) / 2, w + 0.5, dd + 0.5, bh, 0, { u: 4, v: bh, top: false, cell: 8 });
   }
   // the doors: a bronze frame, the name over them, pilasters; banners and a gold cog up the south face
   for (const x of [d0 - 0.5, d1 + 0.5]) { sbox(acc, 'marbleWall', x, 0, 311.7, 1.0, 0.6, dh + 1.6, 0, { u: 1, v: 8, top: 'gilt', tu: 1 }); twSolid(x - 0.5, 311.4, x + 0.5, 312, 0, dh + 1.6); }
@@ -217,15 +222,17 @@ function towerShell(acc, lamps) {
   plate(acc, 'litPanorama', cx, 80 + (TWR.window[2] + TWR.window[3]) / 2, 323, TWR.window[1] - TWR.window[0], TWR.window[3] - TWR.window[2], Math.PI, 0.05);
   // the crown: an octagonal drum, a gilt pinnacle, the cog (two crossed discs so it reads from every side), the spire
   const top = T[T.length - 1][5];
-  cyl(acc, 'towerFace', cx, top, cz, 6.4, 6.0, 9, 8, { u: 8, v: 8, cell: 8 });
-  sbox(acc, 'decoGold', cx, top + 8.2, cz, 12.6, 12.6, 0.9, 0, { u: 4, v: 0.9, top: 'gilt', tu: 4, cell: 8 });
-  frustum(acc, 'gilt', cx, top + 9.1, cz, 9, 9, 6.2, 6.2, 4, 0, { cell: 8 });
+  cyl(acc, 'towerFace', cx, top, cz, 7.2, 6.6, 9, 8, { u: 8, v: 8, cell: 8 });
+  sbox(acc, 'decoGold', cx, top + 7.6, cz, 14.2, 14.2, 1.5, 0, { u: 4, v: 1.5, top: 'gilt', tu: 4, cell: 8 });
+  frustum(acc, 'gilt', cx, top + 9.1, cz, 10, 10, 7, 7, 4, 0, { cell: 8 });
   let y = top + 13.1;
-  for (const [w0, w1, h] of [[6.2, 4.6, 30], [4.6, 3.2, 25]]) {   // two tapering stone stages of the spire, lit windows all the way up
-    frustum(acc, 'towerFace', cx, y, cz, w0, w0, w1, w1, h, 0, { u: 8, v: 8, top: false, cell: 8 }); y += h;
-    sbox(acc, 'decoGold', cx, y - 0.8, cz, w1 + 0.4, w1 + 0.4, 0.8, 0, { u: 4, v: 0.8, top: 'gilt', tu: 4, cell: 8 });
+  for (const [w0, w1, h] of [[7, 5.2, 22], [5.2, 3.6, 18]]) {   // two tapering stone stages of the spire, lit windows all the way up
+    frustum(acc, 'towerFace', cx, y, cz, w0, w0, w1, w1, h, 0, { u: 8, v: 8, top: false, cell: 8 });
+    for (let k = 6; k < h - 1; k += 6) { const w = w0 + (w1 - w0) * k / h + 0.3; sbox(acc, 'decoGold', cx, y + k - 0.5, cz, w, w, 0.5, 0, { u: 4, v: 0.5, top: false, cell: 8 }); }   // lit rings: the spire reads at night
+    y += h;
+    sbox(acc, 'decoGold', cx, y - 1.2, cz, w1 + 0.5, w1 + 0.5, 1.2, 0, { u: 4, v: 1.2, top: 'gilt', tu: 4, cell: 8 });
   }
-  frustum(acc, 'gilt', cx, y, cz, 3.2, 3.2, 1.2, 1.2, 26, 0, { cell: 8 }); y += 26;
+  frustum(acc, 'gilt', cx, y, cz, 3.6, 3.6, 1.2, 1.2, 20, 0, { cell: 8 }); y += 20;
   for (const ph of [0, Math.PI / 2]) plate(acc, 'cog', cx, TWR.cogY, cz, TWR.cogD, TWR.cogD, ph, 0, [0, 0, 1, 1], true);
   cyl(acc, 'gilt', cx, y, cz, 0.6, 0.08, TWR.spire - y, 6, { cell: 8 });
   ST.beacons.push([cx, TWR.spire + 1.5, cz]);   // the Krasnovian beacon blinks on top
@@ -237,9 +244,9 @@ function towerShell(acc, lamps) {
   // floodlights: posts at the corners, the tiers washed in warm light from the square, the crown in gold
   for (const x of [-62.5, -17.5]) { sbox(acc, 'iron', x, 0, 310.8, 0.5, 0.5, 0.8, 0, { u: 1, v: 1 }); sbox(acc, 'flood', x, 0.8, 310.8, 0.8, 0.4, 0.5, 0, { u: 0.8, v: 0.5 }); twSolid(x - 0.4, 310.4, x + 0.4, 311.2, 0, 1.3); }
   for (const x of [-56, -40, -24]) twLight(lamps, x, 2, 300, '#ffc070', 42, 1.4);
-  for (const [y, z, r, k] of [[38, 300, 40, 1.1], [64, 304, 36, 1.1], [86, 308, 30, 1.0]]) twLight(lamps, cx, y, z, '#ffc890', r, k);
+  for (const [y, z, r, k] of [[38, 300, 40, 1.1], [64, 304, 36, 1.1], [92, 306, 36, 1.1], [124, 310, 32, 1.1]]) twLight(lamps, cx, y, z, '#ffc890', r, k);
   for (const x of [-66, -14]) twLight(lamps, x, 12, cz, '#ffb060', 30, 0.9);
-  twLight(lamps, cx, top + 12, cz - 12, '#ffd890', 26, 1.6); twLight(lamps, cx, 150, cz - 14, '#ffd890', 40, 1.2);
+  twLight(lamps, cx, top + 12, cz - 12, '#ffd890', 26, 1.6); twLight(lamps, cx, top + 44, cz - 14, '#ffd890', 40, 1.2);
 }
 function twLiftCarMesh(L) {   // the car (walls, floor, ceiling lamp) and two brass leaves that slide apart; it rides as a group
   const acc = new GeoAcc(), [a, b, c, d] = L.car, A = a - 0.02, B = b + 0.02, H = 2.45;
@@ -266,6 +273,7 @@ function twPermitMesh() {   // the signed permit on the Chairman's desk: hidden 
 }
 // called from buildStreet(): the shell (outside), the four floors (rooms), the lift cars, the permit
 function buildTower() {
+  ACT1_WEST.begin();
   const F = CFG.street.fog, Lt = CFG.street.light, C = CFG.tower.light;
   const mkGeo = (g, o = {}) => {
     const m = new THREE.Mesh(g, makeMat('street', Object.assign({ baked: true }, o)));
@@ -288,7 +296,7 @@ function buildTower() {
     TWR.meshes[name] = mkGeo(g);
   }
   const sacc = new GeoAcc(), slamps = []; towerShell(sacc, slamps);
-  TWR.shell = mk(sacc, { ambient: Lt.skylineAmbient, sky: Lt.skylineSky, lights: slamps }, { fog: CFG.street.skylineFog }); TWR.tris.shell = sacc.tris;
+  TWR.shell = mk(sacc, { ambient: Lt.skylineAmbient, sky: Lt.skylineSky, lights: slamps }, { fog: CFG.tower.shellFog }); TWR.tris.shell = sacc.tris;
   for (const L of TLIFTS) twLiftCarMesh(L);
   twPermitMesh();
   // where you can walk (in the tower only): the doorway, each floor at its height, the lift cars (their floors ride with them)
@@ -304,6 +312,7 @@ function buildTower() {
   const shut = () => level.name === 'tower' && LOCKED.has('twDoor');
   BLOCKERS.push({ x0: d0, x1: d1, z0: TWR.foot[2] - 0.4, z1: TWR.foot[2], get y0() { return shut() ? 0 : -20; }, get y1() { return shut() ? TWR.door[2] : -20; } });
   resetTowerLifts(0);
+  ACT1_WEST.end();
 }
 // A floor with furniture standing in it: the floor's walk rect minus rectangular holes [x0, x1, z0, z1], as a union of walk
 // rects (cut into bands at the holes' edges; each band's free stretches). The holes (desks, shelf rows) are then walls of
@@ -329,7 +338,8 @@ const TW_HOLES = {   // furniture each floor's walk area goes round
 };
 // rooms: each floor is its own room (by height), the lift cars belong to the floors they join; the lobby looks out
 // through the south doors, the Chairman's office through its window
-const twIn = (p) => p.x > TWR.foot[0] && p.x < TWR.foot[1] && p.z > TWR.foot[2] + 0.02 && p.z < TWR.foot[3];
+const _twL = new V3(), twIn = (q) => { const p = ACT1_WEST.local(q, _twL); return twInL(p); };
+const twInL = (p) => p.x > TWR.foot[0] && p.x < TWR.foot[1] && p.z > TWR.foot[2] + 0.02 && p.z < TWR.foot[3];
 function towerRooms() {
   addRoom('twLobby', (p) => twIn(p) && p.y < 10);
   addRoom('twOffice', (p) => twIn(p) && p.y >= 10 && p.y < 38);
@@ -338,12 +348,12 @@ function towerRooms() {
   const M = TWR.meshes;
   roomMeshes('twLobby', M.low); roomMeshes('twOffice', M.low); roomMeshes('twArchive', M.high); roomMeshes('twTop', M.high);
   for (const L of TLIFTS) for (const r of L.rooms) roomMeshes(r, L.group);
-  addPortal('outside', 'twLobby', [-40, 3, TWR.foot[2]], () => (level.name === 'tower' && player.floorY < 6) || (level.name === 'parade' && game.state === 'won'));
-  addPortal('twTop', 'outside', [-40, TWR.top.y + 3, TWR.top.r[2]], () => level.name === 'tower' && player.floorY > 70);
+  addPortal('outside', 'twLobby', ACT1_WEST.pt([-40, 3, TWR.foot[2]]), () => (level.name === 'tower' && player.floorY < 6) || (level.name === 'parade' && game.state === 'won'));
+  addPortal('twTop', 'outside', ACT1_WEST.pt([-40, TWR.top.y + 3, TWR.top.r[2]]), () => level.name === 'tower' && player.floorY > 70);
 }
 // ---- the rides
 // in the car: past the doorway's wall plane (a locked car's floor is off, so the floor's own edge holds you at the doorway)
-const twInCar = (L) => { const h = player.head, [a, b, , d] = L.car; return h.x > a - 0.05 && h.x < b + 0.05 && h.z > TWR.wallZ + 0.1 && h.z < d + 0.1 && Math.abs(player.floorY - L.y) < 0.8; };
+const twInCar = (L) => { const h = ACT1_WEST.head(), [a, b, , d] = L.car; return h.x > a - 0.05 && h.x < b + 0.05 && h.z > TWR.wallZ + 0.1 && h.z < d + 0.1 && Math.abs(player.floorY - L.y) < 0.8; };
 function resetTowerLifts(ridden) {   // ridden: how many lifts you've already taken (0 from the doors; 3 = at the top)
   TLIFTS.forEach((L, i) => { L.stop = i < ridden ? 1 : 0; L.phase = 'open'; L.doors = 1; L.t = 0; L.y = L.stops[L.stop]; if (L.rect) L.rect.y = L.y + 0.001; });
   CFG.floors.maxRise = CFG.tower.restRise; placeTowerLifts();
@@ -394,9 +404,9 @@ function onLeaderSigned(e) {
 }
 defineLevel('tower', {
   menu: '7 · The Tower of Labor', cfg: () => CFG.tower, build: buildTower, rooms: towerRooms,
-  outside: () => [TWR.shell], rects: [TWR.rect],
+  outside: () => [TWR.shell], rects: () => [ACT1_WEST.rect(TWR.rect)], frame: ACT1_WEST,
   start: (f) => startTower(f), update: (dt) => updateTower(dt),
-  after: 'parade', enter: () => player.head.z > 312.6,                                     // through the big south doors
+  after: 'parade', enter: () => ACT1_WEST.head().z > 312.6,                                  // through the big south doors
   signs: { tower: ['THE TOWER OF LABOR', '#f2c14e'], twLobby: ['FIGHT!', '#f2c14e'], twOffices: ['FIGHT!', '#f2c14e'], orlova: ['INSPECTOR ORLOVA', '#e8352b'],
            chairman: ['THE CHAIRMAN', '#f2c14e'], twUp: ['GOING UP', '#33e0d0'], twMinistry: ['THE MINISTRY', '#33e0d0'], twArchive: ['THE ARCHIVE', '#33e0d0'],
            twTop: ['THE TOP FLOOR', '#33e0d0'], signed1: ['SIGNED · 1 OF 3', '#33e0d0'], signed2: ['SIGNED · 2 OF 3', '#33e0d0'], signed3: ['SIGNED · 3 OF 3', '#33e0d0'],
@@ -410,8 +420,8 @@ function startTower(fromSquare) {
   const held = new Set(handList.map(h => h.held));
   if (!fromSquare) { DOOR.target = 1; DOOR.open = 1; player.hp = CFG.player.health; player.hurtT = 0; game.catches = 0; game.disarms = 0; }
   for (const p of props.slice()) if (!held.has(p)) { scene.remove(p.obj); p.body.remove(); p.alive = false; props.splice(props.indexOf(p), 1); }   // the square's props stay behind
-  for (const [type, x, z, y] of CFG.tower.props) new Prop(type, new V3(x, y || 0, z));
-  if (!fromSquare) { placePlayer(CFG.tower.start[0], CFG.tower.start[1], Math.PI); rig.position.y = 0; }
+  for (const [type, x, z, y] of CFG.tower.props) new Prop(type, ACT1_WEST.world(new V3(x, y || 0, z)));
+  if (!fromSquare) { placePlayer(...ACT1_WEST.toWorld(CFG.tower.start[0], CFG.tower.start[1]), Math.PI + ACT1_WEST.yaw); rig.position.y = 0; }
   game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
   showSign('tower', 2.2);
 }

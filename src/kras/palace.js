@@ -5,9 +5,11 @@
 // tracks and up the Boulevard of Champions to the Palace: through the glass foyer, the gym (gymnasts, lifters), the
 // players' tunnel, out onto the arena floor and Bogdan "the Bear" Volkov in the ring, the stands full. Out the north
 // doors onto Parade Square (src/kras/parade.js). One flat floor all the way: no stairs (VR).
-// World coordinates, like podezd 3 (src/kras/podezd.js).
+// The crossing and Station Square north of the tracks are in world coordinates, like podezd 3 (src/kras/podezd.js); from
+// the boulevard on, everything is authored running +z along local x -40 and laid into the world running west, into the
+// sector, by the ACT1_WEST frame (src/levels.js): CFG.palace.encounters, props and finishZ are in its coordinates.
 CFG.palace = {
-  start: [-40, 136.3],                          // "start here": in the gap in the railway fence, facing the crossing
+  start: [-40, 136.3],                          // "start here": in the gap in the railway fence, facing the crossing (world)
   spawnGap: 1.1, clearedPause: 1.6, healBetween: 25,
   enrageAt: 0.5,                                // the Bear loses it below half his health
   finishZ: 251,                                 // walk out the north doors once he's down
@@ -33,7 +35,11 @@ const PL = {
   annex: [-50, -30, 180, 201.5, 6], foyer: [-50, -30, 180, 190, 5.2], gym: [-50, -30, 190, 199.5, 6], doorW: [-43, -37],
   floor: [-52, -28, 212, 240], bank: { rows: 5, depth: 0.9, rise: 0.7, front: 1.1 }, roofY: 12, tunnelH: 3,
   drum: [-40, 226, 27, 17], ring: [-40, 229, 3.6],
-  rect: [-74, -6, 151, 254], rail: [-178, -122, 129, 151],
+  rect: [-74, -6, 151, 254], rail: [-178, -122, 129, 151],      // rect: the boulevard to the north doors (local); rail: world
+  // world: Station Square north of the crossing (you turn west there onto the boulevard), East Station on its east side
+  square: [-56, -22, 151.7, 214], station: [-22, -7, 158, 206], sqRect: [-58, -4, 151.4, 216],
+  yard: [-157.6, -56, 151.7, 164],   // world: the goods yard north of the tracks, west of the square (low: the Tower shows over it from the crossing)
+  crossMesh: null, crossLamps: [], crossTris: 0,
   inMesh: null, outMesh: null, inLamps: [], outLamps: [], inTris: 0, outTris: 0, shutter: null,
 };
 PL.bowl = [PL.floor[0] - 4.5, PL.floor[1] + 4.5, PL.floor[2] - 4.5, PL.floor[3] + 4.5];   // the stands' back walls
@@ -71,30 +77,9 @@ function plStatue(acc, x, z, phi, big = 1) {   // an invented athlete on a plint
   cyl(acc, 'gilt', x, ph + 3.62 * s, z, 0.85 * s, 0.85 * s, 0.16 * s, 10, { u: 1, v: 1 });
   plSolid(x - 1.1 * s, z - 1.1 * s, x + 1.1 * s, z + 1.1 * s, 0, ph);
 }
-// ---- outside: the crossing, the tunnel under the wall, the boulevard, the forecourt, the Palace's drum and its foyer annex
+// ---- outside (local, in the ACT1_WEST frame): the boulevard, the forecourt, the Palace's drum and its foyer annex
 function buildPalaceOutside(acc) {
-  const L = PL.outLamps, [g0, g1] = PL.gap, [rx0, rx1] = PL.rail;
-  // the railway runs on west into the sector (podezd 3 draws the bank as far as x -122)
-  ground(acc, 'asphaltK', rx0, 130, rx1, 151, 0, 8, { cell: 8 });
-  for (const tz of [139.4, 143, 146.6]) aq(acc, 'track', [rx0, 0.012, tz + 1.2], [rx0, 0.012, tz - 1.2], [rx1, 0.012, tz - 1.2], [rx1, 0.012, tz + 1.2], [0, 0, 1, (rx1 - rx0) / 2], [0, 1, 0], 4);
-  // the tunnel mouth under the wall: a concrete portal over all three tracks, black inside
-  { const [px0, px1, pz0, pz1, ph] = PL.portal, [m0, m1, mh] = PL.mouth;
-    sbox(acc, 'concrete', (px0 + px1) / 2, 0, (pz0 + m0) / 2, px1 - px0, m0 - pz0, ph, 0, { u: 4, v: 3.5, top: 'roofDark', tu: 4, cell: 4 });
-    sbox(acc, 'concrete', (px0 + px1) / 2, 0, (m1 + pz1) / 2, px1 - px0, pz1 - m1, ph, 0, { u: 4, v: 3.5, top: 'roofDark', tu: 4, cell: 4 });
-    sbox(acc, 'concrete', (px0 + px1) / 2, mh, (m0 + m1) / 2, px1 - px0, m1 - m0, ph - mh, 0, { u: 4, v: 1.5, top: 'roofDark', tu: 4, cell: 4 });
-    aq(acc, 'concrete', [px0, mh, m1], [px0 + 3, mh, m1], [px0 + 3, mh, m0], [px0, mh, m0], [0, 0, 1, 3], [0, -1, 0], 3);
-    plFace(acc, 'black', px0 + 3, m0, px0 + 3, m1, 0, mh, -1, 0, 1, 1);
-    plate(acc, 'flag_kras', px0 - 0.05, mh + 0.8, (m0 + m1) / 2, 2.4, 1.4, -Math.PI / 2, 0.02);
-    plSolid(px0, pz0, px1, pz1, 0, ph); }
-  // the crossing: planks over the rails, a low fence along the north side of the bank, two posts with the X sign
-  ground(acc, 'darkwood', g0, 138.3, g1, 150.9, 0.02, 2, { cell: 4 });
-  for (const [a, b] of [[-74, g0], [g1, PL.portal[0]]]) { sbox(acc, 'concrete', (a + b) / 2, 0, 151.55, b - a, 0.3, 1.0, 0, { u: 6, v: 1, top: 'wallTop', tu: 6, cell: 6 }); plSolid(a, 151.4, b, 151.7, 0, 1.0); }
-  for (const [x, z] of [[g1 + 0.45, PL.barS - 0.3], [g0 - 0.45, PL.barN + 0.3]]) {
-    sbox(acc, 'iron', x, 0, z, 0.14, 0.14, 3.5, 0, { u: 1, v: 1 }); sbox(acc, 'iron', x, 0, z, 0.5, 0.5, 1.2, 0, { u: 1, v: 1 });
-    plate(acc, 'crossSign', x, 3.15, z, 1.1, 1.1, 0, 0.09, [0, 0, 1, 1], true);
-    sbox(acc, 'black', x, 2.25, z, 1.0, 0.12, 0.3, 0, { u: 1, v: 1 });
-    plSolid(x - 0.25, z - 0.25, x + 0.25, z + 0.25, 0, 3.5);
-  }
+  const L = PL.outLamps, [g0, g1] = PL.gap;
   // the boulevard of champions: paving, lawns, poplars, benches, sodium lamps, a champion on a plinth
   const [bx0, bx1, bz0, bz1] = PL.blvd, [fx0, fx1, fz0, fz1] = PL.fore;
   ground(acc, 'paving', bx0, bz0, bx1, bz1, 0.004, 4, { cell: 4 });
@@ -150,6 +135,77 @@ function buildPalaceOutside(acc) {
     cyl(acc, 'banner', cx, h - 0.6, cz, r + 0.15, r + 0.15, 0.6, n, { u: 8, v: 4, cell: 99 });
     for (const a of [0.4, 0.95, 2.2, 2.75, 3.5, 4.1, 5.3, 5.9]) { const [x, z] = P(a); plLight(L, cx + Math.cos(a) * (r + 2.5), 5, cz + Math.sin(a) * (r + 2.5), CFG.street.light.sodium, 17, 1.6); sbox(acc, 'litSodium', x + Math.cos(a) * 0.2, 6, z + Math.sin(a) * 0.2, 0.5, 0.5, 0.3, 0, { u: 1, v: 1 }); }
   }
+}
+// ---- Station Square (world): over the crossing you come up onto the square in front of East Station, and turn west
+// onto the Boulevard of Champions, the Palace's drum and the Tower of Labor dead ahead down it. Flat (no steps: VR).
+function buildStationSquare(acc, L) {
+  const [x0, x1, z0, z1] = PL.square, [sx0, sx1, sz0, sz1] = PL.station, sm = (sz0 + sz1) / 2;
+  ground(acc, 'paving', x0, z0, x1, z1, 0.004, 4, { cell: 4 });
+  ground(acc, 'asphaltK', x1, z0, PL.sqRect[1], z1, 0, 8, { cell: 8 });
+  // East Station: a long two-storey hall on the square's east side, a taller entrance block in the middle with its
+  // glass front, the name, a clock and a gilt spire with a red star; a canopy along the front
+  sbox(acc, 'towerFace', (sx0 + sx1) / 2, 0, sm, sx1 - sx0, sz1 - sz0, 12, 0, { u: 8, v: 8, top: 'roofDark', tu: 8, cell: 6 });
+  sbox(acc, 'decoGold', (sx0 + sx1) / 2, 11.4, sm, sx1 - sx0 + 0.4, sz1 - sz0 + 0.4, 0.6, 0, { u: 4, v: 0.6, top: false, cell: 6 });
+  const ex0 = sx0 - 1.5, ez0 = sm - 7, ez1 = sm + 7;
+  sbox(acc, 'towerFace', (ex0 + sx1 - 4) / 2, 0, sm, sx1 - 4 - ex0, ez1 - ez0, 19, 0, { u: 8, v: 8, top: 'roofDark', tu: 8, cell: 6 });
+  sbox(acc, 'decoGold', (ex0 + sx1 - 4) / 2, 18.3, sm, sx1 - 4 - ex0 + 0.4, ez1 - ez0 + 0.4, 0.7, 0, { u: 4, v: 0.7, top: false, cell: 6 });
+  plate(acc, 'glassFront', ex0, 6.5, sm, 10, 11, -Math.PI / 2, 0.04, [0, 0, 10 / 3, 11 / 3]);
+  plate(acc, 'stationSign', ex0, 13.8, sm, 12, 12 * 13 / 84, -Math.PI / 2, 0.05);
+  plate(acc, 'clockFace', ex0, 16.4, sm, 2.4, 2.4, -Math.PI / 2, 0.05);
+  frustum(acc, 'gilt', (ex0 + sx1 - 4) / 2, 19, sm, 4, 4, 0.4, 0.4, 9, 0, { cell: 8 });
+  sbox(acc, 'litRed', (ex0 + sx1 - 4) / 2, 28, sm, 0.9, 0.9, 0.9, 0, { u: 1, v: 1 });
+  sbox(acc, 'concrete', sx0 - 3.2, 4.2, sm, 3.4, ez1 - ez0 + 6, 0.35, 0, { u: 2, v: 1, top: 'roofDark', tu: 4 });
+  sbox(acc, 'litWarm', sx0 - 3.2, 4.12, sm, 1.6, ez1 - ez0, 0.08, 0, { u: 1, v: 1 });
+  for (const z of [sm - 9.5, sm + 9.5]) { sbox(acc, 'iron', sx0 - 4.6, 0, z, 0.2, 0.2, 4.2, 0, { u: 1, v: 1 }); plSolid(sx0 - 4.75, z - 0.15, sx0 - 4.45, z + 0.15, 0, 4.2); }
+  for (const z of [sz0 + 6, sz1 - 6]) plate(acc, 'banner', sx0, 6.5, z, 3, 8, -Math.PI / 2, 0.05);
+  plLight(L, sx0 - 3.2, 3.6, sm, '#ffd8a0', 12, 1.5); plLight(L, ex0 - 2, 12, sm, '#ffe2b4', 14, 1.0);   // the entrance, the name and the clock
+  plSolid(ex0, sz0, sx1, sz1, 0, 19);
+  // the square: sodium posts round the edge, poplars along the north side, a monument to the railwaymen in the middle
+  // (facing you as you come up from the crossing); the boulevard opens off the west side (local x -48..-32 = z 190..206)
+  for (const [x, z, d] of [[x0 + 0.3, 160, 1], [x0 + 0.3, 176, 1], [x0 + 0.3, 212, 1], [x1 - 0.3, 166, -1], [x1 - 0.3, 198, -1], [-40, z1 - 0.3, 1]]) plPost(acc, L, x, z, d);
+  for (let x = x0 + 4; x < x1 - 3; x += 5) plTree(acc, x, z1 - 2.2, 1.1);
+  plStatue(acc, -31, 181, Math.PI);
+  plLight(L, -31, 2.4, 177.6, '#ffe8c0', 7, 1.2);
+  // a low wall along the west side (the boulevard's lawns and the goods yard beyond), open onto the boulevard
+  for (const [a, b] of [[z0, 189.6], [206.4, z1]]) { sbox(acc, 'concrete', x0 - 0.15, 0, (a + b) / 2, 0.3, b - a, 1.0, 0, { u: 6, v: 1, top: 'wallTop', tu: 6, cell: 6 }); plSolid(x0 - 0.3, a, x0, b, 0, 1.0); }
+  // the goods yard: two sidings with a few box wagons standing on them, sodium on two masts; nothing tall, so from the
+  // crossing you see over it to the Palace and the Tower of Labor
+  const [yx0, yx1, yz0, yz1] = PL.yard;
+  ground(acc, 'asphaltK', yx0, yz0, yx1, yz1, 0, 8, { cell: 8 });
+  for (const tz of [155.2, 159.6]) aq(acc, 'track', [yx0, 0.012, tz + 1.2], [yx0, 0.012, tz - 1.2], [yx1, 0.012, tz - 1.2], [yx1, 0.012, tz + 1.2], [0, 0, 1, (yx1 - yx0) / 2], [0, 1, 0], 4);
+  for (const [x, tz, t] of [[-70, 155.2, 0], [-85, 155.2, 1], [-118, 159.6, 2], [-133, 159.6, 0], [-148, 155.2, 1]]) {
+    acc.tint = [[0.62, 0.36, 0.3], [0.42, 0.4, 0.36], [0.5, 0.42, 0.3]][t];
+    sbox(acc, 'trainSide', x, 0.5, tz, 13.5, 2.8, 3.3, 0, { u: 13.5, v: 3.3, top: 'roofDark', tu: 4 });
+    acc.tint = [1, 1, 1];
+    for (const bx of [x - 4.5, x + 4.5]) sbox(acc, 'black', bx, 0, tz, 2.2, 2.4, 0.5, 0, { u: 1, v: 1 });
+  }
+  for (const x of [-100, -140]) { sbox(acc, 'iron', x, 0, 162.6, 0.3, 0.3, 12, 0, { u: 1, v: 1 }); sbox(acc, 'litSodium', x, 12, 162.6, 1.6, 0.6, 0.3, 0, { u: 1, v: 1 }); plLight(L, x, 11.5, 160, CFG.street.light.sodium, 20, 1.3); }
+}
+// ---- the crossing (world): the railway west, the tunnel under the wall, the planks, the fence; Station Square and East Station
+function buildPalaceCrossing(acc) {
+  const L = PL.crossLamps, [g0, g1] = PL.gap, [rx0, rx1] = PL.rail;
+  // the railway runs on west into the sector (podezd 3 draws the bank as far as x -122)
+  ground(acc, 'asphaltK', rx0, 130, rx1, 151, 0, 8, { cell: 8 });
+  for (const tz of [139.4, 143, 146.6]) aq(acc, 'track', [rx0, 0.012, tz + 1.2], [rx0, 0.012, tz - 1.2], [rx1, 0.012, tz - 1.2], [rx1, 0.012, tz + 1.2], [0, 0, 1, (rx1 - rx0) / 2], [0, 1, 0], 4);
+  // the tunnel mouth under the wall: a concrete portal over all three tracks, black inside
+  { const [px0, px1, pz0, pz1, ph] = PL.portal, [m0, m1, mh] = PL.mouth;
+    sbox(acc, 'concrete', (px0 + px1) / 2, 0, (pz0 + m0) / 2, px1 - px0, m0 - pz0, ph, 0, { u: 4, v: 3.5, top: 'roofDark', tu: 4, cell: 4 });
+    sbox(acc, 'concrete', (px0 + px1) / 2, 0, (m1 + pz1) / 2, px1 - px0, pz1 - m1, ph, 0, { u: 4, v: 3.5, top: 'roofDark', tu: 4, cell: 4 });
+    sbox(acc, 'concrete', (px0 + px1) / 2, mh, (m0 + m1) / 2, px1 - px0, m1 - m0, ph - mh, 0, { u: 4, v: 1.5, top: 'roofDark', tu: 4, cell: 4 });
+    aq(acc, 'concrete', [px0, mh, m1], [px0 + 3, mh, m1], [px0 + 3, mh, m0], [px0, mh, m0], [0, 0, 1, 3], [0, -1, 0], 3);
+    plFace(acc, 'black', px0 + 3, m0, px0 + 3, m1, 0, mh, -1, 0, 1, 1);
+    plate(acc, 'flag_kras', px0 - 0.05, mh + 0.8, (m0 + m1) / 2, 2.4, 1.4, -Math.PI / 2, 0.02);
+    plSolid(px0, pz0, px1, pz1, 0, ph); }
+  // the crossing: planks over the rails, a low fence along the north side of the bank, two posts with the X sign
+  ground(acc, 'darkwood', g0, 138.3, g1, 150.9, 0.02, 2, { cell: 4 });
+  for (const [a, b] of [[-74, g0], [g1, PL.portal[0]]]) { sbox(acc, 'concrete', (a + b) / 2, 0, 151.55, b - a, 0.3, 1.0, 0, { u: 6, v: 1, top: 'wallTop', tu: 6, cell: 6 }); plSolid(a, 151.4, b, 151.7, 0, 1.0); }
+  for (const [x, z] of [[g1 + 0.45, PL.barS - 0.3], [g0 - 0.45, PL.barN + 0.3]]) {
+    sbox(acc, 'iron', x, 0, z, 0.14, 0.14, 3.5, 0, { u: 1, v: 1 }); sbox(acc, 'iron', x, 0, z, 0.5, 0.5, 1.2, 0, { u: 1, v: 1 });
+    plate(acc, 'crossSign', x, 3.15, z, 1.1, 1.1, 0, 0.09, [0, 0, 1, 1], true);
+    sbox(acc, 'black', x, 2.25, z, 1.0, 0.12, 0.3, 0, { u: 1, v: 1 });
+    plSolid(x - 0.25, z - 0.25, x + 0.25, z + 0.25, 0, 3.5);
+  }
+  buildStationSquare(acc, L);
 }
 // ---- inside: the foyer, the gym, the tunnels, the bowl (floor, stands, roof, the ring under its lights)
 // a bank of stands along one side of the floor: the edge runs (ax, az) → (bx, bz); (ox, oz) points away from the floor;
@@ -276,27 +332,37 @@ function buildTrain() {   // four cars of the evening electric, each its own sma
     const m = new THREE.Mesh(acc.geometry({ ambient: [1, 1, 1], lights: [] }), makeMat('street', { baked: true })); m.frustumCulled = false; m.visible = false; m.userData.small = true; scene.add(m); return m;
   };
   TRAIN.lampA = lamps(-1); TRAIN.lampB = lamps(1);
+  resetTrain('gone');
+}
+function buildShutter() {   // the steel shutter in the north doors (local: it rides in the frame's group)
   const sh = new GeoAcc(); plFace(sh, 'gate', PL.gap[0], PL.bowl[3] + 0.3, PL.gap[1], PL.bowl[3] + 0.3, 0, PL.tunnelH, 0, -1, 2, 1.5); plFace(sh, 'gate', PL.gap[0], PL.bowl[3] + 0.32, PL.gap[1], PL.bowl[3] + 0.32, 0, PL.tunnelH, 0, 1, 2, 1.5);
   PL.shutter = new THREE.Mesh(sh.geometry({ ambient: [0.5, 0.48, 0.46], lights: [] }), makeMat('street', { baked: true })); PL.shutter.frustumCulled = false; PL.shutter.visible = false; PL.shutter.userData.small = true; scene.add(PL.shutter);
-  resetTrain('gone');
 }
 // called from buildStreet(): the inside (one baked mesh, drawn as a room), the outside (one baked mesh), the train and barriers
 function buildPalace() {
-  PL.inLamps = []; PL.outLamps = [];
-  const inAcc = new GeoAcc(), outAcc = new GeoAcc();
-  buildPalaceInside(inAcc); buildPalaceOutside(outAcc);
+  PL.inLamps = []; PL.outLamps = []; PL.crossLamps = [];
   const F = CFG.street.fog, Lt = CFG.street.light;
   const mk = (acc, light) => { const m = new THREE.Mesh(acc.geometry(light), makeMat('street', { baked: true })); m.matrixAutoUpdate = false; m.updateMatrix(); m.frustumCulled = false; m.material.uniforms.uFogNear = { value: F.near }; m.material.uniforms.uFogFar = { value: F.far }; scene.add(m); return m; };
+  // the crossing, the railway and Station Square stay where they are (world): the train and the barriers too
+  const xAcc = new GeoAcc(); buildPalaceCrossing(xAcc); buildTrain();
+  { const [x0, x1, , z1] = PL.square, on = () => level.name === 'palace';   // Station Square, and onto the boulevard off its west side
+    [ { x0: x0 + 0.3, x1: x1 - 0.6, z0: PL.barN + 0.2, z1: z1 - 0.3, pad: 0.3, area: 'plSquare', on },
+      { x0: x0 - 1.5, x1: x0 + 1, z0: 190.3, z1: 205.7, pad: 0.3, area: 'plSqBlvd', on },
+    ].forEach(addWalk); }
+  // from the boulevard on, the level is laid west into the sector by its frame (src/levels.js)
+  ACT1_WEST.begin();
+  const inAcc = new GeoAcc(), outAcc = new GeoAcc();
+  buildPalaceInside(inAcc); buildPalaceOutside(outAcc);
   PL.inMesh = mk(inAcc, { ambient: CFG.palace.light.inAmbient, lights: PL.inLamps }); PL.inTris = inAcc.tris;
-  PL.outMesh = mk(outAcc, { ambient: Lt.ambient, sky: Lt.sky, lights: PL.outLamps.concat(SBX.lamps.filter(l => l[0][2] > 128)) }); PL.outTris = outAcc.tris;
+  PL.outMesh = mk(outAcc, { ambient: Lt.ambient, sky: Lt.sky, lights: PL.outLamps.concat(ACT1_WEST.localLamps(PL.crossLamps)) }); PL.outTris = outAcc.tris;
   for (const l of PL.inLamps.concat(PL.outLamps)) ST.lamps.push(l);
-  buildTrain();
+  buildShutter();
   // where you can walk: the gap in the fence, the crossing (once the train's by), the boulevard, the forecourt, the foyer,
   // the gym, the tunnel, the arena floor, the way out north (once the Bear's down)
   const on = () => level.name === 'palace', P = 0.3, [g0, g1] = PL.gap, [d0, d1] = PL.doorW;
   const [bx0, bx1, bz0, bz1] = PL.blvd, [fx0, fx1, fz0, fz1] = PL.fore, F2 = PL.floor;
-  [ { x0: g0 + 0.3, x1: g1 - 0.3, z0: 135.6, z1: PL.barS - 0.3, pad: P, area: 'plGap', on: () => (level.name === 'podezd' && CRADLE.phase === 'bottom') || on() },
-    { x0: g0 + 0.3, x1: g1 - 0.3, z0: PL.barS - 0.4, z1: PL.barN + 0.4, pad: P, area: 'plCross', on: () => on() && TRAIN.open },
+  [ { x0: g0 + 0.3, x1: g1 - 0.3, z0: 135.6, z1: PL.barS - 0.3, pad: P, area: 'plGap', world: true, on: () => (level.name === 'podezd' && CRADLE.phase === 'bottom') || on() },
+    { x0: g0 + 0.3, x1: g1 - 0.3, z0: PL.barS - 0.4, z1: PL.barN + 0.4, pad: P, area: 'plCross', world: true, on: () => on() && TRAIN.open },
     { x0: bx0, x1: bx1, z0: bz0 + 0.3, z1: bz1 + 0.3, pad: P, area: 'plBlvd', on },
     { x0: fx0, x1: fx1, z0: fz0, z1: fz1 - 0.3, pad: P, area: 'plFore', on },
     { x0: d0 + 0.3, x1: d1 - 0.3, z0: fz1 - 0.5, z1: fz1 + 0.5, pad: P, area: 'plDoor', on },
@@ -307,15 +373,21 @@ function buildPalace() {
     { x0: F2[0] + 0.25, x1: F2[1] - 0.25, z0: F2[2] + 0.25, z1: F2[3] - 0.25, pad: P, area: 'plFloor', on },
     { x0: g0 + 0.3, x1: g1 - 0.3, z0: F2[3] - 0.5, z1: PL.northZ + 1.2, pad: P, area: 'plNorth', on: () => level.name === 'parade' || (on() && palaceNorthOpen()) },
   ].forEach(addWalk);
+  ACT1_WEST.end();
+  // the crossing's mesh last, so the boulevard's lamps (world now) light the square's west edge too
+  PL.crossMesh = mk(xAcc, { ambient: Lt.ambient, sky: Lt.sky, lights: PL.crossLamps.concat(SBX.lamps.filter(l => l[0][2] > 128), PL.outLamps) }); PL.crossTris = xAcc.tris;
+  for (const l of PL.crossLamps) ST.lamps.push(l);
 }
 const palaceNorthOpen = () => level.encounter >= CFG.palace.encounters.length - 1 && (game.state === 'walk' || game.state === 'won' || game.state === 'cleared');
 const inPalace = (p) => p.y < PL.roofY + 1 && ((p.x > PL.annex[0] - 0.3 && p.x < PL.annex[1] + 0.3 && p.z > PL.foyer[2] + 0.02 && p.z < PL.gym[3])
   || (p.x > PL.bowl[0] - 0.3 && p.x < PL.bowl[1] + 0.3 && p.z >= PL.gym[3] && p.z < PL.northZ));
-function palaceRooms() {
-  addRoom('palace', inPalace);
+const _plL = new V3();
+function palaceRooms() {   // (the inside is in the frame's coordinates)
+  const W = ACT1_WEST;
+  addRoom('palace', (p) => inPalace(W.local(p, _plL)));
   roomMeshes('palace', PL.inMesh);
-  addPortal('outside', 'palace', [-40, 1.3, PL.foyer[2]]);
-  addPortal('outside', 'palace', [-40, 1.3, PL.northZ], () => level.name !== 'palace' || palaceNorthOpen());   // shut while the shutter's down
+  addPortal('outside', 'palace', W.pt([-40, 1.3, PL.foyer[2]]));
+  addPortal('outside', 'palace', W.pt([-40, 1.3, PL.northZ]), () => level.name !== 'palace' || palaceNorthOpen());   // shut while the shutter's down
 }
 // ---- the crossing: warn (bells, lamps, barriers down) → the train runs → the barriers lift → open
 function resetTrain(state) {
@@ -344,11 +416,11 @@ function updatePalace(dt) {
   placeTrain();
 }
 defineLevel('palace', {
-  menu: '5 · The Palace of Sport (Volkov)', cfg: () => CFG.palace, build: buildPalace, rooms: palaceRooms,
-  outside: () => [PL.outMesh, ...TRAIN.booms.map(B => B.base)], rects: [PL.rect, PL.rail],
+  menu: '5 · The Palace of Sport (Volkov)', cfg: () => CFG.palace, build: buildPalace, rooms: palaceRooms, frame: ACT1_WEST,
+  outside: () => [PL.outMesh, PL.crossMesh, ...TRAIN.booms.map(B => B.base)], rects: () => [ACT1_WEST.rect(PL.rect), PL.rail, PL.sqRect, PL.yard],
   start: (f) => startPalace(f), update: (dt) => updatePalace(dt),
   after: 'podezd', enter: () => player.head.z > PL.fenceZ + 0.2 && Math.abs(player.head.x + 40) < 2.2,   // through the gap in the fence
-  finish: () => player.head.z > CFG.palace.finishZ && Math.abs(player.head.x + 40) < 2.2, wonSign: 'toParade',
+  finish: () => { const h = ACT1_WEST.head(); return h.z > CFG.palace.finishZ && Math.abs(h.x + 40) < 2.2; }, wonSign: 'toParade',
   signs: { crossing: ['LEVEL CROSSING', '#e8352b'], palace: ['PALACE OF SPORT', '#ff9a3c'], boulevard: ['FIGHT!', '#f2c14e'], gym: ['THE GYM', '#f2c14e'],
            bear: ['BOGDAN VOLKOV, THE BEAR', '#e8352b'], toParade: ['TO PARADE SQUARE', '#33e0d0'] },
   hud: { walk: 'The Palace of Sport — up the boulevard', last: 'The Bear is down — out the north doors', won: 'Out the north doors to Parade Square (R to restart)', short: 'Palace' },
@@ -359,7 +431,7 @@ function startPalace(fromPodezd) {
   const held = new Set(handList.map(h => h.held));
   if (!fromPodezd) { DOOR.target = 1; DOOR.open = 1; player.hp = CFG.player.health; player.hurtT = 0; game.catches = 0; game.disarms = 0; }
   for (const p of props.slice()) if (!held.has(p)) { scene.remove(p.obj); p.body.remove(); p.alive = false; props.splice(props.indexOf(p), 1); }
-  for (const [type, x, z, y] of CFG.palace.props) new Prop(type, new V3(x, y || 0, z));
+  for (const [type, x, z, y] of CFG.palace.props) new Prop(type, ACT1_WEST.world(new V3(x, y || 0, z)));
   if (!fromPodezd) { placePlayer(CFG.palace.start[0], CFG.palace.start[1], Math.PI); rig.position.y = 0; }
   game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
   showSign('crossing', 2.0);
