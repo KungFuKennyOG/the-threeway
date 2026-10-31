@@ -87,6 +87,30 @@ Same method (one Quest-shaped eye, headless Chromium), my own viewpoints, so the
 
 The glass lift wasn't re-measured live (the script can't ride it), but it draws the same street mesh and not the near one, so it should drop by the same ~2.4k per eye as the tribune: about 222k → 217k across both eyes. The street's views rise by 0.5–1.6k per eye, to 156–176k across both eyes. The tightest views are still Parade Square back toward the Palace and the glass lift, now ~217k.
 
+## All four polish passes merged (the bar, Tripoint Square, Superblock 14 + podezd 3, Parade Square)
+
+Same method, clock frozen, at the Superblock pass's viewpoints, on `main` with all four merged. Three of the passes cut always-drawn outdoor triangles while adding detail: the street's baked mesh (23.0k → 20.6k), Parade Square's mesh (7.6k → 5.5k, now 9 culled chunks of one buffer), and Superblock 14 + podezd 3, now hidden from more than 150 m (`CFG.superblock.drawNear`, `CFG.podezd.drawNear`) except the point block's ~1k silhouette. The bar's room went from 960 to 1,712 triangles, but only inside the bar or through its open door. The street atlas is 512 x 2048 (408 paintings).
+
+| View | Draws / eye | Both eyes: tris |
+| --- | ---: | ---: |
+| The gate (Ring Road) | 46 | 156,776 |
+| Tripoint Square, down the road | 43 | 153,848 |
+| Tripoint Square, east | 40 | 149,532 |
+| The courtyard, north | 50 | 182,840 |
+| The courtyard, back to the arch | 54 | 183,788 |
+| Podezd 3's wing roof (toward the Tower) | 50 | 185,352 |
+| The roof, over the yard | 51 | 183,572 |
+| The cradle, mid-ride | 42 | 165,480 |
+| The crossing, stepping off | 54 | 174,352 |
+| The boulevard start | 46 | 162,288 |
+| Parade Square (0, 250), facing east | 46 | 174,728 |
+| The Tower's apron, back toward the square | 54 | 186,916 |
+| The glass lift, 115 m, looking out | 50 | 180,714 |
+| The glass lift, looking down | 55 | 186,932 |
+| The tribune | 45 | 158,240 |
+
+The tightest views are now the glass lift looking down and the Tower's apron, both ~187k across both eyes, down from ~222–232k. Every outdoor view has about 60k of headroom under the ~250k line. Draw calls peak at 55 per eye.
+
 ## JS per frame (Node, the tests' Three.js stand-in, no rendering)
 
 | Scenario | Before | After |
