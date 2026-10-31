@@ -91,7 +91,7 @@ try {
     check('six searchlights sweep the sky (their beams move, always upward), in one small mesh moved as it\'s drawn (so on any level), cheaply',
       C.search.length === 6 && moved > n * 0.8 && a.every(Number.isFinite) && up && typeof g.onBeforeRender === 'function' && us < 200, `${moved}/${n} vertices moved in 4 s, ${us.toFixed(1)} us a tick`);
     const cogTex = TW.ST.atlas.rect.twCog;
-    check('the gilded cog is static (nothing turns it): two crossed self-lit plates on the spire, haloed in the glow', !!cogTex && TWR.cogY === 226 && run('typeof TWR.cog') === 'undefined', ''); }
+    check('the gilded cog is static (nothing turns it): a self-lit gold wheel on the spire, haloed in the glow', !!cogTex && TWR.cogY === 226 && run('typeof TWR.cog') === 'undefined', ''); }
   { const P = TW.ST.skylineMesh.geometry.attributes.position.array, R = AW.rect(TWR.rect); let n = 0;
     for (let i = 0; i < P.length; i += 3) if (P[i + 1] > 0.5 && P[i] > R[0] && P[i] < R[1] && P[i + 2] > R[2] && P[i + 2] < R[3]) n++;
     check('no skyline slab, TV tower or far-city block stands on the tower\'s ground', n === 0, n + ' vertices'); }

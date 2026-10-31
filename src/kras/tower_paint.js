@@ -73,7 +73,7 @@ Object.assign(PAINT, {
   },
   twGlass() {   // the glass lift's panes: clear, with a few streaks of reflected light (the rest isn't drawn)
     const p = new Pix(16, 32);   // one repeat = a whole pane: two short diagonal glints, nothing else
-    for (const [x0, y0, n] of [[3, 4, 6], [5, 5, 3], [10, 20, 5]]) for (let k = 0; k < n; k++) p.set(x0 + k, y0 + k * 2, '#b8d4dc', 230);
+    for (const [x0, y0, n] of [[3, 5, 4], [10, 20, 3]]) for (let k = 0; k < n; k++) p.set(x0 + k, y0 + k * 2, '#7a9aa6');
     return p;
   },
   twStatue() { const p = new Pix(8, 8); p.fill('#a49c8a'); p.rect(0, 0, 8, 1, '#c4bca8'); p.rect(0, 7, 1, 1, '#6e6858'); p.speck('#8e8878', 5); p.speck('#b4ac9a', 3); return p; },   // the heroes: floodlit pale granite

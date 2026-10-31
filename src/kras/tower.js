@@ -155,6 +155,20 @@ function twPin(acc, x, y, z, s, h) {
   sbox(acc, 'twTrim', x, y, z, s, s, h * 0.5, 0, twO({ top: false }));
   frustum(acc, 'twGold', x, y + h * 0.5, z, s * 1.1, s * 1.1, 0.05, 0.05, h * 0.5, 0, twO({ top: false }));
 }
+// The gilded cog: a wheel facing the square, D across and `depth` thick: its two faces (the painted cog) and a toothed gold
+// rim, so from below on the tribune, or from the side across the city, it's a solid gold wheel and not a flat sign.
+function twCogWheel(acc, cx, cy, cz, D, depth) {
+  const R = D / 2 * 0.98, Rg = D / 2 * 0.79, n = 12, half = 0.118, z0 = cz - depth / 2, z1 = cz + depth / 2;
+  plate(acc, 'twCog', cx, cy, z0, D, D, Math.PI, 0); plate(acc, 'twCog', cx, cy, z1, D, D, 0, 0);
+  const P = (r, a, z) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r, z], o = [0, 0, 1, 1];
+  for (let k = 0; k < n; k++) {
+    const t = k / n * Math.PI * 2, ta = t - half, tb = t + half, gb = t + Math.PI * 2 / n - half;
+    aq(acc, 'twGold', P(R, tb, z0), P(R, ta, z0), P(R, ta, z1), P(R, tb, z1), o, [Math.cos(t), Math.sin(t), 0], 99);                       // the tooth's face
+    aq(acc, 'twGold', P(Rg, gb, z0), P(Rg, tb, z0), P(Rg, tb, z1), P(Rg, gb, z1), o, [Math.cos(t + Math.PI / n), Math.sin(t + Math.PI / n), 0], 99);   // the gap's floor
+    aq(acc, 'twGold', P(R, ta, z0), P(Rg, ta, z0), P(Rg, ta, z1), P(R, ta, z1), o, [Math.sin(ta), -Math.cos(ta), 0], 99);                  // its two flanks
+    aq(acc, 'twGold', P(Rg, tb, z0), P(R, tb, z0), P(R, tb, z1), P(Rg, tb, z1), o, [-Math.sin(tb), Math.cos(tb), 0], 99);
+  }
+}
 // a south face (facing -z) from x a to b at z, y0 to y1, cut round holes [x0, x1, ya, yb], its pattern continuous
 function twFaceS(acc, key, a, b, z, y0, y1, holes, um, vm, cell) {
   const piece = (xa, xb, ya, yb) => { if (xb - xa > 1e-3 && yb - ya > 1e-3) wall(acc, key, xb, z, xa, z, ya, yb, um, vm, { cell, u0: (b - xb) / um, v0: (y1 - yb) / vm }); };
@@ -358,7 +372,7 @@ function towerShell(acc, lamps, live) {
   // a lamp every few metres, its housing on the roof and its canopy at the top
   const yTop = TWR.top.y + 8, rz = (gc + gd) / 2;
   for (const x of [g0 - 0.2, g1 + 0.2]) {
-    sbox(acc, 'twGold', x, 30, rz, 0.26, 0.26, yTop - 30, 0, twO({ top: false }));
+    sbox(acc, 'gilt', x, 30, rz, 0.26, 0.26, yTop - 30, 0, twO({ top: false }));
     for (let y = 33; y < yTop; y += 5) plate(acc, 'litWarm', x + (x < cx ? -0.14 : 0.14), y, rz, 0.16, 0.3, x < cx ? -Math.PI / 2 : Math.PI / 2, 0);
   }
   const faceZ = (y) => { for (let i = T.length - 1; i >= 0; i--) if (y >= T[i][4]) return i === T.length - 1 && y >= TWR.stage[4] ? TWR.stage[2] : T[i][2]; return T[0][2]; };
@@ -374,7 +388,7 @@ function towerShell(acc, lamps, live) {
   for (const x of [o0 - 0.7, o1 + 0.7]) plate(acc, 'twBannerTall', x + (x < cx ? -0.6 : 0.6), TY + 4.4, sc, 1.6, 6.4, Math.PI, 0.06);
   sbox(acc, 'twTrim', (ta + tb) / 2, TY - 1.0, (tc + td) / 2, tb - ta, td - tc, 1.0, 0, twO({ top: false }));        // the slab
   sbox(acc, 'twGold', (ta + tb) / 2, TY - 0.35, (tc + td) / 2, tb - ta + 0.2, td - tc + 0.1, 0.3, 0, twO({ top: false }));
-  aq(acc, 'granite', [ta, TY + 0.003, tc], [tb, TY + 0.003, tc], [tb, TY + 0.003, td], [ta, TY + 0.003, td], [0, 0, (tb - ta) / 4, (td - tc) / 4], [0, 1, 0], 4);
+  aq(acc, 'marble', [ta, TY + 0.003, tc], [tb, TY + 0.003, tc], [tb, TY + 0.003, td], [ta, TY + 0.003, td], [0, 0, (tb - ta) / 2, (td - tc) / 2], [0, 1, 0], 99);
   aq(acc, 'carpetRed', [-41.3, TY + 0.012, td], [-38.7, TY + 0.012, td], [-38.7, TY + 0.012, tc], [-41.3, TY + 0.012, tc], [0, 0, 1, (td - tc) / 2.6], [0, 1, 0], 9);
   for (const x of [-48.4, -44.2, -35.8, -31.6]) for (const [z0, z1, h] of [[sc - 2, sc, 9], [sc - 5, sc - 2, 5], [tc + 0.6, sc - 5, 2.2]]) sbox(acc, 'twTrim', x, TY - 1 - h, (z0 + z1) / 2, 1.3, z1 - z0, h, 0, twO({ top: false }));   // the corbels
   // the balustrade (no falling): along the front (a gate where the glass lift docks) and down both sides
@@ -395,7 +409,7 @@ function towerShell(acc, lamps, live) {
   cyl(acc, 'twLantern', cx, sy1, cz, 4.7, 4.4, 7, 8, { u: 2 * Math.PI * 4.7 / 8, v: 7, cell: 99 });
   cyl(acc, 'twGold', cx, sy1 + 7, cz, 5.0, 4.8, 0.9, 8, { u: 4, v: 99, cell: 99 });
   cyl(acc, 'twGold', cx, sy1 + 7.9, cz, 4.2, 0.9, 217 - sy1 - 7.9, 8, { u: 4, v: 99, cell: 99 });
-  for (const ph of [0, Math.PI / 2]) plate(acc, 'twCog', cx, TWR.cogY, cz, TWR.cogD, TWR.cogD, ph, 0, [0, 0, 1, 1], true);
+  twCogWheel(acc, cx, TWR.cogY, cz, TWR.cogD, 2.6);
   cyl(acc, 'twGold', cx, 217, cz, 0.9, 0.08, TWR.spire - 217, 6, { u: 4, v: 99, cell: 99 });
   ST.beacons.push([cx, TWR.spire + 1.5, cz]);   // the Krasnovian beacon blinks on top
   // the searchlights' lamps (their beams are the glow mesh's)
@@ -469,7 +483,8 @@ function twGlowTick(t, cam) {
     _twD.set(x - _twE.x, y - _twE.y, z - _twE.z).normalize(); _twS.set(-_twD.z, 0, _twD.x); if (_twS.lengthSq() < 1e-6) _twS.set(1, 0, 0); _twS.normalize(); _twU.crossVectors(_twS, _twD).normalize();
     for (let j = 0; j < 6; j++) { const c = TRI[j]; put(i + j, x, y, z, _twS, (c === 0 || c === 3 ? -r : r), _twU, (c < 2 ? r : -r)); }
   };
-  halo(6, -40, TWR.cogY, 330, TWR.cogD * 1.05); halo(12, -40, TWR.stage[5] + 3.5, 330, 13);
+  const near = clamp(Math.hypot(_twE.x + 40, _twE.y - TWR.cogY, _twE.z - 330) / 260, 0.35, 1);
+  halo(6, -40, TWR.cogY, 330, TWR.cogD * 1.05 * near); halo(12, -40, TWR.stage[5] + 3.5, 330, 13 * near);
   // the beams: two quads each (lamp -> halfway -> far end), turned about their own axis to face the eye
   const L = C.beamLen, w0 = C.beamW[0] / 2, w1 = C.beamW[1] / 2;
   for (let k = 0; k < C.search.length; k++) {
@@ -507,8 +522,8 @@ function twLiftCarMesh(L) {   // the car (walls, floor, ceiling lamp) and two br
   const acc = new GeoAcc(), [a, b, c, d] = L.car, A = a - 0.02, B = b + 0.02, H = 2.45;
   if (L.glass) {   // glass on three sides (both faces of each pane), gilt posts and a rail, a marble floor, a gilt crown
     for (const [x0, z0, x1, z1] of [[A, c, B, c], [B, c, B, d], [A, d, A, c]]) { wall(acc, 'twGlass', x0, z0, x1, z1, 0.05, H, 1.4, H, { cell: 99 }); wall(acc, 'twGlass', x1, z1, x0, z0, 0.05, H, 1.4, H, { cell: 99 }); }
-    for (const [x, z] of [[A, c], [B, c], [A, d], [B, d]]) sbox(acc, 'twGold', x, 0, z, 0.1, 0.1, H, 0, twO({}));
-    for (const [x0, z0, x1, z1] of [[A, c + 0.06, B, c + 0.06], [B - 0.06, c, B - 0.06, d], [A + 0.06, c, A + 0.06, d]]) sbox(acc, 'twGold', (x0 + x1) / 2, 1.0, (z0 + z1) / 2, Math.max(0.06, x1 - x0), Math.max(0.06, z1 - z0), 0.06, 0, twO({}));
+    for (const [x, z] of [[A, c], [B, c], [A, d], [B, d]]) sbox(acc, 'gilt', x, 0, z, 0.1, 0.1, H, 0, twO({}));
+    for (const [x0, z0, x1, z1] of [[A, c + 0.06, B, c + 0.06], [B - 0.06, c, B - 0.06, d], [A + 0.06, c, A + 0.06, d]]) sbox(acc, 'gilt', (x0 + x1) / 2, 1.0, (z0 + z1) / 2, Math.max(0.06, x1 - x0), Math.max(0.06, z1 - z0), 0.06, 0, twO({}));
     sbox(acc, 'twGold', (a + b) / 2, -0.35, (c + d) / 2, b - a + 0.2, d - c + 0.2, 0.36, 0, twO({ top: false }));
     ground(acc, 'marble', A, c, B, d, 0.01, 2);
     aq(acc, 'iron', [A, H, d], [B, H, d], [B, H, c], [A, H, c], [0, 0, 1, 1], [0, -1, 0], 9);
