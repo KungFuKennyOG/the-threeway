@@ -53,8 +53,8 @@ function walkHeight(w, x, z) {
 // that spot, the nearest one you could step onto (no more than CFG.floors.step above y), the highest if several.
 // A rect's pad lets you reach its edge but doesn't hold you up: past its edge you're over whatever is below.
 function floorAt(x, z, y) {
-  const list = floorBands ? floorBands.get(Math.floor(z / BAND)) : WALK;
-  if (!list || list.flat) return 0;   // no rect over this band, or none raised
+  const list = floorCells ? cellAt(floorCells, x, z) : WALK;
+  if (!list || list.flat) return 0;   // no rect over this cell, or none raised
   const lim = (y === undefined ? Infinity : y) + CFG.floors.step;
   let bestH = -Infinity, bestD = Infinity, above = Infinity;
   for (let i = 0; i < list.length; i++) {
@@ -88,8 +88,22 @@ function bandIndex(list, get, margin) {
   }
   return bands;
 }
+// ...and by x too: the lookups below use cells (BAND x BAND, the same margins), each list in the original order, so they
+// find exactly what the z band would, minus what's far off in x. (Act 1's west levels are laid along world -x by their
+// frame, so the Palace, Parade Square and the Tower all share a few z bands: by z alone a ragdoll in the gym tested
+// every box from Station Square to the Tower, ~6 ms a frame in a five-goon fight.)
+const cellKey = (i, k) => k * 8192 + i;   // (i: x cells within +-4096, 16 km)
+function cellIndex(list, get, margin) {
+  const cells = new Map();
+  for (const it of list) {
+    const [x0, x1, z0, z1] = get(it);
+    for (let k = Math.floor((z0 - margin) / BAND); k <= Math.floor((z1 + margin) / BAND); k++)
+      for (let i = Math.floor((x0 - margin) / BAND); i <= Math.floor((x1 + margin) / BAND); i++) { const c = cellKey(i, k); if (!cells.has(c)) cells.set(c, []); cells.get(c).push(it); }
+  }
+  return cells;
+}
 const NONE = [];
-let blockerBands = null, worldBoxBands = null, walkBands = null, floorBands = null;
+let blockerBands = null, worldBoxBands = null, walkBands = null, floorBands = null, blockerCells = null, worldBoxCells = null, walkCells = null, floorCells = null;
 function indexWorld() {
   blockerBands = bandIndex(BLOCKERS, b => [b.z0, b.z1], 0.8);
   worldBoxBands = bandIndex(WORLD_BOXES, B => [B[2], B[5]], 0.6);
@@ -97,16 +111,23 @@ function indexWorld() {
   for (const list of walkBands.values()) list.flat = floorsFlat(list);   // a band with no raised floor costs nothing extra
   floorBands = bandIndex(WALK, w => [w.fz0, w.fz1], 0);   // floorAt: only the rects over that band
   for (const list of floorBands.values()) list.flat = floorsFlat(list);
+  blockerCells = cellIndex(BLOCKERS, b => [b.x0, b.x1, b.z0, b.z1], 0.8);
+  worldBoxCells = cellIndex(WORLD_BOXES, B => [B[0], B[3], B[2], B[5]], 0.6);
+  walkCells = cellIndex(WALK, w => [w.x0, w.x1, w.z0, w.z1], 8);
+  for (const list of walkCells.values()) list.flat = floorsFlat(list);
+  floorCells = cellIndex(WALK, w => [w.fx0, w.fx1, w.fz0, w.fz1], 0);
+  for (const list of floorCells.values()) list.flat = floorsFlat(list);
 }
-const blockersNear = (z) => (blockerBands && blockerBands.get(Math.floor(z / BAND))) || NONE;
-const boxesNear = (z) => (worldBoxBands && worldBoxBands.get(Math.floor(z / BAND))) || NONE;
+const cellAt = (cells, x, z) => cells.get(cellKey(Math.floor(x / BAND), Math.floor(z / BAND)));
+const blockersNear = (z, x) => (x === undefined ? blockerBands && blockerBands.get(Math.floor(z / BAND)) : blockerCells && cellAt(blockerCells, x, z)) || NONE;
+const boxesNear = (z, x) => (x === undefined ? worldBoxBands && worldBoxBands.get(Math.floor(z / BAND)) : worldBoxCells && cellAt(worldBoxCells, x, z)) || NONE;
 // keep an xz point (radius r) inside the walkable union; returns true if it had to move. walls: ragdoll particles.
 // Where floors are raised, p.y matters: walking (p.y = feet), only rects within CFG.floors.step of you count, so a taller
 // edge is a wall either way; ragdoll particles (p.y = centre) are also free over anything lower, so they fall off ledges.
 // memo (optional, e.g. a particle): remembers the rect it was last inside, tested first (being inside any rect ends the search)
 function keepInWalk(p, r, walls, memo) {
   let best = null, bestD = 1e9, bx = 0, bz = 0;
-  const list = (walkBands && walkBands.get(Math.floor(p.z / BAND))) || WALK;
+  const list = (walkCells && cellAt(walkCells, p.x, p.z)) || WALK;
   const flat = list.flat, step = CFG.floors.step, py = walls ? p.y - r : p.y;
   const m = memo && memo.wk;
   if (m && (!m.on || m.on())) {

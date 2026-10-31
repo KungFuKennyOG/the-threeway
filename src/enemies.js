@@ -913,7 +913,7 @@ function tokensInUse() { let n = 0; for (const e of enemies) if (e.hasToken) n++
 function pushOutXZ(p, r, includeBlockers = true) {
   let moved = keepInWalk(p, r);   // false | true (wall) | the blocker box. p.y: the feet (matters only on raised floors)
   if (!includeBlockers) return moved;
-  for (const b of blockersNear(p.z)) {
+  for (const b of blockersNear(p.z, p.x)) {
     if (b.y1 !== undefined && (p.y >= b.y1 - CFG.floors.step || p.y + 1.6 < (b.y0 || 0))) continue;   // a blocker with a height range: only at its own floor
     const x0 = b.x0 - r, x1 = b.x1 + r, z0 = b.z0 - r, z1 = b.z1 + r;
     if (p.x > x0 && p.x < x1 && p.z > z0 && p.z < z1) {
