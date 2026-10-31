@@ -24,36 +24,55 @@ function chest(r) {
 
 // part spec: [name, parent, pivot, [geometry fns(acc, accFace)]]
 // p.uv: per-part uv overrides for the default boxes (hips, uarm, farm, hand, thigh, shin, foot), e.g. { shin: { '*': X5 } }
+// p.lean (the newer goons): only the face and the chest's front are subdivided, which leaves triangles for signature shapes.
+// p.armK / p.farmK / p.handK / p.legK / p.shinK thicken (or thin) the limbs without moving a joint.
 function humanoid(p) {
   const P = Object.assign({ torso: TA, legs: TD, arms: TC, hands: TC, feet: TD, shoulder: 0.56, chestD: 0.32, waist: 0.38, neck: 0.07,
-    head: [0.23, 0.30, 0.26], thighW: 0.18, headSide: HAIR, uv: {} }, p);
+    head: [0.23, 0.30, 0.26], thighW: 0.18, headSide: HAIR, uv: {}, armK: 1, farmK: 1, handK: 1, legK: 1, shinK: 1 }, p);
   const [hw, hh, hd] = P.head, U = (k, r) => P.uv[k] || { '*': r };
+  const headUV = { f: FACE, b: P.headSide, l: P.headSide, r: P.headSide, t: P.headTop || (P.headSide === HEADS ? HEADT : P.headSide), d: P.headSide };
+  const torsoG = P.lean
+    ? [(a) => tbox(a, null, 0, 0.5, P.waist, 0.25, P.shoulder, P.chestD, chest(P.torso), { sub: 2, faces: 'f' }),
+       (a) => tbox(a, null, 0, 0.5, P.waist, 0.25, P.shoulder, P.chestD, chest(P.torso), { faces: 'blrt' })]
+    : [(a) => tbox(a, null, 0, 0.5, P.waist, 0.25, P.shoulder, P.chestD, chest(P.torso), { sub: 2, faces: 'fblrt' })];
+  const headG = P.lean
+    ? [(a, f) => tbox(a, f, 0, hh, hw, hd, hw * 0.92, hd * 0.95, headUV, { sub: 2, faces: 'f' }),
+       (a) => tbox(a, null, 0, hh, hw, hd, hw * 0.92, hd * 0.95, headUV, { faces: 'blrtd' })]
+    : [(a, f) => tbox(a, f, 0, hh, hw, hd, hw * 0.92, hd * 0.95, headUV, { sub: 2 })];
+  const nk = P.neckW || 0.13, nk1 = P.neckW ? nk * 0.92 : 0.12;
   const parts = [
     ['hips', null, [0, 1.06, 0], [(a) => tbox(a, null, -0.12, 0.08, P.waist, 0.25, P.waist, 0.25, U('hips', P.legs))]],
-    ['torso', 'hips', [0, 0.08, 0], [(a) => tbox(a, null, 0, 0.5, P.waist, 0.25, P.shoulder, P.chestD, chest(P.torso), { sub: 2, faces: 'fblrt' })]],
-    ['head', 'torso', [0, 0.5 + P.neck, 0.01], [
-      (a, f) => tbox(a, f, 0, hh, hw, hd, hw * 0.92, hd * 0.95, { f: FACE, b: P.headSide, l: P.headSide, r: P.headSide, t: P.headTop || (P.headSide === HEADS ? HEADT : P.headSide), d: P.headSide }, { sub: 2 }),
-      (a) => tbox(a, null, -P.neck - 0.02, 0.02, 0.13, 0.13, 0.12, 0.12, { '*': TC }, { faces: 'fblr' })]],
+    ['torso', 'hips', [0, 0.08, 0], torsoG],
+    ['head', 'torso', [0, 0.5 + P.neck, 0.01], [...headG,
+      (a) => tbox(a, null, -P.neck - 0.02, 0.02, nk, nk, nk1, nk1, { '*': P.neckUV || TC }, { faces: 'fblr' })]],
   ];
+  const A = P.armK, F = P.farmK, Hk = P.handK, L = P.legK, Sk = P.shinK;
   for (const [s, nm] of [[-1, 'l'], [1, 'r']]) {
-    parts.push(['uarm' + nm, 'torso', [s * (P.shoulder / 2 + 0.04), 0.44, 0], [(a) => tbox(a, null, 0.04, -0.31, 0.15, 0.15, 0.12, 0.13, U('uarm', P.arms))]]);
-    parts.push(['farm' + nm, 'uarm' + nm, [0, -0.31, 0], [(a) => tbox(a, null, 0.02, -0.27, 0.12, 0.12, 0.1, 0.1, U('farm', P.arms))]]);
-    parts.push(['hand' + nm, 'farm' + nm, [0, -0.27, 0], [(a) => tbox(a, null, 0, -0.13, 0.13, 0.14, 0.13, 0.13, U('hand', P.hands))]]);
-    parts.push(['thigh' + nm, 'hips', [s * 0.11, -0.08, 0], [(a) => tbox(a, null, 0.02, -0.47, P.thighW, P.thighW + 0.01, 0.14, 0.15, U('thigh', P.legs))]]);
-    parts.push(['shin' + nm, 'thigh' + nm, [0, -0.47, 0], [(a) => tbox(a, null, 0.02, -0.43, 0.135, 0.14, 0.11, 0.12, U('shin', P.legs))]]);
+    parts.push(['uarm' + nm, 'torso', [s * (P.shoulder / 2 + 0.04), 0.44, 0], [(a) => tbox(a, null, 0.04, -0.31, 0.15 * A, 0.15 * A, 0.12 * A, 0.13 * A, U('uarm', P.arms))]]);
+    parts.push(['farm' + nm, 'uarm' + nm, [0, -0.31, 0], [(a) => tbox(a, null, 0.02, -0.27, 0.12 * F, 0.12 * F, 0.1 * F, 0.1 * F, U('farm', P.arms))]]);
+    parts.push(['hand' + nm, 'farm' + nm, [0, -0.27, 0], [(a) => tbox(a, null, 0, -0.13 * Hk, 0.13 * Hk, 0.14 * Hk, 0.13 * Hk, 0.13 * Hk, U('hand', P.hands))]]);
+    parts.push(['thigh' + nm, 'hips', [s * 0.11, -0.08, 0], [(a) => tbox(a, null, 0.02, -0.47, P.thighW, (P.thighW + 0.01) * L, 0.14 * L, 0.15 * L, U('thigh', P.legs))]]);
+    parts.push(['shin' + nm, 'thigh' + nm, [0, -0.47, 0], [(a) => tbox(a, null, 0.02, -0.43, 0.135 * Sk, 0.14 * Sk, 0.11 * Sk, 0.12 * Sk, U('shin', P.legs))]]);
     parts.push(['foot' + nm, 'shin' + nm, [0, -0.43, 0], [(a) => tbox(a, null, 0, -0.1, 0.13, 0.29, 0.13, 0.29, U('foot', P.feet), { z: 0.07 })]]);
   }
   const idx = {}; parts.forEach(p => idx[p[0]] = p);
   return idx;
 }
-// a clipboard held in the left fist (paper on X2, the board's back on X3, its edges SW(2))
-const clipboard = (a) => tbox(a, null, -0.02, -0.36, 0.02, 0.26, 0.02, 0.26, { l: X2, r: X3, '*': SW(2) }, { x: 0.06, z: 0.04 });
-// a peaked cap: a crown flaring out over the head (X1 round its side, SW(1) on top) and a black visor (SW(0)).
+// ---- the newer goons (tools/goons_*.py): a lean humanoid with every limb on its own panel:
+// upper arm X6, forearm X7, hand X8, thigh X9, shin X10 (boots are painted on it), foot X11, hips TB, neck SW(15).
+// Each one's signature shapes are a few extra boxes on X1-X5, X12, TD and the swatches.
+const UA = X6, FA = X7, HND = X8, THI = X9, SHN = X10, FT = X11;
+function goon(p) {
+  const uv = Object.assign({ hips: { '*': TB }, uarm: { '*': UA }, farm: { '*': FA }, thigh: { '*': THI }, shin: { '*': SHN } }, p.uv || {});
+  return humanoid(Object.assign({ lean: true, torso: TA, legs: THI, arms: UA, hands: HND, feet: FT, headSide: HEADS, neckUV: SW(15) }, p, { uv }));
+}
+const bx = (r, part, ...a) => r[part][3].push((acc) => tbox(acc, null, ...a));   // one more box on a part
+// a peaked parade cap: a crown that flares up and forward (o.crown round its side, o.top on top) over a black visor (o.visor).
 // The cap's band is painted on the face's top rows and on HEADS.
-function peakedCap(r, o = {}) {
-  const w = o.w || 0.33, d = o.d || 0.36, top = o.top || 0.38, y0 = o.y0 || 0.285;
-  r.head[3].push((a) => tbox(a, null, y0, top, 0.245, 0.27, w, d, { '*': X1, t: SW(1) }, { z: 0.005, faces: 'fblrt' }));
-  r.head[3].push((a) => tbox(a, null, y0 - 0.04, y0 - 0.018, 0.235, 0.12, 0.235, 0.12, { '*': SW(0) }, { z: 0.17 }));
+function peakedCap(r, o) {
+  const y0 = o.y0 || 0.27;
+  bx(r, 'head', y0, o.top, 0.25, 0.27, o.w, o.d, { f: o.crown, '*': o.crownB || o.crown, t: o.topUV }, { z: 0.0, z1: o.lean || 0.03, x1: o.tilt || 0, faces: 'fblrt' });
+  bx(r, 'head', y0 - 0.025, y0 - 0.005, 0.25, o.visorD || 0.14, 0.25, o.visorD || 0.14, { '*': o.visor }, { z: 0.16 });
 }
 const BODIES = {
   boso() {
@@ -151,117 +170,151 @@ const BODIES = {
     for (const nm of ['l', 'r']) r['uarm' + nm][3] = [(a) => tbox(a, null, 0.06, -0.31, 0.21, 0.21, 0.17, 0.17, { '*': TC })];
     return r;
   },
-  // ---- the Palace of Sport and Parade Square (sheets: tools/goons_palace.py)
-  sambo() {    // a young sambo fighter: red kurtka with shoulder wings and a blue belt, blue shorts, bare legs, high wrestling shoes
-    const r = humanoid({ torso: TA, legs: X4, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.56, chestD: 0.31, waist: 0.39, headSide: HEADS,
-      uv: { hips: { '*': TB }, shin: { '*': X5 } } });
-    r.hips[3].push((a) => tbox(a, null, 0.0, 0.07, 0.43, 0.28, 0.43, 0.28, { f: X2, '*': X3 }, { faces: 'fblr' }));   // the belt, knotted at the front
-    r.torso[3].push((a) => tbox(a, null, 0.42, 0.51, 0.64, 0.3, 0.66, 0.3, chest([32, 32, 48, 35]), { faces: 'fblrt' }));   // the jacket's shoulder wings
+  // ---- the Palace of Sport and Parade Square (sheets: tools/goons_palace.py). Each one's signature is in its first comment.
+  sambo() {    // SIGNATURE: the kurtka's big flaring wings. A scrappy kid: cauliflower ears, a taped nose, taped fingers, high boots, a low crouch
+    const r = goon({ shoulder: 0.6, chestD: 0.33, waist: 0.42, neck: 0.03, head: [0.25, 0.27, 0.26], thighW: 0.19, neckW: 0.17, handK: 1.08 });
+    for (const s of [-1, 1]) bx(r, 'torso', 0.32, 0.5, 0.3, 0.4, 0.2, 0.36, { '*': X1 }, { x: s * 0.37, x1: -s * 0.08, faces: 'fblrtd' });   // the kurtka's wings
+    bx(r, 'hips', 0.1, -0.2, 0.47, 0.31, 0.53, 0.35, { '*': X2 }, { faces: 'fblr' });   // its skirt below the belt
+    bx(r, 'hips', 0.04, -0.28, 0.13, 0.04, 0.17, 0.04, { '*': X3 }, { z: 0.18, z1: 0.01, faces: 'fblr' });   // the belt's knot and ends
+    for (const s of [-1, 1]) bx(r, 'head', 0.07, 0.2, 0.06, 0.09, 0.07, 0.08, { '*': X4 }, { x: s * 0.135, x1: s * 0.01, faces: 'fblrt' });   // cauliflower ears
+    for (const nm of ['l', 'r']) bx(r, 'shin' + nm, -0.16, -0.43, 0.16, 0.17, 0.15, 0.16, { '*': X5 }, { faces: 'fblr' });   // high wrestling boots
     return r;
   },
-  gymnast() {  // a gymnast: red zip-up tracksuit top with a gold stripe, red leotard, white leggings and slippers, hair slicked into a bun
-    const r = humanoid({ torso: TA, legs: TB, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.5, chestD: 0.28, waist: 0.34, thighW: 0.16,
-      head: [0.21, 0.29, 0.24], headSide: HEADS, uv: { hips: { '*': X2 } } });
-    r.head[3].push((a) => tbox(a, null, 0.19, 0.31, 0.11, 0.1, 0.09, 0.08, { '*': X3 }, { z: -0.15 }));   // the bun
-    r.torso[3].push((a) => tbox(a, null, 0.46, 0.57, 0.3, 0.24, 0.27, 0.21, chest([32, 32, 48, 34]), { faces: 'fblr' }));   // stand-up collar
+  gymnast() {  // SIGNATURE: a high ponytail flying out behind. A gold medal on a ribbon, a striped tracksuit, leg warmers; she's just stuck the landing
+    const r = goon({ shoulder: 0.5, chestD: 0.28, waist: 0.32, thighW: 0.16, head: [0.21, 0.28, 0.23], neckW: 0.1, armK: 0.9, farmK: 0.9, handK: 0.9 });
+    bx(r, 'head', 0.25, 0.34, 0.11, 0.11, 0.1, 0.1, { '*': SW(0) }, { z: -0.07, faces: 'fblrt' });   // the scrunchie
+    bx(r, 'head', 0.26, 0.56, 0.1, 0.08, 0.18, 0.05, { '*': X1 }, { z: -0.1, z1: -0.36 });   // the ponytail, flying out behind
+    bx(r, 'torso', 0.18, 0.3, 0.12, 0.025, 0.12, 0.025, { '*': X2 }, { z: 0.15, faces: 'fblr' });   // the medal
+    bx(r, 'torso', 0.44, 0.57, 0.3, 0.24, 0.26, 0.21, { '*': X3 }, { faces: 'fblr' });   // the tracksuit's stand-up collar
+    for (const nm of ['l', 'r']) bx(r, 'shin' + nm, -0.04, -0.37, 0.165, 0.175, 0.18, 0.19, { '*': X4 }, { faces: 'fblr' });   // leg warmers
     return r;
   },
-  lifter() {   // a weightlifter: navy singlet, a wide leather belt, huge bare arms, wrist wraps, knee wraps, red lifting shoes
-    const r = humanoid({ torso: TA, legs: X2, arms: X3, hands: X4, feet: TD_R, shoulder: 0.8, chestD: 0.48, waist: 0.6, neck: -0.04,
-      head: [0.25, 0.29, 0.27], thighW: 0.25, headSide: HEADS, uv: { hips: { '*': TB }, shin: { '*': X5 } } });
-    r.torso[3].push((a) => tbox(a, null, 0.0, 0.34, 0.62, 0.46, 0.72, 0.52, chest([32, 38, 48, 48]), { z: 0.03, faces: 'fblr' }));   // the belly
-    r.hips[3].push((a) => tbox(a, null, 0.02, 0.2, 0.66, 0.5, 0.66, 0.5, { f: X6, '*': X7 }, { faces: 'fblr' }));   // the belt
-    r.head[3].push((a) => tbox(a, null, 0.26, 0.35, 0.25, 0.27, 0.25, 0.27, { '*': SW(4) }, { faces: 'fblrt' }));   // the flat-top
-    for (const nm of ['l', 'r']) {
-      r['uarm' + nm][3] = [(a) => tbox(a, null, 0.06, -0.31, 0.24, 0.24, 0.19, 0.19, { '*': X3 })];
-      r['farm' + nm][3] = [(a) => tbox(a, null, 0.02, -0.27, 0.18, 0.18, 0.14, 0.14, { '*': X3 })];
-    }
+  lifter() {   // SIGNATURE: arms like hams and a huge waxed handlebar moustache. Chest and belly on short bowed legs, chalked hands, a cog on the singlet
+    const r = goon({ shoulder: 0.84, chestD: 0.5, waist: 0.6, neck: -0.05, head: [0.26, 0.28, 0.27], thighW: 0.27, neckW: 0.22,
+      armK: 1.6, farmK: 1.55, handK: 1.3, legK: 1.25, shinK: 1.25 });
+    bx(r, 'torso', 0.2, 0.5, 0.74, 0.52, 0.94, 0.52, chest(TA), { z: 0.02, faces: 'fblr' });   // the chest
+    bx(r, 'torso', -0.04, 0.24, 0.66, 0.54, 0.74, 0.56, { f: X2, '*': X3 }, { z: 0.03, faces: 'fblr' });   // the belly
+    bx(r, 'torso', 0.4, 0.5, 0.9, 0.44, 0.56, 0.26, { '*': TD }, { faces: 'fblr' });   // traps like a yoke
+    bx(r, 'hips', 0.02, 0.2, 0.7, 0.54, 0.7, 0.54, { f: X4, '*': X5 }, { faces: 'fblr' });   // the belt
+    bx(r, 'head', 0.25, 0.37, 0.27, 0.28, 0.27, 0.28, { '*': X1, t: SW(0) }, { faces: 'fblrt' });   // the flat-top
+    bx(r, 'head', 0.055, 0.1, 0.4, 0.05, 0.36, 0.045, { '*': X12 }, { z: 0.145 });   // the handlebar moustache
+    for (const s of [-1, 1]) bx(r, 'head', 0.07, 0.17, 0.05, 0.045, 0.04, 0.035, { '*': X12 }, { x: s * 0.185, x1: s * 0.02, z: 0.145, faces: 'fblrt' });   // its waxed tips
     return r;
   },
-  guard() {    // the honour guard: a long parade coat, white belt and gloves, gold aiguillette and shoulder boards, a tall peaked cap
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.6, chestD: 0.34, waist: 0.42, headSide: HEADS });
-    r.hips[3].push((a) => tbox(a, null, 0.06, -0.62, 0.46, 0.32, 0.6, 0.42, { '*': TB }, { faces: 'fblr' }));   // the coat to the knee
-    peakedCap(r, { w: 0.37, d: 0.39, top: 0.42 });
-    for (const x of [-0.25, 0.25]) r.torso[3].push((a) => tbox(a, null, 0.47, 0.52, 0.13, 0.2, 0.13, 0.2, { '*': SW(2) }, { x }));   // gold shoulder boards
+  guard() {    // SIGNATURE: a towering parade cap. Gold boards and braid, white gloves, a sabre on the hip, ramrod straight with the flagpole
+    const r = goon({ shoulder: 0.62, chestD: 0.37, waist: 0.38, head: [0.23, 0.3, 0.25], thighW: 0.17, neckW: 0.12 });
+    peakedCap(r, { top: 0.56, w: 0.47, d: 0.45, lean: 0.07, crown: X1, crownB: TD, topUV: SW(1), visor: SW(0), visorD: 0.16 });
+    for (const s of [-1, 1]) bx(r, 'torso', 0.46, 0.53, 0.17, 0.22, 0.18, 0.23, { '*': X2 }, { x: s * 0.31, faces: 'fblrt' });   // gold shoulder boards
+    bx(r, 'hips', 0.06, -0.62, 0.42, 0.3, 0.56, 0.4, { f: X4, '*': X5 }, { faces: 'fblr' });   // the parade coat's skirt
+    bx(r, 'hips', 0.0, -0.76, 0.045, 0.07, 0.04, 0.06, { '*': X3 }, { x: -0.31, z: 0.03, z1: -0.24, faces: 'fblr' });   // the sabre's scabbard, slung back
+    bx(r, 'hips', 0.0, 0.17, 0.07, 0.11, 0.08, 0.13, { '*': SW(2) }, { x: -0.31, z: 0.05, z1: 0.04 });   // its gilt hilt
     return r;
   },
-  bandsman() { // the brass band: a white-topped peaked cap, a red tunic with gold frogging, navy trousers, a snare drum on the hip
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.58, chestD: 0.34, waist: 0.44, headSide: HEADS, uv: { hips: { '*': TB } } });
-    peakedCap(r, { w: 0.31, d: 0.34, top: 0.37 });
-    r.hips[3].push((a) => tbox(a, null, -0.24, -0.06, 0.3, 0.3, 0.3, 0.3, { '*': X2, t: X3, d: X3 }, { x: -0.36, z: 0.08 }));   // the snare drum
+  bandsman() { // SIGNATURE: a tall plumed shako and a bass drum strapped to his front. Puffed cheeks, a high-stepping march, a raised mallet
+    const r = goon({ shoulder: 0.58, chestD: 0.34, waist: 0.44, head: [0.25, 0.29, 0.26], neckW: 0.13 });
+    bx(r, 'head', 0.26, 0.6, 0.27, 0.29, 0.32, 0.33, { f: X1, '*': TD, t: SW(1) }, { faces: 'fblrt' });   // the shako
+    bx(r, 'head', 0.24, 0.265, 0.27, 0.15, 0.27, 0.15, { '*': SW(0) }, { z: 0.17 });   // its peak
+    bx(r, 'head', 0.58, 0.92, 0.09, 0.09, 0.2, 0.17, { '*': X2 }, { z: 0.1, z1: -0.06 });   // the plume
+    r.torso[3].push((a) => tbox(a, null, 0.0, 0.4, 0.52, 0.22, 0.52, 0.22, { f: X3, b: X3, '*': X4 }, { z: 0.28 }));   // the bass drum
+    for (const s of [-1, 1]) bx(r, 'torso', 0.45, 0.53, 0.16, 0.2, 0.18, 0.22, { '*': X5 }, { x: s * 0.29, faces: 'fblrt' });   // fringed epaulettes
     return r;
   },
-  specialist() {   // the specialist: black leather jacket, collar up, black tracksuit trousers with white side stripes, white trainers, a crew cut
-    const r = humanoid({ torso: TA, legs: X2, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.6, chestD: 0.33, waist: 0.4, headSide: HEADS,
-      uv: { hips: { '*': TB }, thigh: { '*': X2, l: X3, r: X3 }, shin: { '*': X2, l: X3, r: X3 } } });
-    r.torso[3].push((a) => tbox(a, null, 0.44, 0.6, 0.42, 0.31, 0.32, 0.25, chest([32, 32, 48, 34]), { faces: 'fblrt' }));   // the collar, turned up
-    r.hips[3].push((a) => tbox(a, null, 0.0, 0.14, 0.46, 0.31, 0.46, 0.31, chest([32, 42, 48, 48]), { faces: 'fblr' }));   // jacket hem
+  specialist() {   // SIGNATURE: mirrored aviators under slicked-back hair, the leather collar up. A gold chain, a scar, a gold tooth, guard high
+    const r = goon({ shoulder: 0.64, chestD: 0.33, waist: 0.38, head: [0.23, 0.29, 0.25], neckW: 0.13 });
+    bx(r, 'torso', 0.4, 0.68, 0.44, 0.32, 0.58, 0.4, { '*': X1 }, { z: -0.02, faces: 'blr' });   // the collar, turned up and flared
+    bx(r, 'head', 0.23, 0.37, 0.245, 0.27, 0.23, 0.25, { '*': X2, t: SW(0) }, { z: -0.01, z1: -0.03, faces: 'fblrt' });   // slicked-back hair
+    bx(r, 'head', 0.1, 0.27, 0.17, 0.08, 0.21, 0.06, { '*': X2 }, { z: -0.14, z1: -0.04, faces: 'blrtd' });   // the ducktail
+    bx(r, 'head', 0.13, 0.185, 0.25, 0.03, 0.25, 0.03, { '*': X3 }, { z: 0.125 });   // mirrored aviators
+    bx(r, 'hips', 0.0, 0.14, 0.44, 0.31, 0.44, 0.31, { '*': X4 }, { faces: 'fblr' });   // jacket hem
+    for (const s of [-1, 1]) bx(r, 'torso', 0.4, 0.5, 0.18, 0.3, 0.2, 0.3, { '*': X5 }, { x: s * 0.27, faces: 'fblrt' });   // padded shoulders
     return r;
   },
   // ---- the Tower of Labor (sheets: tools/goons_tower.py)
-  militia() {  // Ministry militiaman: grey-blue tunic with a belt and cross strap, red-banded peaked cap, a wrestler's build
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.66, chestD: 0.42, waist: 0.5,
-      neck: -0.02, head: [0.25, 0.29, 0.27], thighW: 0.22, headSide: HEADS, uv: { hips: { '*': TB } } });
-    r.torso[3].push((a) => tbox(a, null, 0.0, 0.32, 0.5, 0.36, 0.6, 0.44, chest([32, 40, 48, 48]), { z: 0.02, faces: 'fblr' }));   // barrel chest
-    peakedCap(r, { w: 0.34, d: 0.37, top: 0.38, y0: 0.27 });
+  militia() {  // SIGNATURE: a huge fur ushanka with the flaps sticking out. A walrus moustache, a red nose, a barrel chest, arms wide to grab
+    const r = goon({ shoulder: 0.74, chestD: 0.44, waist: 0.5, neck: -0.03, head: [0.26, 0.28, 0.27], thighW: 0.22, neckW: 0.18, armK: 1.15, farmK: 1.15, handK: 1.15 });
+    bx(r, 'torso', 0.0, 0.34, 0.54, 0.38, 0.66, 0.46, chest(TA), { z: 0.02, faces: 'fblr' });   // the barrel chest
+    bx(r, 'head', 0.24, 0.46, 0.34, 0.34, 0.38, 0.36, { '*': X1, t: X2 }, { z: -0.01, faces: 'fblrt' });   // the fur crown
+    bx(r, 'head', 0.3, 0.48, 0.38, 0.07, 0.41, 0.06, { '*': X3 }, { z: 0.185, faces: 'fblrt' });   // the front flap, turned up, a cog on it
+    for (const s of [-1, 1]) bx(r, 'head', 0.1, 0.3, 0.07, 0.24, 0.07, 0.26, { '*': X2 }, { x: s * 0.2, x1: s * 0.08 });   // the ear flaps, sticking out
+    bx(r, 'head', 0.025, 0.105, 0.32, 0.05, 0.22, 0.045, { '*': X4 }, { z: 0.15 });   // the walrus moustache
     return r;
   },
-  inspector() {   // Ministry inspector: a long grey-blue uniform coat, blue-banded cap, a clipboard in the left hand
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.54, chestD: 0.3, waist: 0.4, headSide: HEADS });
-    r.hips[3].push((a) => tbox(a, null, 0.06, -0.58, 0.44, 0.3, 0.54, 0.38, { '*': TB }, { faces: 'fblr' }));   // coat to the knee
-    peakedCap(r, { w: 0.32, d: 0.35, top: 0.37 });
-    r.handl[3].push(clipboard);
+  inspector() {   // SIGNATURE: the clipboard held up like a shield, a long flaring trench coat. Round spectacles, a long nose in the air, prim
+    const r = goon({ shoulder: 0.52, chestD: 0.29, waist: 0.36, head: [0.22, 0.31, 0.24], thighW: 0.16, neckW: 0.11, armK: 0.95 });
+    bx(r, 'hips', 0.08, -0.74, 0.42, 0.3, 0.66, 0.48, { f: X1, '*': X2 }, { faces: 'fblr' });   // the trench coat, flaring to mid-calf
+    bx(r, 'torso', 0.36, 0.6, 0.4, 0.3, 0.58, 0.36, { '*': X3 }, { z: -0.01, faces: 'blr' });   // the storm collar, up
+    bx(r, 'head', 0.09, 0.17, 0.055, 0.1, 0.04, 0.03, { '*': SW(3) }, { z: 0.15, z1: -0.03, faces: 'fblrtd' });   // the long nose
+    peakedCap(r, { top: 0.42, w: 0.3, d: 0.33, crown: X5, crownB: TD, topUV: SW(1), visor: SW(0), visorD: 0.12 });
+    bx(r, 'handl', 0.08, -0.3, 0.32, 0.025, 0.32, 0.025, { b: X12, '*': SW(2) }, { z: -0.07 });   // the clipboard, up like a shield
     return r;
   },
-  clerk() {    // office clerk: shirtsleeves with red garters, a brown waistcoat, glasses, a bald crown; a rubber stamp in his fist
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.52, chestD: 0.3, waist: 0.4, headSide: HEADS,
-      uv: { hips: { '*': TB }, uarm: { '*': X2 }, farm: { '*': X3 } } });
-    r.handr[3].push((a) => tbox(a, null, -0.1, -0.22, 0.05, 0.05, 0.045, 0.045, { '*': SW(2) }));            // the stamp's handle
-    r.handr[3].push((a) => tbox(a, null, -0.22, -0.27, 0.12, 0.08, 0.12, 0.08, { '*': SW(3), d: SW(4) }));    // its pad
+  clerk() {    // SIGNATURE: a tower of files hugged to his belly and a giant rubber stamp raised like a hammer. A green eyeshade, sweat, a nervous hunch
+    const r = goon({ shoulder: 0.5, chestD: 0.3, waist: 0.44, head: [0.25, 0.3, 0.26], neckW: 0.11, armK: 0.9, farmK: 0.9 });
+    bx(r, 'head', 0.195, 0.235, 0.28, 0.06, 0.28, 0.17, { '*': X1 }, { z: 0.25, z1: -0.05 });   // the green eyeshade's bill, tipped down
+    r.torso[3].push((a) => tbox(a, null, 0.02, 0.42, 0.4, 0.24, 0.38, 0.24, { f: X2, t: X4, '*': X3 }, { x: -0.03, z: 0.27 }));   // the files
+    bx(r, 'torso', 0.4, 0.52, 0.17, 0.02, 0.19, 0.02, { '*': SW(0) }, { x: 0.06, z: 0.3, faces: 'fblr' });   // a loose sheet sticking out
+    bx(r, 'handr', -0.06, -0.24, 0.06, 0.06, 0.07, 0.07, { '*': SW(1) });   // the stamp's handle
+    bx(r, 'handr', -0.24, -0.35, 0.21, 0.21, 0.23, 0.23, { '*': X5, d: SW(4) });   // its pad: big
     return r;
   },
-  bodyguard() {   // the Chairman's bodyguard: dark suit, a red tie (front only), sunglasses, an earpiece and its cord, a buzz cut
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.64, chestD: 0.36, waist: 0.46, headSide: HEADS, uv: { hips: { '*': TB } } });
-    r.head[3].push((a) => tbox(a, null, 0.09, 0.16, 0.035, 0.06, 0.035, 0.06, { '*': SW(2) }, { x: 0.125, z: 0.01 }));    // the earpiece
-    r.head[3].push((a) => tbox(a, null, -0.12, 0.09, 0.015, 0.015, 0.015, 0.015, { '*': SW(2) }, { x: 0.12, z: -0.03 }));  // its cord
+  bodyguard() {   // SIGNATURE: refrigerator shoulders under a tiny head. Wraparound shades, a flat-top, the earpiece's coiled cord, fists up
+    const r = goon({ shoulder: 0.84, chestD: 0.42, waist: 0.5, neck: -0.06, head: [0.19, 0.25, 0.21], thighW: 0.22, neckW: 0.2,
+      armK: 1.3, farmK: 1.2, handK: 1.15, legK: 1.1 });
+    bx(r, 'torso', 0.1, 0.5, 0.62, 0.44, 0.98, 0.48, chest(TA), { z: 0.02, faces: 'fblr' });   // the slab of a chest
+    bx(r, 'torso', 0.42, 0.52, 0.92, 0.42, 0.34, 0.18, { f: X5, '*': X1 }, { faces: 'fblr' });   // shoulders sloping straight into his head
+    bx(r, 'head', 0.105, 0.16, 0.21, 0.04, 0.205, 0.04, { '*': X2 }, { z: 0.1 });   // wraparound shades
+    bx(r, 'head', 0.2, 0.28, 0.18, 0.2, 0.17, 0.19, { '*': X3, t: SW(0) }, { faces: 'fblrt' });   // the flat-top
+    bx(r, 'head', 0.07, 0.13, 0.035, 0.05, 0.035, 0.05, { '*': SW(1) }, { x: 0.105, faces: 'fblrt' });   // the earpiece
+    bx(r, 'head', -0.14, 0.08, 0.02, 0.02, 0.02, 0.02, { '*': SW(2) }, { x: 0.112, z: -0.02, faces: 'fblr' });   // its coiled cord
     return r;
   },
-  orlova() {   // Inspector Vera Orlova: a grey-blue Ministry greatcoat, gold epaulettes, a red armband, a peaked cap over a tight bun, black gloves and boots
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.54, chestD: 0.3, waist: 0.38, thighW: 0.17,
-      head: [0.22, 0.29, 0.25], headSide: HEADS, uv: { shin: { '*': X4 } } });
-    r.hips[3].push((a) => tbox(a, null, 0.06, -0.66, 0.44, 0.3, 0.58, 0.4, { '*': TB }, { faces: 'fblr' }));   // the greatcoat, to mid-calf
-    peakedCap(r, { w: 0.31, d: 0.34, top: 0.37 });
-    r.head[3].push((a) => tbox(a, null, 0.12, 0.24, 0.1, 0.09, 0.08, 0.07, { '*': X3 }, { z: -0.15 }));   // the bun under the cap
-    for (const x of [-0.22, 0.22]) r.torso[3].push((a) => tbox(a, null, 0.47, 0.52, 0.12, 0.18, 0.12, 0.18, { '*': SW(2) }, { x }));   // gold epaulettes
-    r.uarml[3] = [(a) => tbox(a, null, 0.04, -0.31, 0.15, 0.15, 0.12, 0.13, { '*': X2 })];   // the red armband, on one arm
+  orlova() {   // SIGNATURE: a greatcoat flaring out like a bell under caped, fur-collared shoulders. A huge-crowned cap, a platinum bun, red lips
+    const r = goon({ shoulder: 0.54, chestD: 0.3, waist: 0.34, thighW: 0.17, head: [0.22, 0.29, 0.24], neckW: 0.1 });
+    bx(r, 'hips', 0.08, -0.8, 0.42, 0.3, 0.82, 0.62, { f: X1, '*': X2 }, { faces: 'fblr' });   // the greatcoat, flaring to the boot tops
+    bx(r, 'torso', 0.3, 0.5, 0.78, 0.48, 0.56, 0.36, { '*': X3 }, { faces: 'fblrd' });   // the cape over her shoulders
+    bx(r, 'torso', 0.46, 0.62, 0.44, 0.34, 0.38, 0.3, { '*': X4 }, { z: -0.01, faces: 'fblrt' });   // the fur collar
+    peakedCap(r, { top: 0.52, w: 0.45, d: 0.43, lean: 0.06, tilt: 0.03, crown: X5, crownB: TD, topUV: SW(1), visor: SW(0), visorD: 0.14 });
+    bx(r, 'head', 0.1, 0.25, 0.13, 0.11, 0.1, 0.09, { '*': X12 }, { z: -0.16, faces: 'fblrt' });   // the bun
+    r.uarml[3] = [(a) => tbox(a, null, 0.04, -0.31, 0.15, 0.15, 0.12, 0.13, { '*': TC })];   // the red armband, on one arm
     return r;
   },
-  chairman() {    // the Chairman: elderly and heavy, a big grey suit, medals, a dark red tie, bushy grey eyebrows, a bald crown
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.7, chestD: 0.44, waist: 0.6, neck: -0.02,
-      head: [0.26, 0.3, 0.28], thighW: 0.22, headSide: HEADS, uv: { hips: { '*': TB } } });
-    r.torso[3].push((a) => tbox(a, null, -0.02, 0.32, 0.62, 0.5, 0.68, 0.52, chest([32, 38, 48, 48]), { z: 0.04, faces: 'fblr' }));   // the belly
+  chairman() {    // SIGNATURE: enormous eyebrows in a big jowly face under a fur hat. A sash and medals down to the belly; he waves from the stand
+    const r = goon({ shoulder: 0.72, chestD: 0.46, waist: 0.62, neck: -0.03, head: [0.3, 0.32, 0.3], thighW: 0.22, neckW: 0.22, armK: 1.1, farmK: 1.05 });
+    bx(r, 'torso', -0.04, 0.34, 0.64, 0.54, 0.72, 0.54, { f: X1, '*': X2 }, { z: 0.05, faces: 'fblr' });   // the belly
+    bx(r, 'head', 0.29, 0.52, 0.34, 0.34, 0.38, 0.36, { '*': X5, t: SW(0) }, { z: -0.005, faces: 'fblrt' });   // the fur hat
+    for (const s of [-1, 1]) bx(r, 'head', 0.19, 0.245, 0.15, 0.065, 0.17, 0.05, { '*': X4 }, { x: s * 0.08, x1: s * 0.03, z: 0.165 });   // the eyebrows
+    bx(r, 'head', -0.04, 0.1, 0.37, 0.28, 0.31, 0.27, { '*': X12 }, { z: -0.01, faces: 'blrd' });   // the jowls
+    bx(r, 'head', 0.08, 0.17, 0.095, 0.075, 0.075, 0.05, { '*': SW(1) }, { z: 0.165, faces: 'fblrd' });   // the nose
     return r;
   },
   // ---- the bar's officials (sheets: tools/goons_officials.py)
-  harmony() {   // Columbia's Department of Civic Harmony: a pale-blue blazer, a white armband, khakis, a clipboard and a smile
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.56, chestD: 0.32, waist: 0.42, headSide: HEADS,
-      uv: { hips: { '*': TB } } });
-    r.uarml[3] = [(a) => tbox(a, null, 0.04, -0.31, 0.15, 0.15, 0.12, 0.13, { '*': X4 })];   // the armband
-    r.handl[3].push(clipboard);
-    r.hips[3].push((a) => tbox(a, null, -0.02, 0.12, 0.45, 0.3, 0.45, 0.3, chest([32, 44, 48, 48]), { faces: 'fblr' }));   // blazer hem
+  harmony() {   // SIGNATURE: a big blond pompadour over a huge toothy grin. A loud red blazer, the closure notice held up, a thumbs-up
+    const r = goon({ shoulder: 0.58, chestD: 0.32, waist: 0.42, head: [0.25, 0.29, 0.26], neckW: 0.12 });
+    bx(r, 'head', 0.24, 0.39, 0.27, 0.28, 0.26, 0.27, { '*': X1, t: SW(0) }, { z: -0.01, faces: 'fblrt' });   // the hair
+    bx(r, 'head', 0.3, 0.46, 0.25, 0.1, 0.23, 0.12, { '*': X1, t: SW(0) }, { z: 0.1, z1: 0.05, faces: 'fblrt' });   // the pompadour's wave
+    bx(r, 'hips', -0.02, 0.12, 0.46, 0.31, 0.46, 0.31, { '*': X2 }, { faces: 'fblr' });   // blazer hem
+    bx(r, 'torso', 0.3, 0.42, 0.1, 0.025, 0.1, 0.025, { '*': X3 }, { x: -0.16, z: 0.17, faces: 'fblr' });   // the rosette
+    bx(r, 'handl', 0.08, -0.3, 0.3, 0.025, 0.3, 0.025, { b: X12, '*': SW(2) }, { z: -0.07 });   // the closure notice on its clipboard
+    bx(r, 'handr', -0.1, -0.21, 0.045, 0.05, 0.04, 0.045, { '*': SW(3) }, { x: -0.03, faces: 'fblrd' });   // thumbs up
     return r;
   },
-  enforcer() {  // Civic Harmony enforcer: a navy double-breasted suit, a gold tie (front only), a fedora
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.62, chestD: 0.36, waist: 0.46, headSide: HEADS,
-      uv: { hips: { '*': TB } } });
-    r.head[3].push((a) => tbox(a, null, 0.24, 0.26, 0.4, 0.42, 0.4, 0.42, { '*': SW(1), t: SW(2), d: SW(1) }, { z: 0.01 }));   // the brim
-    r.head[3].push((a) => tbox(a, null, 0.26, 0.4, 0.27, 0.29, 0.24, 0.24, { '*': X1, t: SW(2) }, { z: 0.0, faces: 'fblrt' }));   // the crown, a black band
+  enforcer() {  // SIGNATURE: a fedora pulled down over his eyes. A padded pinstripe suit, a toothpick, brass knuckles on big fists
+    const r = goon({ shoulder: 0.68, chestD: 0.36, waist: 0.42, head: [0.24, 0.29, 0.26], neckW: 0.15, handK: 1.3, farmK: 1.1 });
+    bx(r, 'head', 0.185, 0.21, 0.47, 0.47, 0.47, 0.47, { '*': X1 }, { z: 0.02 });   // the brim, pulled low
+    bx(r, 'head', 0.21, 0.38, 0.29, 0.29, 0.24, 0.23, { '*': X2, t: SW(0) }, { faces: 'fblrt' });   // the crown and its band
+    bx(r, 'head', 0.055, 0.1, 0.02, 0.02, 0.02, 0.02, { '*': SW(1) }, { x: -0.05, x1: -0.08, z: 0.15, faces: 'fblr' });   // the toothpick
+    for (const nm of ['l', 'r']) bx(r, 'hand' + nm, -0.15, -0.2, 0.2, 0.08, 0.2, 0.08, { '*': X3 }, { z: 0.03 });   // brass knuckles
+    bx(r, 'torso', 0.42, 0.51, 0.78, 0.37, 0.78, 0.37, { '*': X4 }, { faces: 'fblrt' });   // padded shoulders
     return r;
   },
-  aokiagent() { // Aoki Development agent: a sleek black suit, a thin black tie, narrow sunglasses, slicked hair, the company's red pin
-    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.54, chestD: 0.3, waist: 0.37, thighW: 0.17, headSide: HEADS,
-      uv: { hips: { '*': TB } } });
-    r.hips[3].push((a) => tbox(a, null, 0.0, 0.12, 0.41, 0.29, 0.41, 0.29, chest([32, 44, 48, 48]), { faces: 'fblr' }));   // jacket hem
+  aokiagent() { // SIGNATURE: a red visor glowing across his eyes. A sleek black suit, a glowing company badge, sword-straight, a blade hand out
+    const r = goon({ shoulder: 0.56, chestD: 0.3, waist: 0.34, thighW: 0.17, head: [0.22, 0.3, 0.24], neckW: 0.1 });
+    bx(r, 'head', 0.13, 0.19, 0.245, 0.265, 0.245, 0.265, { '*': X1 }, { faces: 'fblr' });   // the visor's band, round his head
+    bx(r, 'head', 0.135, 0.185, 0.27, 0.025, 0.27, 0.025, { '*': X2 }, { z: 0.14 });   // its red lens
+    bx(r, 'head', 0.23, 0.37, 0.245, 0.27, 0.2, 0.25, { '*': X3, t: SW(0) }, { z: -0.01, z1: -0.02, faces: 'fblrt' });   // slicked hair
+    bx(r, 'torso', 0.46, 0.6, 0.3, 0.24, 0.27, 0.22, { '*': X4 }, { faces: 'fblr' });   // a high stiff collar
+    bx(r, 'torso', 0.31, 0.4, 0.08, 0.03, 0.08, 0.03, { '*': X5 }, { x: -0.13, z: 0.155, faces: 'fblr' });   // the glowing badge
+    bx(r, 'hips', 0.12, -0.36, 0.4, 0.28, 0.46, 0.32, { '*': X12 }, { faces: 'fblr' });   // the jacket's long skirt
     return r;
   },
   ivan() {     // Krasnovian bouncer: wrestler frame in a tracksuit
@@ -330,31 +383,36 @@ Object.assign(POSES, {
   kickLowStrike: { hips: [0, -25, 0], torso: [14, 25, 0], uarml: [-20, 0, -40], farml: [-80, 0, 0], uarmr: [-50, 0, 30], farmr: [-110, 0, 0],
     thighl: [-55, 0, 15], shinl: [0, 0, 0], thighr: [-14, 0, 8], shinr: [24, 0, 0] },
 });
-Object.assign(POSES, {   // the Palace of Sport and Parade Square
-  sambo: { hips: [0, 10, 0], torso: [24, -6, 0], head: [-16, 6, 0], uarml: [-52, 0, -26], farml: [-62, 0, 0], uarmr: [-44, 0, 28], farmr: [-66, 0, 0],
-    thighl: [-22, 0, -12], shinl: [30, 0, 0], thighr: [-8, 0, 12], shinr: [22, 0, 0] },
-  gymnast: { hips: [0, 14, 0], torso: [-5, -4, 0], head: [-10, 6, 0], uarml: [8, 0, -16], farml: [-14, 0, 0], uarmr: [8, 0, 16], farmr: [-14, 0, 0],
-    thighl: [-4, 0, -4], thighr: [5, 0, 7] },
-  lifter: { torso: [6, 0, 0], head: [-6, 0, 0], uarml: [-10, 0, -20], farml: [-30, 0, 0], uarmr: [-10, 0, 20], farmr: [-30, 0, 0],
-    thighl: [-6, 0, -10], thighr: [-6, 0, 10], shinl: [8, 0, 0], shinr: [8, 0, 0] },
-  guard: { torso: [-2, 0, 0], head: [-6, 0, 0], uarml: [0, 0, -6], farml: [-8, 0, 0], uarmr: [-18, 0, 14], farmr: [-78, 0, 0], thighl: [0, 0, -3], thighr: [0, 0, 3] },
-  bandsman: { torso: [-3, 0, 0], head: [-6, 4, 0], uarml: [4, 0, -24], farml: [-40, 0, 0], uarmr: [4, 0, 24], farmr: [-60, -10, 0], thighl: [-4, 0, -6], thighr: [4, 0, 6] },
-});
-POSES.specialist = POSES.boxer;
-Object.assign(POSES, {   // the bar's officials
-  harmony: { torso: [-2, 0, 0], head: [-6, 8, 0], uarml: [-20, 0, -8], farml: [-70, 30, 0], uarmr: [4, 0, 10], farmr: [-20, 0, 0], thighl: [-2, 0, -4], thighr: [2, 0, 4] },
-  enforcer: { torso: [10, -10, 0], head: [6, 10, 0], uarml: [-56, 0, -24], farml: [-96, 0, 0], uarmr: [-44, 0, 24], farmr: [-104, 0, 0],
-    thighl: [-18, 0, -6], shinl: [20, 0, 0], thighr: [14, 0, 6], shinr: [10, 0, 0], hips: [0, 18, 0] },
-});
-POSES.aokiagent = POSES.kicker;
-Object.assign(POSES, {   // the Tower of Labor
-  militia: POSES.wrestler,
-  inspector: { torso: [-2, 0, 0], head: [-8, -6, 0], uarml: [-20, 0, -8], farml: [-70, 30, 0], uarmr: [2, 0, 8], farmr: [-14, 0, 0], thighl: [-2, 0, -4], thighr: [2, 0, 4] },
-  clerk: { torso: [14, 0, 0], head: [6, 0, 0], uarml: [-6, 0, -10], farml: [-30, 0, 0], uarmr: [-24, 0, 14], farmr: [-56, 0, 0], thighl: [-6, 0, -4], shinl: [8, 0, 0], thighr: [4, 0, 4] },
-  bodyguard: { torso: [6, -6, 0], head: [-2, 6, 0], uarml: [-40, 0, -22], farml: [-96, 0, 0], uarmr: [-34, 0, 22], farmr: [-100, 0, 0],
-    thighl: [-14, 0, -8], shinl: [16, 0, 0], thighr: [10, 0, 8], hips: [0, 12, 0] },
-  orlova: { torso: [-4, 0, 0], head: [-10, 0, 0], uarml: [8, 0, -10], farml: [-20, 0, 0], uarmr: [-28, 0, 22], farmr: [-80, 0, 0], thighl: [-4, 0, -4], thighr: [4, 0, 5], hips: [0, 8, 0] },
-  chairman: { torso: [-8, 0, 0], head: [-10, 0, 0], uarml: [6, 0, -18], farml: [-24, 0, 0], uarmr: [6, 0, 18], farmr: [-24, 0, 0], thighl: [0, 0, -6], thighr: [0, 0, 6] },
+Object.assign(POSES, {   // the newer goons' idle poses: every one has attitude (docs/goon-style.md)
+  sambo: { hips: [0, 10, 0], torso: [30, -6, 0], head: [-28, 6, 0], uarml: [-58, 0, -30], farml: [-44, 0, 0], uarmr: [-50, 0, 32], farmr: [-48, 0, 0],   // a low wrestler's crouch
+    thighl: [-30, 0, -16], shinl: [42, 0, 4], thighr: [-24, 0, 16], shinr: [38, 0, -4], footl: [-12, -10, 0], footr: [-12, 10, 0] },
+  gymnast: { hips: [0, 12, 0], torso: [-10, -6, 4], head: [-16, 8, -6], uarml: [6, 0, -48], farml: [-8, 0, -10], uarmr: [-10, 0, 150], farmr: [0, 0, 12],   // stuck the landing: one arm up
+    thighl: [-16, 0, -4], shinl: [4, 0, 0], footl: [40, 0, 0], thighr: [4, 0, 8], shinr: [6, 0, 0] },
+  lifter: { torso: [-4, 0, 0], head: [-8, 0, 0], uarml: [0, 0, -88], farml: [0, 0, -100], uarmr: [0, 0, 88], farmr: [0, 0, 100],   // a double-biceps flex
+    thighl: [-20, 0, -20], shinl: [28, 0, 8], thighr: [-20, 0, 20], shinr: [28, 0, -8] },
+  guard: { torso: [-7, 0, 0], head: [-12, 0, 0], uarml: [-8, 0, -8], farml: [-48, 0, 0], uarmr: [-18, 0, 14], farmr: [-78, 0, 0], thighl: [0, 0, -2], thighr: [0, 0, 2] },   // ramrod, hand on the sabre
+  bandsman: { hips: [0, 6, 0], torso: [-8, 0, 0], head: [-8, 4, 0], uarml: [-34, 0, -24], farml: [-56, 0, 0], uarmr: [-140, 0, 24], farmr: [-36, 0, 0],   // high-stepping, mallet up
+    thighl: [-58, 0, -4], shinl: [74, 0, 0], footl: [20, 0, 0], thighr: [3, 0, 4] },
+  specialist: { torso: [10, -12, 0], head: [6, 14, -8], uarml: [-62, 0, -26], farml: [-96, 0, 0], uarmr: [-48, 0, 24], farmr: [-108, 0, 0],   // guard high, head cocked
+    thighl: [-20, 0, -6], shinl: [24, 0, 0], thighr: [16, 0, 6], shinr: [12, 0, 0], hips: [0, 20, 0], handl: [10, 0, 0], handr: [14, 0, 0] },
+  militia: { torso: [18, 0, 0], head: [-12, 0, 0], uarml: [-34, 0, -58], farml: [-58, 0, 0], uarmr: [-34, 0, 58], farmr: [-58, 0, 0],   // arms wide to grab
+    thighl: [-16, 0, -24], shinl: [28, 0, 4], thighr: [-16, 0, 24], shinr: [28, 0, -4], footl: [-12, -14, 0], footr: [-12, 14, 0] },
+  inspector: { hips: [0, -6, 0], torso: [-8, 0, 0], head: [-18, -12, 4], uarml: [-34, 0, -8], farml: [-104, 0, 0], uarmr: [-26, 0, 12], farmr: [-80, 0, 0],   // nose up, clipboard up
+    thighl: [-2, 0, -3], thighr: [2, 0, 3] },
+  clerk: { torso: [24, 0, 0], head: [-14, 0, 0], uarml: [-16, 0, -14], farml: [-84, 0, 32], uarmr: [-150, 0, 16], farmr: [-34, 0, 0],   // hunched, the stamp up
+    thighl: [-8, 0, 5], shinl: [14, 0, -3], thighr: [-8, 0, -5], shinr: [14, 0, 3] },
+  bodyguard: { hips: [0, 10, 0], torso: [10, -6, 0], head: [-6, 4, 0], uarml: [-46, 0, -34], farml: [-100, 0, 0], uarmr: [-40, 0, 34], farmr: [-104, 0, 0],   // a wall with fists up
+    thighl: [-14, 0, -12], shinl: [16, 0, 0], thighr: [8, 0, 12] },
+  orlova: { hips: [0, 8, 0], torso: [-6, 8, 0], head: [-12, -10, 6], uarml: [10, 0, -44], farml: [0, 0, 92], uarmr: [-24, 0, 30], farmr: [-100, 0, -16],   // hand on hip, baton up
+    thighl: [-4, 0, -6], thighr: [4, 0, 4] },
+  chairman: { torso: [-10, 0, 0], head: [-8, 6, 0], uarml: [-12, 0, -24], farml: [-74, 0, 24], uarmr: [-14, 0, 118], farmr: [0, 0, 26],   // belly out, waving from the stand
+    thighl: [0, 0, -8], thighr: [0, 0, 8] },
+  harmony: { hips: [0, 8, 0], torso: [4, -10, 0], head: [-6, 14, -12], uarml: [-24, 0, -30], farml: [-112, 0, 0], uarmr: [-26, 0, 16], farmr: [-118, 0, 0],   // notice up, thumbs up
+    thighl: [-2, 0, -4], thighr: [4, 0, 6] },
+  enforcer: { hips: [0, 18, 0], torso: [-6, -12, 0], head: [10, 10, -6], uarml: [-52, 0, -28], farml: [-100, 0, 0], uarmr: [-40, 0, 26], farmr: [-110, 0, 0],   // leaning back, fists up
+    thighl: [-18, 0, -8], shinl: [20, 0, 0], thighr: [14, 0, 8], shinr: [10, 0, 0] },
+  aokiagent: { hips: [0, 30, 0], torso: [-4, -24, 0], head: [-6, -6, 0], uarml: [30, 0, -8], farml: [-60, 0, 40], uarmr: [-72, 0, 8], farmr: [-24, 0, 0],   // bladed, one hand out
+    thighl: [-10, 0, -4], shinl: [8, 0, 0], thighr: [6, 0, 6] },
 });
 function attackPose(type, side, phase) {   // phase: 'windup' | 'strike'
   if (type === 'batboy-bat') return phase === 'windup' ? POSES.batWind : POSES.batStrike;
