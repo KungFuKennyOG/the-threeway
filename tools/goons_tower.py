@@ -205,18 +205,18 @@ def clerk():
 # X2 the wraparound shades, X3 + SW(0) the flat-top, SW(1) the earpiece, SW(2) its cord
 def bodyguard():
     S = Sheet()
-    sk, sh, dk, hi, hr = '#d6a07c', '#ae785a', '#6a4030', '#efc49e', '#1a1614'
-    K, Kh, Km, Kd = '#1e1e28', '#525266', '#2e2e3a', '#0c0c12'
-    sh1, sh2 = '#08080c', '#7a8cb0'
+    sk, sh, dk, hi, hr, hrd = '#d6a07c', '#ae785a', '#6a4030', '#efc49e', '#f0e0a0', '#b8a060'   # a bleached flat-top
+    K, Kh, Km, Kd = '#2c2e3a', '#6e7290', '#3a3c4a', '#14141c'
+    sh1, sh2 = '#9aa8c0', '#e8f0ff'   # silver mirror shades
     def fc(P, v):
         skin_face(P, sk, sh); P.rect(0, 24, 32, 6, sh); P.rect(2, 24, 28, 5, sk); P.rect(0, 26, 3, 6, dk); P.rect(29, 26, 3, 6, dk)   # a square slab of a jaw
         P.rect(0, 0, 32, 8, hr); P.rect(0, 0, 3, 14, hr); P.rect(29, 0, 3, 14, hr)
         l = -1 if v == 1 else 0
         P.rect(5, 10 + l, 22, 2, hr)
         if v != 2:   # wraparound shades (a box too); cracked when he's hurt
-            P.rect(3, 12, 26, 6, sh1); P.hl(5, 13, 6, sh2); P.hl(19, 13, 6, sh2); P.hl(3, 12, 26, '#3a3a48')
+            P.rect(3, 12, 26, 6, sh1); P.rect(5, 13, 8, 2, sh2); P.rect(19, 13, 8, 2, sh2); P.hl(3, 12, 26, '#3a3a48'); P.hl(3, 17, 26, '#5a6680')
             if v == 1: P.map(['#   ', ' # #', '  # '], {'#': '#ffffff'}, 20, 14)
-        else: eye(P, 2, 8, 14, 5, W_, BLK, dk); eye(P, 2, 19, 14, 5, W_, BLK, dk); P.rect(18, 20, 12, 3, sh1)
+        else: eye(P, 2, 8, 14, 5, W_, BLK, dk); eye(P, 2, 19, 14, 5, W_, BLK, dk); P.rect(18, 20, 12, 3, sh1); P.hl(18, 20, 12, sh2)
         P.rect(14, 18, 4, 4, sh); P.px(13, 21, dk); P.px(18, 21, dk)
         if v == 0: P.hl(10, 25, 12, dk); P.hl(11, 26, 10, sh)   # a flat, bored line
         elif v == 1: mouth_hurt(P, 10, 24, 12, dk, W_)
@@ -224,9 +224,9 @@ def bodyguard():
         P.vl(15, 28, 2, dk)
         for (x, y) in ((5, 23), (8, 27), (12, 29), (19, 29), (23, 27), (26, 23)): P.px(x, y, sh)
     faces3(S, fc)
-    hd = S.at('HEADS'); hd.fill(sk); hd.rect(0, 0, 16, 5, hr); hd.rect(0, 13, 16, 3, sh); hd.rect(0, 6, 16, 2, sh1)
-    ft = S.at('X3'); ft.fill(hr); ft.grain(hr, '#4a4040', 0.2, 2); swatch(S, 0, hr)
-    gl = S.at('X2'); gl.fill(sh1); gl.hl(0, 0, 16, '#3a3a48'); gl.hl(2, 5, 4, sh2); gl.hl(10, 5, 4, sh2); gl.px(3, 4, '#ffffff'); gl.px(11, 4, '#ffffff')
+    hd = S.at('HEADS'); hd.fill(sk); hd.rect(0, 0, 16, 5, hr); hd.grain(hr, hrd, 0.3, 3, 0, 0, 16, 5); hd.rect(0, 13, 16, 3, sh); hd.rect(0, 6, 16, 2, '#3a3a48')
+    ft = S.at('X3'); ft.fill(hr); ft.grain(hr, hrd, 0.3, 2); ft.hl(0, 15, 16, hrd); swatch(S, 0, hr); S.rect(48, 112, 4, 1, '#ffffff')
+    gl = S.at('X2'); gl.fill(sh1); gl.hl(0, 0, 16, '#3a3a48'); gl.hl(0, 15, 16, '#3a3a48'); gl.rect(1, 3, 6, 3, sh2); gl.rect(9, 3, 6, 3, sh2); gl.hl(0, 8, 16, '#5a6680'); gl.vl(7, 0, 16, '#3a3a48'); gl.px(2, 3, '#ffffff'); gl.px(10, 3, '#ffffff')
     swatch(S, 1, '#d8c8b0'); swatch(S, 2, '#ece4d4'); S.px(56, 113, '#b0a890'); S.px(58, 115, '#b0a890')
     t = S.at('TA'); t.fill(K); t.grain(K, Km, 0.15, 3)   # the suit: wide lit lapels, a white shirt, a long red tie, a gold pin, a pocket square
     t.map(['KKKKKWWWWWWKKKKK', 'KKKKKWWRRWWKKKKK', 'KKKKhKWRRWKhKKKK', 'KKKhKKWRRWKKhKKK', 'KKhKKKKRRKKKKhKK', 'KhKKKKKRRKKKKKhK', 'KKKKKKKRRKKKKKKK', 'KKKKKKKRRKKKKKKK', 'KKKKKKKRRKKKKKKK', 'KKKKKKKRRKKKKKKK',
