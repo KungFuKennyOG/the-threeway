@@ -11,6 +11,7 @@ const PZ = {
   seventh: 19.6, wingRoof: 33.6, lobbyH: 3.0, floorH: 2.9,
   mach: [-45.7, -42.5, 125.2, 128.4], roofZ1: 129.7,                   // lift B's machine room on the wing's roof; the roof's north edge
   cradle: [-38, -32, 129.6, 131.4], yard: [[-48, -20, 130.6, 137.5], [-20, -2, 132.6, 137.5]],
+  gap: [-33, -27],                                                     // the gap in the bank's fence: the level crossing starts here (src/kras/palace.js)
   rail: [-122, -1, 129, 151],                                          // the railway bank and tracks (kept clear of the far city)
   inMesh: null, outMesh: null, lamps: [], outLamps: [],
 };
@@ -122,11 +123,11 @@ function buildPodezdOutside(acc) {
   // ---- the railway bank below: gravel, a low fence, three tracks running west into the sector, a signal
   const [rr0, rr1, rq0, rq1] = PZ.rail, fz = PZ.yard[0][3];
   ground(acc, 'asphaltK', rr0, 130, rr1, fz + 0.3, 0, 4);
-  for (const [a, b] of [[rr0, -42], [-38, rr1]]) sbox(acc, 'concrete', (a + b) / 2, 0, fz + 0.15, b - a, 0.3, 1.2, 0, { u: 2, v: 1.2, top: 'wallTop', tu: 1 });   // a gap at the level crossing (src/kras/palace.js)
+  for (const [a, b] of [[rr0, PZ.gap[0]], [PZ.gap[1], rr1]]) sbox(acc, 'concrete', (a + b) / 2, 0, fz + 0.15, b - a, 0.3, 1.2, 0, { u: 2, v: 1.2, top: 'wallTop', tu: 1 });   // a gap at the level crossing (src/kras/palace.js)
   for (const tz of [139.4, 143, 146.6]) aq(acc, 'track', [rr0, 0.012, tz + 1.2], [rr0, 0.012, tz - 1.2], [rr1, 0.012, tz - 1.2], [rr1, 0.012, tz + 1.2], [0, 0, 1, (rr1 - rr0) / 2], [0, 1, 0], 2);
   ground(acc, 'asphaltK', rr0, fz + 0.3, rr1, rq1, -0.005, 4);
   sbox(acc, 'iron', -24, 0, 148.6, 0.16, 0.16, 4.2, 0, { u: 1, v: 1 }); sbox(acc, 'litRed', -24, 3.8, 148.4, 0.3, 0.2, 0.3, 0, { u: 1, v: 1 });
-  for (const x of [-44.5, -24, -8]) sodiumPost(acc, x, 136.6, 1);   // (the first one lights the level crossing)
+  for (const x of [-44.5, -35, -8]) sodiumPost(acc, x, 136.6, 1);   // (the middle one lights the level crossing)
 }
 function liftCarMesh(L) {
   const acc = new GeoAcc(), [a, b, c, d] = L.car, A = a - 0.02, B = b + 0.02, H = 2.3;

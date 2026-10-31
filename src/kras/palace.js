@@ -9,7 +9,7 @@
 // the boulevard on, everything is authored running +z along local x -40 and laid into the world running west, into the
 // sector, by the ACT1_WEST frame (src/levels.js): CFG.palace.encounters, props and finishZ are in its coordinates.
 CFG.palace = {
-  start: [-40, 136.3],                          // "start here": in the gap in the railway fence, facing the crossing (world)
+  start: [-30, 136.3],                          // "start here": in the gap in the railway fence, facing along the crossing (world)
   spawnGap: 1.1, clearedPause: 1.6, healBetween: 25,
   enrageAt: 0.5,                                // the Bear loses it below half his health
   finishZ: 251,                                 // walk out the north doors once he's down
@@ -28,8 +28,11 @@ CFG.palace = {
            flood: '#ffe8c8', floodRadius: 12, floodK: 1.1, stand: '#ffd8a0', standRadius: 9, standK: 0.8 },
 };
 const PL = {
-  gap: [-42, -38],                                   // the fence gap, the crossing, both tunnels (x)
-  fenceZ: 137.5, barS: 138.2, barN: 151.3, track: 143,
+  gap: [-42, -38],                                   // both tunnels inside the Palace (local x; the axis is local x -40)
+  fenceZ: 137.5, barS: 138.2, barN: 151.3, fenceN: 151.55, track: 143,
+  // the level crossing (world): from the gap in the bank's fence (PZ.gap) it runs skewed across the three tracks, north-west
+  // at ang from north, so you step off it facing the Tower of Labor (w: the planks' width, square to the way across)
+  cross: { x: (PZ.gap[0] + PZ.gap[1]) / 2, ang: 55 * Math.PI / 180, w: 3.2, arm: 6.2 },
   portal: [-8, -1, 137.8, 151, 7], mouth: [138.2, 147.9, 5.5],   // the tunnel under the wall the trains come out of
   blvd: [-48, -32, 151.4, 166], fore: [-64, -16, 166, 180],   // the boulevard, then a wide forecourt before the bowl
   annex: [-50, -30, 180, 201.5, 10.6], foyer: [-50, -30, 180, 190, 5.2], gym: [-50, -30, 190, 199.5, 6], doorW: [-43, -37],
@@ -38,12 +41,33 @@ const PL = {
   bowlC: [-40, 226], sides: 24, floorR: 15.4, bank: { rows: 7, depth: 0.9, rise: 0.7, front: 1.1 }, wallTop: 10, roofY: 15.3, tunnelH: 3,
   drum: [-40, 226, 27, 10.6], ring: [-40, 226, 3.6],  // the drum: centre, radius, height to the cornice
   rect: [-74, -6, 151, 254], rail: [-178, -122, 129, 151],      // rect: the boulevard to the north doors (local); rail: world
-  // world: Station Square north of the crossing (you turn west there onto the boulevard), East Station on its east side
-  square: [-56, -22, 151.7, 214], station: [-22, -7, 158, 206], sqRect: [-58, -4, 151.4, 216],
-  yard: [-157.6, -56, 151.7, 164],   // world: the goods yard north of the tracks, west of the square (low: the Tower shows over it from the crossing)
+  // world: Station Square north of the crossing. You come off the crossing at its south-east corner and walk on north-west
+  // across it into the boulevard's mouth (its south half paved, so the opening is wide); East Station on its east side,
+  // its back to the wall. square: its extent; walk: [x0, x1, z0, z1] rects (the arrival, the station's forecourt, the
+  // boulevard's mouth, the strip under the wall slab, the corner the goods yard's wall steps round)
+  square: [-72, -46, 151.7, 216], station: [-46, -36, 153.5, 177],
+  walk: [[-60, -46.3, 151.7, 162], [-58, -46.3, 162, 177], [-71.9, -52, 160.8, 190], [-55.6, -50.3, 177, 215.7], [-64.7, -52, 156.6, 162]],
+  // the wall slabs (world): the Ministry built its tallest slabs between the sector and the Accords wall, so nobody has to
+  // look at Columbia. 22 storeys of precast panels: [x0, x1, z0, z1, storeys, y0]. Close enough to the route that from
+  // the crossing, the square and the boulevard they hide Columbia's ridge, its crowns and Civic Harmony's mast; only the
+  // Halcyon (375 m up) and the searchlights' beams show over them. From the Tower's tribune the whole ridge is back.
+  // (the last one stands on the tunnel's portal under the wall: the trains come out from under it)
+  slabs: [[-36, -22, 152.2, 226, 22], [-50, -36, 177, 230, 22], [-55.5, -42, 230, 256, 22], [-16, -3, 151, 178, 22], [-8, -3, 137.8, 151, 12, 7]],
+  // kept clear of the far city: the square and the station's old ground, the goods yard north of the tracks (low: the
+  // Tower shows over it). Unchanged since the square was restaged: the far city draws its blocks from one random stream,
+  // so a block more or less here would reshuffle every block after it (Columbia's from Tripoint Square among them)
+  sqRect: [-58, -4, 151.4, 216], yard: [-157.6, -56, 151.7, 164], yardEnd: -65, yardTop: 160.5,   // (the yard's east end, drawn: the square's wall)
   crossMesh: null, crossLamps: [], crossTris: 0,
   inMesh: null, outMesh: null, inLamps: [], outLamps: [], glowLamps: [], inTris: 0, outTris: 0, shutter: null,
 };
+// the skewed crossing: its centreline's x at z, the planks' half-width along x, the way across (a unit [x, z]), where it
+// ends west (the train clears that before the barriers lift), and the arrival: one step off its north end
+{ const C = PL.cross, t = Math.tan(C.ang);
+  PL.crossX = (z) => C.x - (z - PL.fenceZ) * t;
+  C.hw = C.w / 2 / Math.cos(C.ang); C.dir = [-Math.sin(C.ang), Math.cos(C.ang)];
+  C.west = PL.crossX(PL.fenceN) - C.hw;
+  C.arrive = [PL.crossX(PL.fenceN) + C.dir[0] * 1.2, PL.fenceN + C.dir[1] * 1.2];
+  PL.crossPosts = [[PL.crossX(PL.barS) + C.hw + 0.45, PL.barS - 0.3], [PL.crossX(PL.barN) - C.hw - 0.45, PL.barN + 0.3]]; }   // the barriers' pivots: south, north
 PL.backR = PL.floorR + PL.bank.rows * PL.bank.depth;                                       // the stands' back wall (corner radius)
 { const [cx, cz] = PL.bowlC, c = Math.cos(Math.PI / PL.sides), f = PL.floorR * c, b = PL.backR * c;
   PL.floor = [cx - f, cx + f, cz - f, cz + f];   // the round floor's bounding box
@@ -51,9 +75,10 @@ PL.backR = PL.floorR + PL.bank.rows * PL.bank.depth;                            
 PL.northZ = PL.drum[1] + PL.drum[2] * Math.cos(Math.PI / 24);                              // the drum's north door (z)
 // the four floodlight masts (outside): feet out on the oval's corners, heads leaning 4 m in toward the middle, the banks
 // aimed at the floor: [foot x, foot z, head x, head z, height, aim x, aim z]. The far pair stand taller, so their banks
-// clear the rim seen from the boulevard. Placed off the Tower of Labor's sightlines from the boulevard and the crossing
-// (the crossing looks up the oval's west flank at it: the north-west bank keeps below and left of its upper tiers).
-PL.masts = [[-72.5, 181, 50], [-7.5, 181, 50], [-73, 248, 56], [-7, 248, 56]].map(([x, z, h]) => {
+// clear the rim seen from the boulevard. Placed off the Tower of Labor's sightlines from the boulevard, the crossing and
+// the arrival off it (the crossing looks up the oval's west flank at it: the near pair stand in from the corners so its
+// bank keeps left of the Tower's upper tiers, crown and cog as you step off the crossing).
+PL.masts = [[-69, 181, 50], [-11, 181, 50], [-73, 248, 56], [-7, 248, 56]].map(([x, z, h]) => {
   const cx = -40, cz = 215.5, dx = cx - x, dz = cz - z, d = Math.hypot(dx, dz);
   return [x, z, x + dx / d * 4, z + dz / d * 4, h, cx - dx * 0.3, cz - dz * 0.3];
 });
@@ -151,12 +176,14 @@ function plMast(acc, L, bx, bz, tx, tz, h, ax, az) {
 function buildPalaceOutside(acc) {
   const L = PL.outLamps, G = PL.glowLamps, [g0, g1] = PL.gap, S = PL.shell, n = S.n, UP = '#ffe2b0';
   // ---- the boulevard of champions: paving between poplars that stop short, benches, sodium lamps; then the forecourt
-  // opens wide in front of the bowl, a champion either side of it (none on the axis: the doors are in view all the way)
+  // opens wide in front of the bowl, a champion either side of it (none on the axis: the doors are in view all the way).
+  // Its mouth is wide: the lawn on its south (local -x) side is paved too, and you come onto it across Station Square
+  // from the crossing, north-west, the Tower ahead
   const [bx0, bx1, bz0, bz1] = PL.blvd, [fx0, fx1, fz0, fz1] = PL.fore;
   ground(acc, 'paving', bx0, bz0, bx1, bz1, 0.004, 4, { cell: 4 });
-  ground(acc, 'dirt', -74, bz0, bx0, bz1, 0, 4, { cell: 8 }); ground(acc, 'dirt', bx1, bz0, -6, bz1, 0, 4, { cell: 8 });
+  ground(acc, 'paving', -74, bz0, bx0, bz1, 0.004, 4, { cell: 4 }); ground(acc, 'dirt', bx1, bz0, -6, bz1, 0, 4, { cell: 8 });
   for (let z = 154; z < bz1 - 1; z += 4.6) { plTree(acc, bx0 - 1.4, z); plTree(acc, bx1 + 1.4, z + 2.3); }
-  for (let k = 0; k < 4; k++) { plTree(acc, -58 - (k % 2) * 6, 154.5 + k * 2.6, 1.15); plTree(acc, -22 + (k % 2) * 6, 155.5 + k * 2.4, 1.1); }
+  for (let k = 0; k < 4; k++) plTree(acc, -22 + (k % 2) * 6, 155.5 + k * 2.4, 1.1);
   for (const [x, z, d] of [[bx0 + 0.5, 159, 1], [bx1 - 0.5, 162.5, -1]]) {
     sbox(acc, 'darkwood', x, 0.4, z, 0.5, 1.9, 0.08, 0, { u: 1, v: 1 }); sbox(acc, 'darkwood', x - d * 0.22, 0.45, z, 0.06, 1.9, 0.5, 0, { u: 1, v: 1 });
     for (const s of [-0.8, 0.8]) sbox(acc, 'iron', x, 0, z + s, 0.4, 0.06, 0.42, 0, { u: 1, v: 1 });
@@ -286,56 +313,87 @@ function buildPalaceOutside(acc) {
   // sightline to it. PL.masts: [foot x, foot z, head x, head z, height, aim x, aim z]
   for (const [bx, bz, tx, tz, h, ax, az] of PL.masts) plMast(acc, L, bx, bz, tx, tz, h, ax, az);
 }
-// ---- Station Square (world): over the crossing you come up onto the square in front of East Station, and turn west
-// onto the Boulevard of Champions, the Palace's drum and the Tower of Labor dead ahead down it. Flat (no steps: VR).
-function buildStationSquare(acc, L) {
-  const [x0, x1, z0, z1] = PL.square, [sx0, sx1, sz0, sz1] = PL.station, sm = (sz0 + sz1) / 2;
-  ground(acc, 'paving', x0, z0, x1, z1, 0.004, 4, { cell: 4 });
-  ground(acc, 'asphaltK', x1, z0, PL.sqRect[1], z1, 0, 8, { cell: 8 });
-  // East Station: a long two-storey hall on the square's east side, a taller entrance block in the middle with its
-  // glass front, the name, a clock and a gilt spire with the gold cog; a canopy along the front
+// ---- Station Square (world): off the skewed crossing you come up onto the square's south-east corner facing north-west,
+// the Tower of Labor just right of straight ahead over the goods yard and the Palace, and walk straight on across the
+// square into the boulevard's wide mouth. East Station stands along the square's east side, its back to the wall slabs,
+// which stand between the sector and the Accords wall (and hide Columbia's ridge from here). Flat (no steps: VR).
+// a panel slab, n storeys of 2.8 m on Superblock 14's 'slab' painting (a repeat: 4 bays x 4 storeys, 12 m x 11.2 m),
+// blank 'slabEnd' gables; one quad per repeat (cell 999). k shifts the window pattern so no two faces match.
+function plSlab(acc, x0, x1, z0, z1, n, y0 = 0, k = 0) {
+  const h = n * 2.8, y1 = y0 + h, longX = x1 - x0 > z1 - z0, o = { cell: 999 };
+  const face = (a, b, c, d, tx, tz, key, i) => plFace(acc, key, a, b, c, d, y0, y1, tx, tz, 12, 11.2, Object.assign({ u0: ((k + i) * 0.25) % 1, v0: ((k * 3 + i) * 0.25) % 1 }, o));
+  face(x0, z0, x0, z1, -1, 0, longX ? 'slabEnd' : 'slab', 0); face(x1, z0, x1, z1, 1, 0, longX ? 'slabEnd' : 'slab', 1);
+  face(x0, z0, x1, z0, 0, -1, longX ? 'slab' : 'slabEnd', 2); face(x0, z1, x1, z1, 0, 1, longX ? 'slab' : 'slabEnd', 3);
+  aq(acc, 'roofDark', [x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1], [0, 0, 1, 1], [0, 1, 0], 999);
+  const mx = (x0 + x1) / 2, mz = (z0 + z1) / 2, [lw, ld] = longX ? [5, 3.4] : [3.4, 5];   // the lift's machine room on the roof
+  sbox(acc, 'concrete', mx, y1, mz, lw, ld, 3, 0, { u: 4, v: 3, top: 'roofDark', tu: 99, cell: 999 });
+  plSolid(x0, z0, x1, z1, y0, y1);
+}
+function buildStationSquare(acc, L, bake) {
+  const [sx0, sx1, sz0, sz1] = PL.station, sm = (sz0 + sz1) / 2, [w0, , , w3] = PL.walk, [yx0, , yz0, yz1] = PL.yard, yx1 = PL.yardEnd, yw = PL.yardTop, yc = 156;
+  // the paving: the arrival, the station's forecourt, the strip under the wall slab (the boulevard's mouth is the
+  // Palace's: its south lawn is paved over), and the bit of the mouth between the goods yard and the boulevard
+  ground(acc, 'paving', w0[0] - 0.3, PL.fenceN, sx0, yc, 0.004, 4, { cell: 4 }); ground(acc, 'paving', yx1 - 0.3, yc, sx0, yw, 0.004, 4, { cell: 4 });
+  ground(acc, 'paving', -72.2, yw, sx0, 164, 0.004, 4, { cell: 4 });
+  ground(acc, 'paving', -55.6, 164, sx0, sz1, 0.004, 4, { cell: 4 });
+  ground(acc, 'paving', -55.6, sz1, w3[1] + 0.3, w3[3] + 0.3, 0.004, 4, { cell: 4 });
+  ground(acc, 'dirt', -55.6, w3[3] + 0.3, -50, 230, 0, 4, { cell: 8 });
+  // East Station: a two-storey hall along the square's east side, its back to the slabs; a taller entrance block in the
+  // middle with its glass front, the name, a clock and a gilt spire with the gold cog; a canopy over the doors
   sbox(acc, 'towerFace', (sx0 + sx1) / 2, 0, sm, sx1 - sx0, sz1 - sz0, 12, 0, { u: 8, v: 8, top: 'roofDark', tu: 8, cell: 6 });
   sbox(acc, 'decoGold', (sx0 + sx1) / 2, 11.4, sm, sx1 - sx0 + 0.4, sz1 - sz0 + 0.4, 0.6, 0, { u: 4, v: 0.6, top: false, cell: 6 });
-  const ex0 = sx0 - 1.5, ez0 = sm - 7, ez1 = sm + 7;
-  sbox(acc, 'towerFace', (ex0 + sx1 - 4) / 2, 0, sm, sx1 - 4 - ex0, ez1 - ez0, 19, 0, { u: 8, v: 8, top: 'roofDark', tu: 8, cell: 6 });
-  sbox(acc, 'decoGold', (ex0 + sx1 - 4) / 2, 18.3, sm, sx1 - 4 - ex0 + 0.4, ez1 - ez0 + 0.4, 0.7, 0, { u: 4, v: 0.7, top: false, cell: 6 });
-  plate(acc, 'glassFront', ex0, 6.5, sm, 10, 11, -Math.PI / 2, 0.04, [0, 0, 10 / 3, 11 / 3]);
-  plate(acc, 'stationSign', ex0, 13.8, sm, 12, 12 * 13 / 84, -Math.PI / 2, 0.05);
+  const ex0 = sx0 - 1.5, ex1 = sx1 - 2, ez0 = sm - 6, ez1 = sm + 6, ec = (ex0 + ex1) / 2;
+  sbox(acc, 'towerFace', ec, 0, sm, ex1 - ex0, ez1 - ez0, 19, 0, { u: 8, v: 8, top: 'roofDark', tu: 8, cell: 6 });
+  sbox(acc, 'decoGold', ec, 18.3, sm, ex1 - ex0 + 0.4, ez1 - ez0 + 0.4, 0.7, 0, { u: 4, v: 0.7, top: false, cell: 6 });
+  plate(acc, 'glassFront', ex0, 6.5, sm, 9, 11, -Math.PI / 2, 0.04, [0, 0, 3, 11 / 3]);
+  plate(acc, 'stationSign', ex0, 13.8, sm, 10.5, 10.5 * 13 / 84, -Math.PI / 2, 0.05);
   plate(acc, 'clockFace', ex0, 16.4, sm, 2.4, 2.4, -Math.PI / 2, 0.05);
-  frustum(acc, 'gilt', (ex0 + sx1 - 4) / 2, 19, sm, 4, 4, 0.4, 0.4, 9, 0, { cell: 8 });
-  for (const ph of [0, Math.PI / 2]) plate(acc, 'cog', (ex0 + sx1 - 4) / 2, 29.0, sm, 3.4, 3.4, ph, 0, [0, 0, 1, 1], true);   // the gold cog on the spire
+  frustum(acc, 'gilt', ec, 19, sm, 4, 4, 0.4, 0.4, 9, 0, { cell: 8 });
+  for (const ph of [0, Math.PI / 2]) plate(acc, 'cog', ec, 29.0, sm, 3.4, 3.4, ph, 0, [0, 0, 1, 1], true);   // the gold cog on the spire
   sbox(acc, 'concrete', sx0 - 3.2, 4.2, sm, 3.4, ez1 - ez0 + 6, 0.35, 0, { u: 2, v: 1, top: 'roofDark', tu: 4 });
   sbox(acc, 'litWarm', sx0 - 3.2, 4.12, sm, 1.6, ez1 - ez0, 0.08, 0, { u: 1, v: 1 });
-  for (const z of [sm - 9.5, sm + 9.5]) { sbox(acc, 'iron', sx0 - 4.6, 0, z, 0.2, 0.2, 4.2, 0, { u: 1, v: 1 }); plSolid(sx0 - 4.75, z - 0.15, sx0 - 4.45, z + 0.15, 0, 4.2); }
-  for (const z of [sz0 + 6, sz1 - 6]) plate(acc, 'banner', sx0, 6.5, z, 3, 8, -Math.PI / 2, 0.05);
+  for (const z of [sm - 8.5, sm + 8.5]) { sbox(acc, 'iron', sx0 - 4.6, 0, z, 0.2, 0.2, 4.2, 0, { u: 1, v: 1 }); plSolid(sx0 - 4.75, z - 0.15, sx0 - 4.45, z + 0.15, 0, 4.2); }
+  plate(acc, 'banner', sx0, 6.5, (ez1 + sz1) / 2, 3, 8, -Math.PI / 2, 0.05);
   // the departures board on the hall's front, south of the entrance and over the canopy's line: KRASNOGRAD · 31 HRS
-  plate(acc, 'decoGold', sx0, 6.5, 169, 5.7, 2.5, -Math.PI / 2, 0.05); plate(acc, 'departures', sx0, 6.5, 169, 5.4, 2.25, -Math.PI / 2, 0.08);
-  plLight(L, sx0 - 3.2, 3.6, sm, '#ffd8a0', 12, 1.5); plLight(L, ex0 - 2, 12, sm, '#ffe2b4', 14, 1.0);   // the entrance, the name and the clock
-  plSolid(ex0, sz0, sx1, sz1, 0, 19);
-  // the square: sodium posts round the edge, poplars along the north side, a monument to the railwaymen in the middle
-  // (facing you as you come up from the crossing); the boulevard opens off the west side (local x -48..-32 = z 190..206)
-  for (const [x, z, d] of [[x0 + 0.3, 160, 1], [x0 + 0.3, 176, 1], [x0 + 0.3, 212, 1], [x1 - 0.3, 166, -1], [x1 - 0.3, 198, -1], [-40, z1 - 0.3, 1], [-46.5, 168, 1], [-33.5, 168, -1]]) plPost(acc, L, x, z, d);
-  for (let x = x0 + 4; x < x1 - 3; x += 5) plTree(acc, x, z1 - 2.2, 1.1);
-  plStatue(acc, -31, 181, Math.PI);
-  plLight(L, -31, 2.4, 177.6, '#ffe8c0', 7, 1.2);
-  // a low wall along the west side (the boulevard's lawns and the goods yard beyond), open onto the boulevard
-  for (const [a, b] of [[z0, 189.6], [206.4, z1]]) { sbox(acc, 'concrete', x0 - 0.15, 0, (a + b) / 2, 0.3, b - a, 1.0, 0, { u: 6, v: 1, top: 'wallTop', tu: 6, cell: 6 }); plSolid(x0 - 0.3, a, x0, b, 0, 1.0); }
-  // the goods yard: two sidings with a few box wagons standing on them, sodium on two masts; nothing tall, so from the
-  // crossing you see over it to the Palace and the Tower of Labor
-  const [yx0, yx1, yz0, yz1] = PL.yard;
-  ground(acc, 'asphaltK', yx0, yz0, yx1, yz1, 0, 8, { cell: 8 });
+  const bz = (sz0 + ez0) / 2;
+  plate(acc, 'decoGold', sx0, 6.5, bz, 5.7, 2.5, -Math.PI / 2, 0.05); plate(acc, 'departures', sx0, 6.5, bz, 5.4, 2.25, -Math.PI / 2, 0.08);
+  plLight(L, sx0 - 3.2, 3.6, sm, '#ffd8a0', 12, 1.5); plLight(L, ex0 - 2, 12, sm, '#ffe2b4', 14, 1.0); plLight(L, sx0 - 2.5, 7, bz, '#ffe2b4', 6, 0.8);   // the entrance, the name and the clock, the board
+  plSolid(sx0, sz0, sx1, sz1, 0, 12); plSolid(ex0, ez0, ex1, ez1, 0, 19);
+  // the wall slabs (PL.slabs), and on the one that closes the boulevard's view east, a faded banner on the axis and
+  // PEACE · LABOR · UNITY along its top, floodlit from the strip (that light bakes into this mesh only)
+  PL.slabs.forEach(([x0, x1, z0, z1, n, y0], k) => plSlab(acc, x0, x1, z0, z1, n, y0 || 0, k));
+  { const [x0, , z0, z1] = PL.slabs[1], top = PL.slabs[1][4] * 2.8;
+    plate(acc, 'prBanner', x0, 30, 198, 5.2, 15.6, -Math.PI / 2, 0.06);
+    plate(acc, 'prSlogan', x0, top - 3.4, (z0 + z1) / 2, 34, 34 * 14 / 136, -Math.PI / 2, 0.06);
+    bake.push(lightFromHex([x0 - 7, 18, 198], '#ffd8a0', 26, 1.6), lightFromHex([x0 - 9, top - 12, (z0 + z1) / 2], '#ffe2b4', 30, 1.2)); }
+  // and on the gable over the tracks (you see it from the crossing), Superblock 14's worker mosaic, big
+  { const [x0, x1, z0] = PL.slabs[0], cx = (x0 + x1) / 2;
+    plate(acc, 'mosaicK', cx, 30, z0, 10.2, 17, Math.PI, 0.06);
+    bake.push(lightFromHex([cx, 14, z0 - 7], '#ffe2b4', 26, 1.5)); }
+  // sodium posts round the square, poplars under the slab, a monument to the railwaymen facing the crossing
+  for (const [x, z, d] of [[w0[0] + 0.3, 160.5, 1], [-46.8, 152.4, -1], [-58.2, 176, 1], [w3[1] - 0.2, 186, -1], [w3[0] + 0.3, 211, 1]]) plPost(acc, L, x, z, d);
+  for (const z of [185, 191, 205.5, 211]) plTree(acc, -52.8, z, 1.1);
+  plStatue(acc, -53.5, 170.5, Math.atan2(PL.cross.arrive[0] + 53.5, PL.cross.arrive[1] - 170.5));
+  plLight(L, -53, 2.4, 167.6, '#ffe8c0', 7, 1.2);
+  // the strip ends at a low wall (the boulevard's north lawn beyond)
+  sbox(acc, 'concrete', (w3[0] + w3[1]) / 2, 0, w3[3] + 0.45, w3[1] - w3[0] + 0.6, 0.3, 1.0, 0, { u: 6, v: 1, top: 'wallTop', tu: 6, cell: 6 }); plSolid(w3[0], w3[3] + 0.3, w3[1] + 0.3, w3[3] + 0.6, 0, 1.0);
+  // the goods yard: two sidings with a few box wagons standing on them, sodium on two masts, a low wall round its end;
+  // nothing tall, so from the crossing you see over it to the Palace and the Tower of Labor
+  ground(acc, 'asphaltK', yx0, yz0, yx1, yw, 0, 8, { cell: 8 }); ground(acc, 'asphaltK', yx1, yz0, w0[0] - 0.3, yc, 0, 8, { cell: 8 }); ground(acc, 'asphaltK', yx0, yw, -72.2, yz1, 0, 8, { cell: 8 });
   for (const tz of [155.2, 159.6]) aq(acc, 'track', [yx0, 0.012, tz + 1.2], [yx0, 0.012, tz - 1.2], [yx1, 0.012, tz - 1.2], [yx1, 0.012, tz + 1.2], [0, 0, 1, (yx1 - yx0) / 2], [0, 1, 0], 4);
-  for (const [x, tz, t] of [[-70, 155.2, 0], [-85, 155.2, 1], [-118, 159.6, 2], [-133, 159.6, 0], [-148, 155.2, 1]]) {
+  for (const [x, tz, t] of [[-80, 155.2, 0], [-95, 155.2, 1], [-118, 159.6, 2], [-133, 159.6, 0], [-148, 155.2, 1]]) {
     acc.tint = [[0.62, 0.36, 0.3], [0.42, 0.4, 0.36], [0.5, 0.42, 0.3]][t];
     sbox(acc, 'trainSide', x, 0.5, tz, 13.5, 2.8, 3.3, 0, { u: 13.5, v: 3.3, top: 'roofDark', tu: 4 });
     acc.tint = [1, 1, 1];
     for (const bx of [x - 4.5, x + 4.5]) sbox(acc, 'black', bx, 0, tz, 2.2, 2.4, 0.5, 0, { u: 1, v: 1 });
   }
+  for (const [a, b, c, d] of [[w0[0] - 0.6, w0[0] - 0.3, yz0, yc + 0.3], [yx1 - 0.3, w0[0] - 0.3, yc, yc + 0.3], [yx1 - 0.3, yx1, yc, yw + 0.3], [-72.2, yx1, yw, yw + 0.3], [-72.5, -72.2, yw, yz1]]) {
+    sbox(acc, 'concrete', (a + b) / 2, 0, (c + d) / 2, b - a, d - c, 1.0, 0, { u: 6, v: 1, top: 'wallTop', tu: 6, cell: 6 }); plSolid(a, c, b, d, 0, 1.0); }
   for (const x of [-100, -140]) { sbox(acc, 'iron', x, 0, 162.6, 0.3, 0.3, 12, 0, { u: 1, v: 1 }); sbox(acc, 'litSodium', x, 12, 162.6, 1.6, 0.6, 0.3, 0, { u: 1, v: 1 }); plLight(L, x, 11.5, 160, CFG.street.light.sodium, 20, 1.3); }
 }
 // ---- the crossing (world): the railway west, the tunnel under the wall, the planks, the fence; Station Square and East Station
-function buildPalaceCrossing(acc) {
-  const L = PL.crossLamps, [g0, g1] = PL.gap, [rx0, rx1] = PL.rail;
+function buildPalaceCrossing(acc, bake) {
+  const L = PL.crossLamps, [rx0, rx1] = PL.rail;
   // the railway runs on west into the sector (podezd 3 draws the bank as far as x -122)
   ground(acc, 'asphaltK', rx0, 130, rx1, 151, 0, 8, { cell: 8 });
   for (const tz of [139.4, 143, 146.6]) aq(acc, 'track', [rx0, 0.012, tz + 1.2], [rx0, 0.012, tz - 1.2], [rx1, 0.012, tz - 1.2], [rx1, 0.012, tz + 1.2], [0, 0, 1, (rx1 - rx0) / 2], [0, 1, 0], 4);
@@ -348,16 +406,19 @@ function buildPalaceCrossing(acc) {
     plFace(acc, 'black', px0 + 3, m0, px0 + 3, m1, 0, mh, -1, 0, 1, 1);
     plate(acc, 'flag_kras', px0 - 0.05, mh + 0.8, (m0 + m1) / 2, 2.4, 1.4, -Math.PI / 2, 0.02);
     plSolid(px0, pz0, px1, pz1, 0, ph); }
-  // the crossing: planks over the rails, a low fence along the north side of the bank, two posts with the X sign
-  ground(acc, 'darkwood', g0, 138.3, g1, 150.9, 0.02, 2, { cell: 4 });
-  for (const [a, b] of [[-74, g0], [g1, PL.portal[0]]]) { sbox(acc, 'concrete', (a + b) / 2, 0, 151.55, b - a, 0.3, 1.0, 0, { u: 6, v: 1, top: 'wallTop', tu: 6, cell: 6 }); plSolid(a, 151.4, b, 151.7, 0, 1.0); }
-  for (const [x, z] of [[g1 + 0.45, PL.barS - 0.3], [g0 - 0.45, PL.barN + 0.3]]) {
+  // the crossing: planks laid skewed over the rails from the gap in the bank's fence, north-west (PL.cross); a low fence
+  // along the north side of the tracks with a gap where it comes out; two posts with the X sign where the barriers pivot
+  { const C = PL.cross, X = PL.crossX, za = PL.barS + 0.1, zb = PL.barN - 0.4;
+    aq(acc, 'darkwood', [X(za) - C.hw, 0.02, za], [X(za) + C.hw, 0.02, za], [X(zb) + C.hw, 0.02, zb], [X(zb) - C.hw, 0.02, zb], [0, 0, C.hw, (zb - za) / 2], [0, 1, 0], 4);
+    const n0 = X(PL.fenceN) - C.hw - 0.1, n1 = X(PL.fenceN) + C.hw + 0.1;
+    for (const [a, b] of [[-74, n0], [n1, PL.slabs[3][0]]]) { sbox(acc, 'concrete', (a + b) / 2, 0, PL.fenceN, b - a, 0.3, 1.0, 0, { u: 6, v: 1, top: 'wallTop', tu: 6, cell: 6 }); plSolid(a, 151.4, b, 151.7, 0, 1.0); } }
+  for (const [x, z] of PL.crossPosts) {
     sbox(acc, 'iron', x, 0, z, 0.14, 0.14, 3.5, 0, { u: 1, v: 1 }); sbox(acc, 'iron', x, 0, z, 0.5, 0.5, 1.2, 0, { u: 1, v: 1 });
     plate(acc, 'crossSign', x, 3.15, z, 1.1, 1.1, 0, 0.09, [0, 0, 1, 1], true);
     sbox(acc, 'black', x, 2.25, z, 1.0, 0.12, 0.3, 0, { u: 1, v: 1 });
     plSolid(x - 0.25, z - 0.25, x + 0.25, z + 0.25, 0, 3.5);
   }
-  buildStationSquare(acc, L);
+  buildStationSquare(acc, L, bake);
 }
 // ---- inside: the foyer, the gym, the tunnels, the bowl (floor, stands, roof, the ring under its lights)
 // the bowl's polygon: segment i faces the centre from angle -π/2 + i·2π/sides (0 = south, sides/2 = north: the vomitories);
@@ -543,15 +604,17 @@ function buildTrain() {   // four cars of the evening electric, each its own sma
   }
   // the barriers (an arm on a pivot each: the south one swings up from the east post, the north one from the west) and
   // the red lamps that wig-wag while they're down
-  for (const [x, z, flip] of [[PL.gap[1] + 0.45, PL.barS, 0], [PL.gap[0] - 0.45, PL.barN, Math.PI]]) {
-    const acc = new GeoAcc(); sbox(acc, 'boom', -2.3, -0.07, 0, 4.4, 0.12, 0.14, 0, { u: 2, v: 0.14 });
+  // (the crossing is skewed, so each arm spans the planks along the tracks: PL.cross.arm)
+  const AL = PL.cross.arm;
+  for (const [x, z, flip] of [[PL.crossPosts[0][0], PL.barS, 0], [PL.crossPosts[1][0], PL.barN, Math.PI]]) {
+    const acc = new GeoAcc(); sbox(acc, 'boom', -AL / 2 - 0.1, -0.07, 0, AL, 0.12, 0.14, 0, { u: 2, v: 0.14 });
     const arm = new THREE.Mesh(acc.geometry({ ambient: [0.55, 0.5, 0.48], lights: [] }), makeMat('street', { baked: true })); arm.frustumCulled = false;
     const pivot = new THREE.Group(), base = new THREE.Group(); pivot.add(arm); base.add(pivot);
     base.position.set(x, 1.05, z); base.rotation.y = flip; scene.add(base); TRAIN.booms.push({ base, pivot });
   }
   const lamps = (side) => {
     const acc = new GeoAcc();
-    for (const [x, z] of [[PL.gap[1] + 0.45, PL.barS - 0.3], [PL.gap[0] - 0.45, PL.barN + 0.3]]) for (const dz of [-0.08, 0.08]) sbox(acc, 'litRed', x + side * 0.38, 2.12, z + dz, 0.22, 0.04, 0.26, 0, { u: 1, v: 1 });
+    for (const [x, z] of PL.crossPosts) for (const dz of [-0.08, 0.08]) sbox(acc, 'litRed', x + side * 0.38, 2.12, z + dz, 0.22, 0.04, 0.26, 0, { u: 1, v: 1 });
     const m = new THREE.Mesh(acc.geometry({ ambient: [1, 1, 1], lights: [] }), makeMat('street', { baked: true })); m.frustumCulled = false; m.visible = false; m.userData.small = true; scene.add(m); return m;
   };
   TRAIN.lampA = lamps(-1); TRAIN.lampB = lamps(1);
@@ -567,11 +630,10 @@ function buildPalace() {
   const F = CFG.street.fog, Lt = CFG.street.light;
   const mk = (acc, light) => { const m = new THREE.Mesh(acc.geometry(light), makeMat('street', { baked: true })); m.matrixAutoUpdate = false; m.updateMatrix(); m.frustumCulled = false; m.material.uniforms.uFogNear = { value: F.near }; m.material.uniforms.uFogFar = { value: F.far }; scene.add(m); return m; };
   // the crossing, the railway and Station Square stay where they are (world): the train and the barriers too
-  const xAcc = new GeoAcc(); buildPalaceCrossing(xAcc); buildTrain();
-  { const [x0, x1, , z1] = PL.square, on = () => level.name === 'palace';   // Station Square, and onto the boulevard off its west side
-    [ { x0: x0 + 0.3, x1: x1 - 0.6, z0: PL.barN + 0.2, z1: z1 - 0.3, pad: 0.3, area: 'plSquare', on },
-      { x0: x0 - 1.5, x1: x0 + 1, z0: 190.3, z1: 205.7, pad: 0.3, area: 'plSqBlvd', on },
-    ].forEach(addWalk); }
+  const xAcc = new GeoAcc(), bake = []; buildPalaceCrossing(xAcc, bake); buildTrain();
+  { const on = () => level.name === 'palace';   // Station Square (PL.walk), and onto the boulevard where the strip meets it
+    PL.walk.forEach(([x0, x1, z0, z1], k) => addWalk({ x0, x1, z0, z1, pad: 0.3, area: 'plSquare' + k, on }));
+    addWalk({ x0: -57.5, x1: -55, z0: 190.3, z1: 205.7, pad: 0.3, area: 'plSqBlvd', on }); }
   // from the boulevard on, the level is laid west into the sector by its frame (src/levels.js)
   ACT1_WEST.begin();
   const inAcc = new GeoAcc(), outAcc = new GeoAcc();
@@ -587,8 +649,11 @@ function buildPalace() {
   // the round floor: overlapping rects inside the stands' boards (corners on a circle Rw from the centre)
   const [cx, cz] = PL.bowlC, Rw = PL.floorR * Math.cos(Math.PI / PL.sides) - 0.35;
   const round = [10, 28, 45, 62, 80].map((d, k) => { const c = Math.cos(d * Math.PI / 180) * Rw, s = Math.sin(d * Math.PI / 180) * Rw; return { x0: cx - c, x1: cx + c, z0: cz - s, z1: cz + s, pad: P, area: 'plFloor' + k, on }; });
-  [ { x0: g0 + 0.3, x1: g1 - 0.3, z0: 135.6, z1: PL.barS - 0.3, pad: P, area: 'plGap', world: true, on: () => (level.name === 'podezd' && CRADLE.phase === 'bottom') || on() },
-    { x0: g0 + 0.3, x1: g1 - 0.3, z0: PL.barS - 0.4, z1: PL.barN + 0.4, pad: P, area: 'plCross', world: true, on: () => on() && TRAIN.open },
+  // the skewed crossing: overlapping bands along it, each as wide as the planks over its own stretch
+  { const C = PL.cross, X = PL.crossX, z0 = PL.barS - 0.4, z1 = PL.barN + 0.4, n = Math.ceil((z1 - z0) / 0.7);
+    for (let i = 0; i < n; i++) { const a = z0 + (z1 - z0) * i / n, b = z0 + (z1 - z0) * (i + 1) / n;
+      addWalk({ x0: X(b) - C.hw + 0.2, x1: X(a) + C.hw - 0.2, z0: a, z1: b, pad: P, area: 'plCross' + i, world: true, on: () => on() && TRAIN.open }); } }
+  [ { x0: PZ.gap[0] + 0.5, x1: PZ.gap[1] - 0.5, z0: 135.6, z1: PL.barS - 0.3, pad: P, area: 'plGap', world: true, on: () => (level.name === 'podezd' && CRADLE.phase === 'bottom') || on() },
     { x0: bx0, x1: bx1, z0: bz0 + 0.3, z1: bz1 + 0.3, pad: P, area: 'plBlvd', on },
     { x0: fx0, x1: fx1, z0: fz0, z1: fz1 - 0.3, pad: P, area: 'plFore', on },
     { x0: d0 + 0.3, x1: d1 - 0.3, z0: fz1 - 0.5, z1: fz1 + 0.5, pad: P, area: 'plDoor', on },
@@ -601,7 +666,7 @@ function buildPalace() {
   ].forEach(addWalk);
   ACT1_WEST.end();
   // the crossing's mesh last, so the boulevard's lamps (world now) light the square's west edge too
-  PL.crossMesh = mk(xAcc, { ambient: Lt.ambient, sky: Lt.sky, lights: PL.crossLamps.concat(SBX.lamps.filter(l => l[0][2] > 128), PL.outLamps) }); PL.crossTris = xAcc.tris;
+  PL.crossMesh = mk(xAcc, { ambient: Lt.ambient, sky: Lt.sky, lights: PL.crossLamps.concat(SBX.lamps.filter(l => l[0][2] > 128), PL.outLamps, bake) }); PL.crossTris = xAcc.tris;
   for (const l of PL.crossLamps) ST.lamps.push(l);
 }
 const palaceNorthOpen = () => level.encounter >= CFG.palace.encounters.length - 1 && (game.state === 'walk' || game.state === 'won' || game.state === 'cleared');
@@ -637,7 +702,7 @@ function updatePalace(dt) {
   if (P.phase === 'warn' && P.t > T.warn) { P.phase = 'run'; if (AU.noise) AU.noise(2.4, 0.22, 260); }
   if (P.phase === 'run' || P.phase === 'lift' || P.phase === 'open') P.x = Math.max(T.endX - 80, P.x - T.speed * dt);
   const tail = P.x + T.cars * (T.carLen + T.gap);
-  if (P.phase === 'run' && tail < PL.gap[0] - 3) { P.phase = 'lift'; P.t = 0; }
+  if (P.phase === 'run' && tail < PL.cross.west - 3) { P.phase = 'lift'; P.t = 0; }
   if (P.phase === 'lift') { P.lift = Math.min(1, P.t / T.lift); if (P.lift >= 1) { P.phase = 'open'; P.open = true; showSign('palace', 2.2); } }
   placeTrain();
 }
@@ -645,7 +710,7 @@ defineLevel('palace', {
   menu: '5 · The Palace of Sport (Volkov)', cfg: () => CFG.palace, build: buildPalace, rooms: palaceRooms, frame: ACT1_WEST,
   outside: () => [PL.outMesh, PL.crossMesh, ...TRAIN.booms.map(B => B.base)], rects: () => [ACT1_WEST.rect(PL.rect), PL.rail, PL.sqRect, PL.yard],
   start: (f) => startPalace(f), update: (dt) => updatePalace(dt),
-  after: 'podezd', enter: () => player.head.z > PL.fenceZ + 0.2 && Math.abs(player.head.x + 40) < 2.2,   // through the gap in the fence
+  after: 'podezd', enter: () => player.head.z > PL.fenceZ + 0.2 && Math.abs(player.head.x - PL.cross.x) < 2.2,   // through the gap in the fence
   finish: () => { const h = ACT1_WEST.head(); return h.z > CFG.palace.finishZ && Math.abs(h.x + 40) < 2.2; }, wonSign: 'toParade',
   signs: { crossing: ['LEVEL CROSSING', '#e8352b'], palace: ['PALACE OF SPORT', '#ff9a3c'], boulevard: ['FIGHT!', '#f2c14e'], gym: ['THE GYM', '#f2c14e'],
            bear: ['BOGDAN VOLKOV, THE BEAR', '#e8352b'], toParade: ['TO PARADE SQUARE', '#33e0d0'] },
@@ -658,7 +723,7 @@ function startPalace(fromPodezd) {
   if (!fromPodezd) { DOOR.target = 1; DOOR.open = 1; player.hp = CFG.player.health; player.hurtT = 0; game.catches = 0; game.disarms = 0; }
   for (const p of props.slice()) if (!held.has(p)) { scene.remove(p.obj); p.body.remove(); p.alive = false; props.splice(props.indexOf(p), 1); }
   for (const [type, x, z, y] of CFG.palace.props) new Prop(type, ACT1_WEST.world(new V3(x, y || 0, z)));
-  if (!fromPodezd) { placePlayer(CFG.palace.start[0], CFG.palace.start[1], Math.PI); rig.position.y = 0; }
+  if (!fromPodezd) { placePlayer(CFG.palace.start[0], CFG.palace.start[1], Math.PI - PL.cross.ang); rig.position.y = 0; }   // facing along the crossing
   game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
   showSign('crossing', 2.0);
 }

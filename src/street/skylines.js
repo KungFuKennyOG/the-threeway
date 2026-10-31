@@ -14,7 +14,10 @@ const SKY = {
   civic: { t: 0.44, top: 320 },                    // the Dept. of Civic Harmony on Liberty Avenue, its mast on top
   royal: { t: 0.73 },                              // the Royal Hotel beside it, joined by a skybridge
   heights: {},                                     // filled in as they're built (test/street.js checks the ladder)
+  crowns: [],                                      // Columbia's crowns: each tower's top-tier corners, crown and tip [x, y, z] (sightline checks)
 };
+// a tower's top tier (its corners at y, w x d, turned by phi), its crown and the tip of its spire, for SKY.crowns
+const skyCrown = (x, z, y, w, d, phi, crown, tip) => { for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const [px, pz] = LP(x, z, phi, sx * w / 2, sz * d / 2); SKY.crowns.push([px, y, pz]); } SKY.crowns.push([x, crown, z], [x, tip, z]); };
 // the four corners of a tapering section: neon strips running up each arris (a quad either side of the corner)
 function edgeStrips(acc, key, x, z, y0, y1, w0, w1, phi, sw, sides = [0, 1, 2, 3]) {
   const C = [[-1, 1], [1, 1], [1, -1], [-1, -1]], o = 0.25;
@@ -89,6 +92,7 @@ function decoTower(acc, x, z, w, d, h, phi, o = {}) {
   sbox(acc, 'decoGold', x, y, z, cw * 0.55, cw * 0.55, 5, phi, { u: 4, v: 4, top: 'decoGold', tu: 4, cell: 999 });
   const sp = o.spire || 16;
   cyl(acc, 'gilt', x, y + 5, z, 1.1, 0.1, sp, 4, { cell: 999 });
+  skyCrown(x, z, y, cw, d * T[T.length - 1][0], phi, y + 5, y + 5 + sp);
   ST.beacons.push([x, y + 5 + sp + 1.5, z]);
   if (o.light) ST.searchlights.push([x, y + 5, z]);
   SKY.heights.ridge = Math.max(SKY.heights.ridge || 0, y + 5 + sp);
@@ -115,6 +119,7 @@ function civicHarmony(acc, x, z, phi) {
   ST.beacons.push([x, SKY.civic.top + 1.5, z]);
   for (const [sx, sz] of [[-1, 1], [1, -1]]) { const [px, pz] = LP(x, z, phi, sx * 8, sz * 7); ST.searchlights.push([px, 233, pz]); }
   SKY.civicLight = [x, 240, z];   // the crown's tracking light (it finds the Halcyon)
+  skyCrown(x, z, 232, 20, 18, phi, 292.2, SKY.civic.top);   // (its crown: the mooring deck; its tip: the needle)
   SKY.heights.civic = SKY.civic.top; SKY.civicMast = [x, 284, z];
 }
 // the Royal Hotel: broader and lower, a gold mansard crown, ROYAL down its front in red neon, a skybridge to Civic Harmony
@@ -128,6 +133,7 @@ function royalHotel(acc, x, z, phi) {
   frustum(acc, 'decoGold', x, 148, z, 22, 15, 12, 6, 9, phi, { u: 8, v: 9, top: 'decoGold', tu: 8, cell: 999 });
   cyl(acc, 'gilt', x, 157, z, 0.6, 0.1, 12, 4, { cell: 999 });
   ST.beacons.push([x, 170, z]); SKY.royalLight = [x, 157, z];
+  skyCrown(x, z, 148, 22, 15, phi, 157, 169);
   const [sx, sz] = LP(x, z, phi, 11, 13); plate(acc, 'royalSign', sx, 62, sz, 8, 32, phi, 0.4);   // phi turns its front to the square
 }
 function buildSkylines() {

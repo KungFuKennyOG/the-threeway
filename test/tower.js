@@ -112,7 +112,7 @@ try {
     check('the Tower of Labor stands dead ahead down the boulevard, ~180 m on, deep in the sector', Math.abs(tz - bz) < 1e-9 && tx < bx - 170 && tx < -200, `(${tx.toFixed(1)}, ${tz.toFixed(1)})`); }
   { const PL = run('PL'), PR = run('PR'), Lv = TW.LEVELS;
     const R = (D) => (typeof D.rects === 'function' ? D.rects() : D.rects);
-    const crossing = [PL.gap[0], PL.gap[1]], square = PL.square, palace = AW.rect(PL.rect), parade = R(Lv.parade)[0], tower = R(Lv.tower)[0];
+    const crossing = [PL.cross.west, PL.cross.x + PL.cross.hw], square = PL.square, palace = AW.rect(PL.rect), parade = R(Lv.parade)[0], tower = R(Lv.tower)[0];
     const seq = [['the crossing', crossing], ['Station Square', square], ['the Palace', palace], ['Parade Square', parade], ['the Tower', tower]];
     const mid = (r) => (r[0] + r[1]) / 2;   // each reaches further west, and from the square on each one's middle is west of the last's
     // (all north of the tracks' line, z 151.4; the Tower's wings spread both ways off its axis, west of where the tracks end at x -178, so for it, its middle)
