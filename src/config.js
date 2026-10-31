@@ -52,13 +52,14 @@ const CFG = {
     bottle: { dmg: 8, poiseMult: 1.0, durability: 1, grabRadius: 0.16, hitRadius: 0.08, reach: 0.2 },
     stool:  { dmg: 6, poiseMult: 1.5, durability: 3, grabRadius: 0.3,  hitRadius: 0.22, reach: 0.6 },
     bat:    { dmg: 10, poiseMult: 1.8, durability: 8, grabRadius: 0.22, hitRadius: 0.1, reach: 0.75, length: 0.75 },
+    pipe:   { dmg: 12, poiseMult: 2.0, durability: 99, grabRadius: 0.22, hitRadius: 0.09, reach: 0.8, length: 0.8 },   // the laborer's: steel, never breaks
     potato: { dmg: 5, poiseMult: 1.0, durability: 1, grabRadius: 0.18, hitRadius: 0.07, playerDmg: 6 },
     pot:    { dmg: 9, poiseMult: 2.0, durability: 99, grabRadius: 0.2, hitRadius: 0.12, playerDmg: 10 },
     // street props
     crate:  { dmg: 9, poiseMult: 2.0, durability: 2, grabRadius: 0.34, hitRadius: 0.24, reach: 0.5, size: 0.46 },
     bin:    { dmg: 7, poiseMult: 1.7, durability: 99, grabRadius: 0.32, hitRadius: 0.24, reach: 0.5, size: 0.44, height: 0.62 },
     sign:   { dmg: 11, poiseMult: 1.8, durability: 5, grabRadius: 0.24, hitRadius: 0.17, reach: 1.1, length: 1.25 },
-    swingMult: { stool: 1.2, bat: 1.3, sign: 1.25, bin: 1.1 },   // big things hit as if swung a bit faster
+    swingMult: { stool: 1.2, bat: 1.3, pipe: 1.25, sign: 1.25, bin: 1.1 },   // big things hit as if swung a bit faster
     drinkHeal: 30, drinkTime: 0.8, mouthRadius: 0.16,
     thrownHitSpeed: 3.0,
     throwAssistDeg: 20,       // thrown props curve a little toward a goon inside this cone
@@ -84,6 +85,10 @@ const CFG = {
     rocco:    { hp: 150, poise: 110, speed: 1.8, reach: 0.76, windup: 0.42, dmg: 9, combo: 4, comboWindup: 0.22, highGuard: true, boss: true, scale: 0.96 },
     // Bogdan "the Bear" Volkov: wrestling champion turned enforcer. A bigger, slower grappler; enrages at half health
     volkov:   { hp: 280, poise: 200, speed: 1.2, reach: 1.0, windup: 0.85, dmg: 0, combo: 1, grabber: true, boss: true, clinchDps: 8, clinchSlam: 22, armHitsToBreak: 3, scale: 1.04 },
+    // Krasnovia fodder: a conscript in an oversized greatcoat, half asleep (slow windups)
+    conscript: { hp: 40, poise: 35, speed: 1.15, reach: 0.78, windup: 0.9, dmg: 9, combo: 1, scale: 0.86 },
+    // Krasnovia weapon goon: a laborer with a length of steel pipe. Slower and heavier than Bat Boy's bat; swat it loose and it's yours
+    laborer:  { hp: 70, poise: 75, speed: 1.1, reach: 1.1, windup: 1.15, dmg: 18, combo: 1, weapon: 'pipe', unarmedReach: 0.8, unarmedDmg: 10, unarmedWindup: 0.8, scale: 0.9 },
     ivan:     { hp: 190, poise: 150, speed: 1.15, reach: 0.95, windup: 0.85, dmg: 0, combo: 1, grabber: true, boss: true, clinchDps: 7, clinchSlam: 18, armHitsToBreak: 3, scale: 0.96 },
   },
   boss: { tagCooldown: 4.0, benchRadius: 2.9, enrageSpeed: 1.25, enrageWindup: 0.75 },

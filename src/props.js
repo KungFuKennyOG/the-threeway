@@ -6,6 +6,7 @@ class Prop {
   constructor(type, pos) {
     this.type = type; this.isProp = true; this.cfg = CFG.weapons[type]; this.alive = true;
     this.durability = this.cfg.durability; this.drunk = false; this.heldBy = null; this.heldByEnemy = null;
+    this.batLike = type === 'bat' || type === 'pipe';   // a long thing held by one end: same rig, pinning and hit point
     this.thrown = false; this.hostile = false; this.hitSet = new Set(); this.spin = 0; this.prevPos = new V3();
     const body = this.body = new Body('prop', this);
     let geo, mat;
@@ -27,11 +28,17 @@ class Prop {
       body.add('base', o.clone().add(new V3(0, -0.19, 0)), 0.17, 3);
       body.add('rim', o.clone().add(new V3(0.2, 0.32, 0)), 0.04, 3);
       body.stick('seat', 'base'); body.stick('seat', 'rim'); body.stick('base', 'rim');
-    } else if (type === 'bat') {     // knob at the origin, barrel along +y
+    } else if (this.batLike) {     // knob at the origin, barrel along +y
       const acc = new GeoAcc(), L = this.cfg.length;
-      tbox(acc, null, 0, 0.26, 0.04, 0.04, 0.045, 0.045, { '*': [0, 22, 8, 32] }, { sheetW: 8, sheetH: 32 });
-      tbox(acc, null, 0.26, L, 0.045, 0.045, 0.075, 0.075, { '*': [0, 0, 8, 22], t: [0, 0, 8, 2] }, { sheetW: 8, sheetH: 32 });
-      geo = acc.geometry(); mat = sharedMat('bat');
+      if (type === 'bat') {
+        tbox(acc, null, 0, 0.26, 0.04, 0.04, 0.045, 0.045, { '*': [0, 22, 8, 32] }, { sheetW: 8, sheetH: 32 });
+        tbox(acc, null, 0.26, L, 0.045, 0.045, 0.075, 0.075, { '*': [0, 0, 8, 22], t: [0, 0, 8, 2] }, { sheetW: 8, sheetH: 32 });
+      } else {                       // the pipe: taped grip, straight steel, a valve fitting on the end
+        tbox(acc, null, 0, 0.24, 0.05, 0.05, 0.05, 0.05, { '*': [0, 22, 8, 32] }, { sheetW: 8, sheetH: 32 });
+        tbox(acc, null, 0.24, L - 0.07, 0.045, 0.045, 0.045, 0.045, { '*': [0, 4, 8, 22] }, { sheetW: 8, sheetH: 32, faces: 'fblr' });
+        tbox(acc, null, L - 0.07, L, 0.075, 0.075, 0.075, 0.075, { '*': [0, 0, 8, 4] }, { sheetW: 8, sheetH: 32 });
+      }
+      geo = acc.geometry(); mat = sharedMat(type);
       body.add('knob', pos.clone(), 0.035, 3);
       body.add('tip', pos.clone().add(new V3(0, L, 0)), 0.05, 3);
       body.stick('knob', 'tip');
@@ -89,7 +96,7 @@ class Prop {
       _by.subVectors(b.seat.x, b.base.x).normalize();
       frameQ(_by, _pa.subVectors(b.rim.x, b.seat.x), _pb.set(0, 0, 1), _bq);
       setPart(this.obj, _pc.copy(b.seat.x).addScaledVector(_by, -0.32), _bq, 1);
-    } else if (this.type === 'bat' || this.type === 'sign') {
+    } else if (this.batLike || this.type === 'sign') {
       _by.subVectors(b.tip.x, b.knob.x).normalize();
       frameQ(_by, _pa.set(1, 0, 0), _pb.set(0, 0, 1), _bq);
       setPart(this.obj, this.type === 'sign' ? _pc.copy(b.knob.x).addScaledVector(_by, -0.05) : b.knob.x, _bq, 1);
@@ -106,14 +113,14 @@ class Prop {
   }
   get airborne() { return this.thrown || this.hostile; }
   grabPoint(out) {
-    if (this.type === 'bat') return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, 0.15);
+    if (this.batLike) return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, 0.15);
     if (this.type === 'sign') return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, 0.25);
     return out.copy(this.body.center.lengthSq() ? this.body.center : this.body.ps[0].x);
   }
   hitPoint(out) {
     if (this.type === 'bottle') return out.copy(this.body.by.base.x);
     if (this.type === 'stool') return out.copy(this.body.by.seat.x);
-    if (this.type === 'bat') return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, 0.8);
+    if (this.batLike) return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, 0.8);
     if (this.type === 'sign') return out.copy(this.body.by.tip.x);
     if (this.type === 'crate' || this.type === 'bin') return out.addVectors(this.body.by.seat.x, this.body.by.base.x).multiplyScalar(0.5);
     return out.copy(this.body.ps[0].x);
@@ -125,7 +132,7 @@ class Prop {
     const b = this.body.by;
     if (this.type === 'bottle') { b.neck.pin.copy(h.fist); b.base.pin.copy(h.fist).addScaledVector(K, 0.26); }
     else if (this.type === 'stool') { b.base.pin.copy(h.fist).addScaledVector(K, 0.06); b.seat.pin.copy(h.fist).addScaledVector(K, 0.57); b.rim.pin.copy(b.seat.pin).addScaledVector(X, 0.2); }
-    else if (this.type === 'bat') { b.knob.pin.copy(h.fist).addScaledVector(K, -0.06); b.tip.pin.copy(h.fist).addScaledVector(K, this.cfg.length - 0.06); }
+    else if (this.batLike) { b.knob.pin.copy(h.fist).addScaledVector(K, -0.06); b.tip.pin.copy(h.fist).addScaledVector(K, this.cfg.length - 0.06); }
     else if (this.type === 'sign') { b.knob.pin.copy(h.fist).addScaledVector(K, -0.1); b.tip.pin.copy(h.fist).addScaledVector(K, this.cfg.length - 0.25); }
     else if (this.type === 'crate' || this.type === 'bin') {   // held by the near edge, sticking out past the knuckles
       b.base.pin.copy(h.fist).addScaledVector(K, 0.12); b.seat.pin.copy(b.base.pin).addScaledVector(K, this.half * 2); b.rim.pin.copy(b.seat.pin).addScaledVector(X, this.cfg.size / 2);

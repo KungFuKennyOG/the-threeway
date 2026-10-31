@@ -211,6 +211,25 @@ const check = (name, ok, extra = '') => { log.push((ok ? 'PASS ' : 'FAIL ') + na
     const fistDmg = lb ? TW.CFG.punch.tiers.find(t => t.name === lb.tier).dmg * (lb.zone === 'head' ? 1.5 : lb.zone.startsWith('arm') ? 0.5 : 1) : 0;
     check('a bat swing hits harder than the same swing with a fist', lb && lb.dmg >= fistDmg + 9, lb ? `${lb.tier} on ${lb.zone}: ${lb.dmg} dmg vs fist ${fistDmg}` : 'no hit');
     pads[0].buttons[1].pressed = false; step(2);
+    // ---- the Krasnovian laborer: same disarm as Bat Boy, but a steel pipe that never breaks; the conscript is plain fodder
+    run(`clearEnemies(); player.hp = 100; for (const p of props.slice()) if (p.type === 'bat') p.break();`); setGrip(R, 0.2, 1.3, -0.25); step(3);
+    const lab = new TW.Enemy('laborer'); lab.placeAt(0, -1.25, 0); lab.state = 'approach'; lab.cooldown = 0; TW.enemies.push(lab);
+    check('the laborer spawns holding a pipe', lab.weapon && lab.weapon.type === 'pipe' && lab.weapon.batLike && lab.weapon.heldByEnemy === lab);
+    guard = 0; while (!(lab.state === 'windup' && lab.timer > lab.windupTime * 0.6) && guard++ < 900) step(1);
+    { const kp = lab.weapon.body.by, mp = kp.knob.x.clone().lerp(kp.tip.x, 0.6), fp = mp.clone().add(new THREE.Vector3(0.05, -0.1, 0.4));
+      setGrip(R, fp.x, fp.y, fp.z); step(2);
+      for (let i = 0; i < 6; i++) { R.position.lerpVectors(fp, mp, (i + 1) / 6); step(1); } }
+    check('swatting the pipe mid-swing disarms him', !lab.weapon && lab.state === 'stagger', lab.state);
+    setGrip(R, 0.2, 1.3, -0.25); step(Math.ceil(1.5 / DT));
+    const pipe = TW.props.find(p => p.type === 'pipe');
+    const pgp = pipe.grabPoint(new THREE.Vector3());
+    setGrip(R, pgp.x, pgp.y + 0.03, pgp.z); step(2); pads[0].buttons[1].pressed = true; step(2);
+    check('you can pick the pipe up', TW.hands.right.held === pipe);
+    pads[0].buttons[1].pressed = false; step(2);
+    run(`clearEnemies();`);
+    const cs = new TW.Enemy('conscript'); cs.placeAt(0, -1.3, 0); TW.enemies.push(cs); step(5);
+    check('the conscript spawns unarmed, with fodder health', !cs.weapon && cs.hp === TW.CFG.enemies.conscript.hp && cs.tris > 0);
+    run(`clearEnemies(); for (const p of props.slice()) if (p.type === 'pipe') p.break();`);
     // ---- Aoki Security: the riot shield eats punches from the front and he answers with the baton
     run(`clearEnemies(); player.hp = 100; game.state = 'fight'; game.queue = [];`);
     TW.rig.position.set(0, 0, 0); TW.rig.rotation.y = 0; setGrip(L, -0.25, 1.0, -0.2); setGrip(R, 0.25, 1.0, -0.2); step(3);

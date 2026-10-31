@@ -86,5 +86,8 @@ const TEX = {
  "sheet_kicker": "assets/tex/sheet_kicker.png",
  "sign_low": "assets/tex/sign_low.png",
  "sign_shatter": "assets/tex/sign_shatter.png",
- "bar_atlas": "assets/tex/bar_atlas.png"
+ "bar_atlas": "assets/tex/bar_atlas.png",
+ "sheet_conscript": "assets/tex/sheet_conscript.png",
+ "sheet_laborer": "assets/tex/sheet_laborer.png",
+ "pipe": "assets/tex/pipe.png"
 };

@@ -108,6 +108,20 @@ const BODIES = {
     r.torso[3].push((a) => tbox(a, null, 0.44, 0.58, 0.4, 0.3, 0.3, 0.24, chest([32, 32, 48, 34]), { faces: 'fblrt' }));   // bomber collar
     return r;
   },
+  conscript() {   // Krasnovian conscript: a greatcoat two sizes too big, a fur ushanka with the flaps down, boots
+    const r = humanoid({ torso: TA, legs: TD_L, arms: [32, 48, 48, 58], hands: [32, 60, 48, 64], feet: TD_R, shoulder: 0.62, chestD: 0.34, waist: 0.46 });
+    r.hips[3].push((a) => tbox(a, null, 0.06, -0.6, 0.48, 0.32, 0.62, 0.44, { '*': TB }, { sub: 2, faces: 'fblr' }));   // coat skirt to the knee
+    r.head[3].push((a) => tbox(a, null, 0.22, 0.38, 0.28, 0.31, 0.26, 0.29, { '*': HAIR }, { z: -0.01, faces: 'fblrt' }));   // the fur crown
+    r.head[3].push((a) => tbox(a, null, 0.04, 0.24, 0.29, 0.15, 0.29, 0.15, { '*': HAIR }, { z: -0.02, faces: 'lr' }));    // ear flaps
+    for (const nm of ['l', 'r']) r['farm' + nm][3].push((a) => tbox(a, null, -0.2, -0.27, 0.15, 0.15, 0.15, 0.15, { '*': [32, 48, 48, 58] }, { faces: 'fblr' }));   // sleeves past the wrist
+    return r;
+  },
+  laborer() {     // Krasnovian laborer: quilted work jacket, red scarf, knit cap, heavy boots; a steel pipe in the right fist
+    const r = humanoid({ torso: TA, legs: TD_L, arms: [32, 48, 48, 59], hands: [32, 60, 48, 64], feet: TD_R, shoulder: 0.66, chestD: 0.38, waist: 0.5, thighW: 0.2 });
+    r.hips[3].push((a) => tbox(a, null, -0.02, 0.16, 0.48, 0.32, 0.48, 0.32, { '*': TB }, { faces: 'fblr' }));   // jacket hem below the waist
+    r.head[3].push((a) => tbox(a, null, 0.23, 0.33, 0.25, 0.28, 0.21, 0.24, { '*': HAIR }, { z: -0.01, faces: 'fblrt' }));   // knit cap
+    return r;
+  },
   rocco() {    // Columbian bouncer: a boxer without headgear, broader
     const r = BODIES.boxer(true, 0.64);
     r.torso[3].push((a) => tbox(a, null, 0.3, 0.52, 0.56, 0.34, 0.64, 0.36, chest(TA), { z: 0.01, faces: 'fblr' }));
@@ -161,6 +175,10 @@ const POSES = {
   lobRelease: { torso: [16, -10, 0], head: [6, 0, 0], uarmr: [-110, 0, 6], farmr: [-6, 0, 0], uarml: [-20, 0, -14], farml: [-30, 0, 0], thighl: [-18, 0, -6], shinl: [18, 0, 0] },
 };
 POSES.rocco = POSES.boxer; POSES.ivan = POSES.wrestler; POSES.volkov = POSES.wrestler;
+POSES.conscript = { torso: [12, 4, 0], head: [16, -10, 8], uarml: [2, 0, -8], farml: [-18, 0, 0], uarmr: [2, 0, 8], farmr: [-22, 0, 0],   // slouched, head lolling
+  thighl: [-4, 0, -4], thighr: [4, 0, 4], hips: [0, 6, 0] };
+POSES.laborer = { torso: [8, -6, 0], head: [-2, 6, 0], uarml: [-14, 0, -12], farml: [-36, 0, 0], uarmr: [-30, 0, 28], farmr: [-90, 0, 0],
+  thighl: [-8, 0, -8], shinl: [10, 0, 0], thighr: [6, 0, 8], hips: [0, 10, 0] };
 Object.assign(POSES, {
   secguard: { torso: [8, 0, 0], head: [-4, 0, 0], uarml: [-15, 0, 16], farml: [-55, 0, 0], uarmr: [10, 0, 14], farmr: [-30, 0, 0],
     thighl: [-10, 0, -6], shinl: [12, 0, 0], thighr: [8, 0, 6], hips: [0, -10, 0] },
