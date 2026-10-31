@@ -214,6 +214,56 @@ const PAINT = {
   },
   decoGold() { const p = new Pix(16, 8); p.fill('#c9a04a', EM); p.rect(0, 0, 16, 1, '#fff0b0', EM); for (let x = 1; x < 16; x += 3) p.rect(x, 2, 1, 6, '#9a7420', EM); return p; },
   sunburst() { const p = new Pix(16, 16); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const a = Math.atan2(15 - y, x - 7.5), d = Math.hypot(x - 7.5, 15 - y); if (a > 0 && d < 8.5 && (Math.floor(a / Math.PI * 11) % 2 === 0 || d < 2.5)) p.set(x, y, d < 2.5 ? '#fff0b0' : PC.gold, EM); } return p; },
+  // the skyline pass: Aoki Development's black glass, its crown boards; Columbia's floodlit crowns and mooring mast
+  glassBlack() {   // near-black glass, thin mullions, a few cold-white floors still working late
+    const p = new Pix(32, 32); p.fill('#07080e'); for (let x = 0; x < 32; x += 8) p.rect(x, 0, 1, 32, '#151a2a');
+    for (let y = 1; y < 32; y += 4) { p.rect(0, y + 2, 32, 1, '#0d1018'); let x = 0; while (x < 32) { const run = 3 + Math.floor(prng() * 9), q = prng(); if (q < 0.2) p.rect(x, y, Math.min(run, 32 - x), 1, q < 0.03 ? '#ff3020' : '#b8c8e8', EM); x += run + 2 + Math.floor(prng() * 6); } }
+    return p;
+  },
+  aokiBoard() {   // the crown's neon fascia: AOKI in white on red, brush marks either side
+    const p = new Pix(64, 16); p.fill('#d81e18', EM); p.rect(0, 0, 64, 1, '#ffffff', EM); p.rect(0, 15, 64, 1, '#ffffff', EM);
+    p.bigText('AOKI', 9, 1, '#5a0604', EM); p.bigText('AOKI', 8, 1, '#ffffff', EM);
+    p.glyph(0, 1, 4, '#ffd8c8', EM); p.glyph(3, 58, 4, '#ffd8c8', EM); return p;
+  },
+  neonLattice() {   // Aoki's crown: red neon tubes on black glass, lit all the way up
+    const p = new Pix(16, 16); p.fill('#2a0606', EM);
+    for (let k = 0; k < 16; k += 4) { p.rect(k, 0, 1, 16, '#ff3020', EM); p.rect(0, k, 16, 1, '#ff3020', EM); }
+    p.rect(0, 0, 16, 1, '#ffd0c0', EM); p.rect(2, 2, 1, 1, '#ff8070', EM); p.rect(10, 6, 1, 1, '#ff8070', EM); return p;
+  },
+  decoFlood() {   // floodlit limestone: lamps on the setback below wash the piers bright, fading upward
+    const p = new Pix(16, 32);
+    for (let y = 0; y < 32; y++) {
+      const k = 0.55 + 0.45 * (y / 31), pier = [255 * k, 238 * k, 196 * k].map(Math.round), slot = [150 * k, 112 * k, 60 * k].map(Math.round);
+      for (let x = 0; x < 16; x++) p.set(x, y, (x % 8) < 3 ? pier : slot, EM);
+      if (y % 6 === 2) for (let x = 3; x < 16; x += 8) p.rect(x, y, 5, 2, prng() < 0.5 ? '#ffe2a0' : '#3a2a16', EM);
+    }
+    return p;
+  },
+  mastLit() {   // the mooring mast: floodlit cream ribs between gold, dark glass between them
+    const p = new Pix(16, 16); p.fill('#2a2418', EM); for (let x = 0; x < 16; x += 4) { p.rect(x, 0, 2, 16, '#fff0c8', EM); p.set(x + 2, 0, '#c9a04a', EM); }
+    for (let y = 3; y < 16; y += 8) p.rect(0, y, 16, 1, '#f2c14e', EM); return p;
+  },
+  royalSign() {   // the Royal Hotel's vertical neon: ROYAL in red, gold frame
+    const p = new Pix(16, 64); p.fill('#140a08', EM); p.rect(0, 0, 16, 64, PC.gold, EM); p.rect(1, 1, 14, 62, '#140a08', EM);
+    'ROYAL'.split('').forEach((ch, i) => { p.bigText(ch, 3, 2 + i * 12, '#ff5a3c', EM); }); return p;
+  },
+  // ---- the Halcyon zeppelin: cream hull, gold deco ribs, navy belly band, FLY HALCYON down each flank
+  hull() {   // u runs along the hull, v around it (the belly in the lower middle of the texture)
+    const p = new Pix(32, 16); p.fill('#e6dac0');
+    p.rect(0, 11, 32, 1, PC.gold); p.rect(0, 12, 32, 1, '#1a2a5a'); p.rect(0, 13, 32, 1, PC.gold);   // the belly band (row 12 = straight down)
+    for (let x = 0; x < 32; x += 8) p.rect(x, 0, 1, 16, '#c9a04a');
+    p.speck('#d6c8aa', 10); return p;
+  },
+  zepAd() { const s = 'FLY HALCYON', p = new Pix(72, 12); p.fill('#1a2a5a', EM); p.rect(0, 0, 72, 1, PC.gold, EM); p.rect(0, 11, 72, 1, PC.gold, EM); p.text(s, Math.round(36 - textW(s) / 2), 3, '#fff0b0', EM); return p; },
+  gondola() { const p = new Pix(16, 8); p.fill('#1a2a5a'); p.rect(0, 0, 16, 1, PC.gold); for (let x = 1; x < 16; x += 3) p.rect(x, 2, 2, 3, '#ffd8a0', EM); return p; },
+  fin() { const p = new Pix(8, 8); p.fill('#1a2a5a'); p.rect(0, 0, 8, 1, PC.gold); p.rect(0, 7, 8, 1, PC.gold); p.rect(7, 0, 1, 8, PC.gold); return p; },
+  litGreen() { const p = new Pix(4, 4); p.fill('#40ff70', EM); return p; },
+  glow() {   // additive halo (beams mesh): white at the centre fading to black; the vertex colour tints it
+    const p = new Pix(16, 16); for (let y = 0; y < 16; y++) for (let x = 0; x < 16; x++) { const d = Math.min(1, Math.hypot(x - 7.5, y - 7.5) / 7.5), v = Math.round(255 * Math.pow(1 - d, 2)); p.set(x, y, [v, v, v]); } return p;
+  },
+  beamGrad() {   // additive searchlight / light-trail cross-section: bright core, soft edges
+    const p = new Pix(16, 4); for (let x = 0; x < 16; x++) { const d = Math.abs(x - 7.5) / 7.5, v = Math.round(255 * Math.pow(1 - d, 1.6)); p.rect(x, 0, 1, 4, [v, v, v]); } return p;
+  },
   roofDark() { const p = new Pix(8, 8); p.fill('#1e1c22'); p.speck('#2a2830', 6); return p; },
   beam() { const p = new Pix(8, 8); for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if ((x + y) % 3 === 0) p.set(x, y, '#ffe8b8', EM); return p; },
   smoke() { const p = new Pix(8, 8); for (let y = 0; y < 8; y++) for (let x = 0; x < 8; x++) if ((x + y) & 1 && (x - 3.5) ** 2 + (y - 3.5) ** 2 < 14) p.set(x, y, '#3a2e34'); return p; },
