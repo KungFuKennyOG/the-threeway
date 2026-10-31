@@ -110,7 +110,9 @@ function buildPalaceOutside(acc) {
   plStatue(acc, -40, 164, 0);
   // the forecourt: granite, flagpoles, the Bear on the hoardings, the Palace's sign over the foyer
   ground(acc, 'paving', fx0 - 4, fz0, fx1 + 4, fz1, 0.006, 4, { cell: 4 });
-  ground(acc, 'asphaltK', -74, fz1, -6, 253, 0, 8, { cell: 8 });
+  // asphalt round the drum, never under a floor you can see from inside (the two would fight at the doors)
+  for (const [a, b, c, d] of [[-74, -58, fz1, 253], [-22, -6, fz1, 253], [-58, PL.annex[0] - 0.2, fz1, 207], [PL.annex[1] + 0.2, -22, fz1, 207], [-58, g0 - 0.2, 245, 253], [g1 + 0.2, -22, 245, 253]])
+    ground(acc, 'asphaltK', a, c, b, d, 0, 8, { cell: 8 });
   for (const x of [-58, -54, -26, -22]) { sbox(acc, 'iron', x, 0, 174.6, 0.1, 0.1, 9, 0, { u: 1, v: 1 }); plate(acc, 'flag_kras', x + 0.8, 8.2, 174.6, 1.5, 1.0, 0, 0, [0, 0, 1, 1], true); plSolid(x - 0.1, 174.5, x + 0.1, 174.7, 0, 9); }
   for (const [x, phi] of [[-61.5, Math.PI / 2], [-18.5, -Math.PI / 2]]) {
     for (const s of [-1.2, 1.2]) sbox(acc, 'iron', x, 0, 177 + s, 0.1, 0.1, 2.0, 0, { u: 1, v: 1, top: false });
@@ -174,7 +176,7 @@ function buildPalaceInside(acc) {
   const L = PL.inLamps, C = CFG.palace.light, [g0, g1] = PL.gap, [d0, d1] = PL.doorW, TH = PL.tunnelH;
   // ---- the foyer: terrazzo, the glass front from inside, ticket windows, the trophy cabinet, the Bear's posters
   { const [x0, x1, z0, z1, H] = PL.foyer;
-    pzWalls(acc, 'sportWall', [x0, x1, z0 + 0.02, z1], 0, H, { s: [[d0, d1, 2.8]], n: [[d0, d1, 2.8]] });
+    pzWalls(acc, 'sportWall', [x0, x1, z0 + 0.02, z1], 0, 3, { s: [[d0, d1, 2.8]], n: [[d0, d1, 2.8]] }); pzWalls(acc, 'creamWall', [x0, x1, z0 + 0.02, z1], 3, H - 3);
     pzFloorCeil(acc, [x0, x1, z0, z1], 0, H, 'paving');
     for (const z of [182.5, 185, 187.5]) plate(acc, 'ticketWin', x0, 1.4, z, 1.6, 1.6, Math.PI / 2, 0.02);
     sbox(acc, 'darkwood', x0 + 0.4, 0, 185, 0.8, 7.4, 1.0, 0, { u: 1, v: 1 }); plSolid(x0, 181.2, x0 + 0.8, 188.8, 0, 1.0);
@@ -184,7 +186,7 @@ function buildPalaceInside(acc) {
     for (const [x, z] of [[-45, 183.5], [-35, 183.5], [-40, 187.5]]) { sbox(acc, 'litWarm', x, H - 0.1, z, 0.5, 0.5, 0.1, 0, { u: 1, v: 1 }); plLight(L, x, H - 0.4, z, '#ffd8a0', 7.5, 1.2); } }
   // ---- the gym: sprung floor, wall bars, mats, a vaulting horse, a beam, rings, the barbells
   { const [x0, x1, z0, z1, H] = PL.gym;
-    pzWalls(acc, 'sportWall', [x0, x1, z0, z1], 0, H, { s: [[d0, d1, 2.8]], n: [[g0, g1, TH - 0.2]] });
+    pzWalls(acc, 'sportWall', [x0, x1, z0, z1], 0, 3, { s: [[d0, d1, 2.8]], n: [[g0, g1, TH - 0.2]] }); pzWalls(acc, 'creamWall', [x0, x1, z0, z1], 3, H - 3);
     pzFloorCeil(acc, [x0, x1, z0, z1], 0, H, 'sportFloor');
     for (const [x, phi] of [[x0, Math.PI / 2], [x1, -Math.PI / 2]]) for (const z of [192, 194.8, 197.6]) plate(acc, 'wallBars', x, 1.5, z, 2.6, 2.8, phi, 0.06);
     for (const z of [192.4, 195.4, 198.2]) plate(acc, 'windowNight', x0, 4.4, z, 1.6, 1.6, Math.PI / 2, 0.02);
@@ -196,7 +198,7 @@ function buildPalaceInside(acc) {
     for (const x of [-45.5, -44.6]) { sbox(acc, 'iron', x, 2.0, 193, 0.03, 0.03, H - 2.0, 0, { u: 1, v: 1, top: false, cell: 99 }); cyl(acc, 'darkwood', x, 1.85, 193, 0.14, 0.14, 0.12, 6, { u: 1, v: 1 }); }
     sbox(acc, 'iron', x1 - 0.5, 0.9, 191.2, 0.1, 1.9, 0.06, 0, { u: 1, v: 1 }); for (const s of [-0.85, 0.85]) cyl(acc, 'black', x1 - 0.5, 0.55, 191.2 + s, 0.22, 0.22, 0.7, 8, { u: 1, v: 1 });
     sbox(acc, 'iron', x1 - 0.5, 0, 191.2, 0.4, 1.4, 0.9, 0, { u: 1, v: 1 }); plSolid(x1 - 0.8, 190.3, x1, 192.1, 0, 1.0);
-    for (const z of [192, 195, 198]) { sbox(acc, 'fluor', -40, H - 0.1, z, 2.6, 0.24, 0.1, 0, { u: 1, v: 1 }); plLight(L, -40, H - 0.4, z, '#e8f4ff', 8.5, 1.15); } }
+    for (const [x, z] of [[-45, 192.2], [-35, 192.2], [-45, 197.4], [-35, 197.4]]) { sbox(acc, 'fluor', x, H - 0.1, z, 2.6, 0.24, 0.1, 0, { u: 1, v: 1 }); plLight(L, x, H - 0.4, z, '#e8f4ff', 10, 1.4); } }
   // ---- the players' tunnel under the south stands: green dado, a bare bulb
   { const [z0, z1] = [PL.gym[3], PL.bowl[2]];
     plFace(acc, 'stairWall', g0, z0, g0, z1, 0, TH, 1, 0); plFace(acc, 'stairWall', g1, z0, g1, z1, 0, TH, -1, 0);

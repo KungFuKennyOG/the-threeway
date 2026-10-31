@@ -42,9 +42,8 @@ const key = (type, code, extra = {}) => { for (const f of listeners[type] || [])
 els.deskBtn.fire('click');
 const TW = ctx.__tw;
 if (LEVEL === 'street' || LEVEL === 'road') run('startStreet(false)');
-if (LEVEL === 'depot') run('startDepot(false)');
 if (LEVEL === 'superblock') run('startSuperblock(false)');
-const FINAL = { bar: 'bar', both: 'street', street: 'street', depot: 'depot', superblock: 'superblock', road: 'superblock' }[LEVEL];
+const FINAL = { bar: 'bar', both: 'street', street: 'street', superblock: 'superblock', road: 'superblock' }[LEVEL];
 const stats = { tiers: {}, frames: 0, minHp: 100, errors: [], states: {}, waves: new Set(), grabs: 0, throws: 0, drinks: 0, blocks: 0, clinches: 0, parries: 0,
   catchTries: 0, throwBacks: 0, projHits: 0, tags: 0, enraged: [], waveTimes: [], lobs: 0, maxProps: 0 };
 let lastWave = -1, waveStart = 0, catchState = null; const seenCarry = new Set(); let aimingAt = null;
@@ -126,10 +125,10 @@ try {
         const heavy = (punchSide % 3) === 2;
         els.c.fire('mousedown', { button: (punchSide++) % 2 ? 2 : 0, shiftKey: heavy });
       }
-    } else if (['street', 'depot', 'superblock'].includes(TW.level.name) && ['walk', 'cleared', 'intro', 'fight'].includes(G.state) && !live.length) {
+    } else if (['street', 'superblock'].includes(TW.level.name) && ['walk', 'cleared', 'intro', 'fight'].includes(G.state) && !live.length) {
       // nothing to hit: head down the road (aim at the middle of the next stretch)
       const hz = TW.player.head.z;
-      const gx = TW.level.name === 'depot' ? TW.DEPOT.x : TW.level.name === 'superblock' ? (hz < 79 ? -4.6 : hz < 94 ? -19.8 : TW.SB.door[0]) : 0, gz = hz + 6;   // superblock: the gate, the arch, the door
+      const gx = TW.level.name === 'superblock' ? (hz < 79 ? -4.6 : hz < 94 ? -19.8 : TW.SB.door[0]) : 0, gz = hz + 6;   // superblock: the gate, the arch, the door
       aimAt({ x: gx, y: 1.6, z: gz }); press('Space', false); press('KeyS', false); press('KeyW', true);
       stats.streetMax = Math.max(stats.streetMax || 0, hz);
     } else { press('KeyW', false); press('Space', false); }

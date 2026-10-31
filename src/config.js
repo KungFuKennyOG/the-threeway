@@ -185,23 +185,7 @@ const CFG = {
             ['crate', -41, 119, 33.6], ['crate', -40.2, 119.2, 33.6], ['bin', -21, 128.8, 33.6]],
     light: { inAmbient: [0.1, 0.095, 0.1] },
   },
-  // ---- the old level 3: Tram Depot 7, Krasnovia (scrapped as a location; its ring moves to the Palace of Sport) (positions are local to the depot gate: lx across, lz in; see src/depot/build.js)
-  depot: {
-    start: [0, 2.2],                           // where you arrive (through the gate), facing into the yard
-    spawnGap: 1.2, clearedPause: 1.6, healBetween: 25,
-    encounters: [
-      { name: 'yard', trigger: 4, arena: [0.6, 31.6], respawn: [0, 3], sign: 'yard',
-        spawn: [['wrestler', -10, 24], ['cook', 12, 28], ['wrestler', 9, 4.5]] },
-      { name: 'hall', trigger: 35, arena: [32.5, 64], respawn: [0, 35.5], sign: 'hall',
-        spawn: [['secguard', 0, 60], ['wrestler', -11, 56], ['cook', 12, 62], ['kicker', 0, 33]] },
-      { name: 'ring', trigger: 64.5, arena: [62, 79.4], respawn: [0, 64.6], sign: 'volkov', boss: true,
-        spawn: [['volkov', 0, 72]] },
-    ],
-    enrageAt: 0.5,                             // the boss loses it below this share of his health
-    props: [['crate', -8.5, 3], ['crate', -8.9, 3.8], ['bin', 13.5, 12], ['sign', -16.6, 30], ['crate', 12.5, 36], ['bin', -12, 34],
-            ['crate', 16.4, 52], ['bottle', 24, 50.5], ['bottle', 24.1, 52], ['bottle', 26.8, 48]],
-    light: { sodiumRadius: 14, sodiumK: 1.5, floodRadius: 18, floodK: 1.4, tube: '#dfefff', tubeRadius: 13, tubeK: 1.25, workRadius: 9, workK: 1.6, ring: '#ffd8a0', ringRadius: 7.5, ringK: 1.6, hallAmbient: [0.1, 0.1, 0.115] },
-  },
+
   debugLabels: true,          // floating LIGHT / SOLID / HEAVY labels at hit points
   labelScale: 0.0035,         // metres per label pixel
 };

@@ -82,14 +82,25 @@ There are no stairs anywhere (VR): lifts and a cradle do the climbing, so your v
 - **Lift B** at the far end takes you to **the wing's roof**, 34 m up, with the 22-storey point block towering beside you and the whole city around. A roof fight.
 - **The cradle:** step into the window-cleaner's cradle and it lowers you down the north face to the railway bank. The Palace of Sport is next.
 
-The old level 3, Tram Depot 7, is still on the menu as "Old: Tram Depot 7". The location is scrapped, and Volkov's ring moves to the Palace of Sport.
+## Act 1, level 5: the Palace of Sport
+
+Still one flat floor all the way, no cut from the railway bank.
+
+- **The level crossing:** through a gap in the railway fence. The barriers are down, the lamps wig-wag, the bells ring, and the evening electric (four green cars) comes out of the tunnel under the wall and thunders past. Then the barriers lift.
+- **The Boulevard of Champions:** paving between clipped poplars, benches, sodium lamps, a bronze-ish champion on a plinth holding up a gilt wreath, the Palace's drum lit up ahead. A fight (sambo, conscripts, a laborer).
+- **The forecourt and the foyer:** flagpoles, the Bear on the hoardings, PALACE OF SPORT over a glass front. Inside: ticket windows, the trophy cabinet, Volkov's posters.
+- **The gym:** wall bars, mats, a vaulting horse, a beam, rings, a barbell rack. A fight (gymnasts, a lifter, sambo) that holds you in.
+- **The arena:** out of the players' tunnel onto the sports floor, the stands full on all four sides, slogan boards, banners, a lighting truss, the scoreboard (VOLKOV 9 : GUEST 0), the ring under its lamps. **Bogdan "the Bear" Volkov** in the ring: boss bar, enrages at half health.
+- **The north doors:** shut behind a steel shutter until he's down; then out onto Parade Square.
+
+The old Tram Depot 7 level is gone (it stood where the Palace's grounds are now). Its paintings stay in `src/depot/paint.js`: the Palace and the railway reuse them.
 
 ## Quest performance
 
 - **Merged static geometry.** The whole bar room is one mesh on one atlas (`tools/bar_atlas.py` packs its textures; the shader tiles each texture inside its box of the atlas). The street is one mesh on a painted, mipmapped atlas, the skylines and far city another. Light is **baked per vertex** at build time with the shader's own formula, so any number of gas lamps is free; goons, props and hands are lit live by the 6 nearest lamps (the bar's six inside).
 - **Prop batches.** Every stool, crate, bin and street sign is written into one mesh per material each frame (a few hundred vertices on the CPU), so a room full of stools or a street full of crates is one draw call.
 - **LOD stand-ins.** Past the Old Quarter's edge every building is one cheap box with its lit windows painted on, always drawn, out to ~400 m: you see the city's lights and rooflines all the way to the skylines, nothing pops. The street atlas is mipmapped (wrapped gutters), so far things average instead of sparkling.
-- **Portal culling.** The world is rooms joined by doorways (`src/rooms.js`): you're in one room, and a neighbour is drawn only if the doorway into it is open and in view (and the room beyond that only if its doorway is too). The bar and the street only draw each other through the open door; inside with the door shut, the street, skylines and sky aren't drawn at all. The depot hall and workshop work the same way.
+- **Portal culling.** The world is rooms joined by doorways (`src/rooms.js`): you're in one room, and a neighbour is drawn only if the doorway into it is open and in view (and the room beyond that only if its doorway is too). The bar and the street only draw each other through the open door; inside with the door shut, the street, skylines and sky aren't drawn at all. The levels' insides (podezd 3, the Palace) work the same way.
 - Measured in Chromium: 9 draw calls in the bar (was 26), 8–9 down the street, 18 looking back at the Threeway through its open door (was 49). ~52k static triangles, most of them the always-on skylines and far city.
 - **One draw call per goon.** Each goon is a single CPU-skinned mesh: every body part's vertices are moved by its ragdoll frame each frame, and the hurt/KO faces swap by rewriting the face UVs. Previously each goon was 14 to 16 draw calls. Stools are one mesh on a vinyl + chrome atlas.
 - **Perf panel.** Left X (desktop: P) shows fps, physics ms per frame, draw calls and the current quality level on your left wrist, plus live tuning for ragdoll pull, hit shove, knockback, fist pitch in the controller and vertex snap. Tuning is saved in the browser.
@@ -98,7 +109,7 @@ The old level 3, Tram Depot 7, is still on the menu as "Old: Tram Depot 7". The 
 
 ## Tuning
 
-Every number lives in `CFG` in `src/config.js` (level 2: `CFG.street`: the stretches, triggers, spawns and arenas, street props, gaslight, fog, sky glow; level 3: `CFG.depot`: the fights, the props, sodium/tube/ring light, Volkov's enrage point; Volkov himself is in `CFG.enemies.volkov`): physics (`CFG.physics`: how hard goons follow their animation, hit shoves, personal space, domino and impact speeds), tier thresholds, damage and poise per tier, hitstop, knockback, magnetism, block and dodge distances, grab and throw, weapons and projectiles, per-enemy stats, the boss tag team (`CFG.boss`), waves, perf/auto quality (`CFG.perf`), render settings (desktop lines, VR framebuffer scale, snap/affine per mode), and `hands.modelPitchDeg` for how the fist model sits in the controller.
+Every number lives in `CFG` in `src/config.js` (level 2: `CFG.street`: the stretches, triggers, spawns and arenas, street props, gaslight, fog, sky glow; the levels after the street: `CFG.superblock`, `CFG.podezd`, and `CFG.palace` etc. in each level's own file; Volkov himself is in `CFG.enemies.volkov`): physics (`CFG.physics`: how hard goons follow their animation, hit shoves, personal space, domino and impact speeds), tier thresholds, damage and poise per tier, hitstop, knockback, magnetism, block and dodge distances, grab and throw, weapons and projectiles, per-enemy stats, the boss tag team (`CFG.boss`), waves, perf/auto quality (`CFG.perf`), render settings (desktop lines, VR framebuffer scale, snap/affine per mode), and `hands.modelPitchDeg` for how the fist model sits in the controller.
 
 ## Tests
 
@@ -109,8 +120,8 @@ node test/street.js    # 41 checks: one-mesh bar room, prop batches, LOD stand-i
 node test/floors.js     # 29 checks: raised floors, ramps and stairs (a test staircase): the bar unchanged bit for bit, easing up a flight, landing edges, goons fighting, falling and getting up on a landing, props on floors
 node test/podezd.js     # 30 checks: in from the courtyard (no cut), the lobby, lift A breaks at the 7th, the landing, the link, the corridor fight, lift B, the roof (respawn on the roof), the cradle down; rides smooth (mm per frame), goons on their floors, rooms, physics cost
 node test/superblock.js  # 29 checks: past the boom with no cut, one baked mesh + triangle budget, nothing from the skylines on it, the gate/arch/slabs/garages as walls, Krasnovian-only fights in order, restart a stretch, the door ends the level, physics cost
-node test/depot.js     # 29 checks (the old level 3): the depot's three baked meshes + triangle budget, nothing from the skylines on it, walls, track doors, workshop door, solid trams, rooms + portals (hall/workshop drawn only through doorways), the yard and hall fights (trigger, spawn, arena lock, clear, lose + restart), Volkov (boss bar, enrage, clear), street boom → depot, hall physics cost
-node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street; --level=superblock: the gate and the courtyard; --level=road: the street, through the boom, on into Superblock 14; --level=depot: the old depot)
+node test/palace.js     # 30 checks: off the cradle through the fence gap (no cut), the crossing shut, the train out of the tunnel and past, the barriers up, the boulevard fight, the glass front as a wall, the gym fight (held in), Volkov (boss bar, the stands as walls, the shutter, lose + restart, enrage), out the north doors, rooms, physics cost
+node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street; --level=superblock: the gate and the courtyard; --level=road: the street, through the boom, on into Superblock 14)
 node test/vr.js        # 56 checks: the laborer's pipe (disarm, pick up), the conscript, level 2 in VR (start outside, stick walking, held in by the stretch), tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
 node test/physics.js   # 47 checks: heights for all 9 goons, skinned mesh vs skeleton, one mesh per goon/stool, shove + recover, launch, get-up, dominoes, the cook's lob accuracy, Rocco & Ivan tag + enrage
 node test/bot.js 1 400 --mode=aggro    # a bot plays all four rounds (catches pots, throws them back); prints hits, losses, catches, tags, per-round times, errors
@@ -130,9 +141,9 @@ Three.js r149 from jsDelivr, WebXR, synthesized placeholder audio. Plain script 
 | `src/geometry.js` | mesh builders, static batching, light baking |
 | `src/bar.js`, `src/bar_atlas.js` | the bar room (one mesh on one atlas: `tools/bar_atlas.py`), walkable areas, the door |
 | `src/street/` | level 2: `paint.js` (painted street atlas), `build.js` (the square, the road, the checkpoint), `skylines.js` (the three sectors, the far city, the sky), `fight.js` (stretches, portals, signs) |
-| `src/kras/` | Krasnovian interiors: `paint.js` (stairwell paint, padded doors, mailboxes, kitchen tiles, the lift), `podezd.js` (podezd 3: the lobby, the 7th, the wing's corridor and roof, two lifts, the cradle, the railway bank) |
+| `src/kras/` | Krasnovia: `paint.js` (stairwell paint, padded doors, the lift; the Palace's drum, crowd, sports floor, the train), `podezd.js` (podezd 3: the lobby, the 7th, the wing's corridor and roof, two lifts, the cradle, the railway bank), `palace.js` (the Palace of Sport: the level crossing and the train, the boulevard, the foyer, the gym, the arena, `CFG.palace`) |
 | `src/superblock/` | Act 1's walk into Krasnovia: `paint.js` (slabs, garages, the gate's signs, in the street atlas), `build.js` (the gate, the forecourt, the arch, Superblock 14's courtyard and podezd 3; one baked mesh) |
-| `src/depot/` | the old level 3: `paint.js` (its paintings, in the same street atlas), `build.js` (the yard, the hall, the workshop, the ring; its rooms and doorways) |
+| `src/depot/` | `paint.js`: paintings from the scrapped depot level (track, canvas, ropes, the Bear's poster…), still used |
 | `src/rooms.js` | rooms + portals: what's drawn from where |
 | `src/characters.js` | goon bodies and poses, the player's hands |
 | `src/audio.js`, `src/fx.js` | placeholder sound, sprites and signs |

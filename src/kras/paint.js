@@ -67,6 +67,7 @@ Object.assign(PAINT, {
     p.rect(6, 11, 4, 2, '#fff4d0', EM); p.rect(1, 18, 3, 1, '#ffd890', EM); p.rect(12, 18, 3, 1, '#ffd890', EM); return p;
   },
   paving() { const p = new Pix(32, 32); p.fill('#6a6660'); for (let y = 0; y < 32; y += 8) for (let x = (y / 8 % 2) * 8; x < 32; x += 16) p.rect(x, y, 8, 8, '#625e58'); for (let k = 0; k < 32; k += 8) { p.rect(0, k, 32, 1, '#4a4640'); p.rect(k, 0, 1, 32, '#4a4640'); } p.speck('#7a766e', 24); p.speck('#56524c', 18); return p; },
+  creamWall() { const p = new Pix(16, 16); p.fill('#d8d2c0'); p.speck('#ccc6b4', 14); p.speck('#e2dccc', 8); return p; },
   sportWall() { const p = new Pix(16, 32); p.fill('#d8d2c0'); p.speck('#ccc6b4', 16); p.rect(0, 18, 16, 14, '#3a5a8a'); p.rect(0, 18, 16, 1, '#b8231e'); p.speck('#466698', 12); return p; },   // one repeat = 2 m x 4 m: cream over a blue dado
   arenaBoard() {   // the boards round the floor: slogans, red and cream (one repeat = 4 m x 1.1 m)
     const p = new Pix(32, 9); const w = ['SPORT', 'HEALTH', 'LABOUR', 'GLORY', 'VOSTOK'][Math.floor(prng() * 5)], red = prng() < 0.5;

@@ -30,11 +30,11 @@ function startStreet(fromBar) {
   game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
   showSign('street', 2.6);
 }
-// The street and the depot share one flow: stretches with arena locks, spawns, clear, lose + restart, finish.
-// Their configs (CFG.street, CFG.depot) use positions relative to the level's origin.
-const stageCfg = () => level.name === 'depot' ? CFG.depot : LEVELS[level.name] ? LEVELS[level.name].cfg() : CFG.street;
-const stageOrigin = () => level.name === 'depot' ? [DEPOT.x, DEPOT.z] : LEVELS[level.name] && LEVELS[level.name].origin ? LEVELS[level.name].origin() : [0, 0];
-const STAGES = { has: (n) => n === 'street' || n === 'depot' || !!LEVELS[n] };   // levels run by updateStreet() (src/levels.js)
+// The street and every registered level share one flow: stretches with arena locks, spawns, clear, lose + restart, finish.
+// Their configs (CFG.street, CFG.<level>) use positions relative to the level's origin (world, unless it says otherwise).
+const stageCfg = () => LEVELS[level.name] ? LEVELS[level.name].cfg() : CFG.street;
+const stageOrigin = () => LEVELS[level.name] && LEVELS[level.name].origin ? LEVELS[level.name].origin() : [0, 0];
+const STAGES = { has: (n) => n === 'street' || !!LEVELS[n] };   // levels run by updateStreet() (src/levels.js)
 // an encounter starts when you walk past its `trigger` (z, along the level), or, with `at: [x0, x1, z0, z1, y0, y1]`, when you
 // stand inside that box on a floor between y0 and y1 (levels that climb). `lock`: walk areas shut while it's on.
 const triggered = (E, z) => E.at ? (player.head.x > E.at[0] && player.head.x < E.at[1] && player.head.z > E.at[2] && player.head.z < E.at[3] && player.floorY >= E.at[4] && player.floorY <= E.at[5]) : z > E.trigger;
@@ -44,19 +44,6 @@ function startEncounter(i) {
   if (typeof LOCKED !== 'undefined') { LOCKED.clear(); for (const a of E.lock || []) LOCKED.add(a); }
   game.state = 'intro'; game.timer = 0; game.queue = E.spawn.slice(); game.spawnT = 0.3; game.bosses = [];
   showSign(E.sign || 'fight', E.boss ? 2.2 : 1.4); if (E.boss) AU.roar(); else AU.bell();
-}
-function startDepot(fromStreet) {
-  level.name = 'depot'; level.encounter = -1; level.arena = null;
-  clearEnemies();
-  if (!fromStreet) { stockProps(); player.hp = CFG.player.health; player.hurtT = 0; game.catches = 0; game.disarms = 0; }
-  else {   // the bar and street props stay behind (whatever's in your hands comes with you)
-    const held = new Set(handList.map(h => h.held));
-    for (const p of props.slice()) if (!held.has(p)) { scene.remove(p.obj); p.body.remove(); p.alive = false; props.splice(props.indexOf(p), 1); }
-  }
-  for (const [type, x, z] of CFG.depot.props) new Prop(type, new V3(DEPOT.x + x, type === 'bottle' ? 0.95 : 0, DEPOT.z + z));
-  placePlayer(DEPOT.x + CFG.depot.start[0], DEPOT.z + CFG.depot.start[1], Math.PI);
-  game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
-  showSign('depot', 2.6);
 }
 // Act 1, level 2: straight on from the checkpoint, no cut. From the street you just keep walking (the boom stays up);
 // from the menu you start just past the boom.
@@ -72,7 +59,7 @@ function startSuperblock(fromStreet) {
   game.state = 'walk'; game.timer = 0; game.queue = []; game.bosses = [];
   showSign('krasnovia', 2.6);
 }
-function updateStreet(dt) {   // the stage flow for whichever level you're in (street or depot)
+function updateStreet(dt) {   // the stage flow for whichever level you're in (the street or a registered level)
   const S = stageCfg(), enc = S.encounters, [ox, oz] = stageOrigin(), z = player.head.z - oz;
   const D = LEVELS[level.name]; if (D && D.update) D.update(dt);   // the level's own rides and set pieces
   if (game.state === 'walk') {
@@ -97,7 +84,6 @@ function updateStreet(dt) {   // the stage flow for whichever level you're in (s
     }
     for (const b of game.bosses) if (b.alive && !b.enraged && S.enrageAt && b.hp < b.maxHp * S.enrageAt) enrage(b);
     if (!game.queue.length && enemies.every(e => !e.alive)) {
-      if (level.name === 'depot' && level.encounter === enc.length - 1) { game.state = 'won'; game.timer = 0; showSign('depotClear', 1e9); AU.bell(); return; }
       game.state = 'cleared'; game.timer = 0; showSign('ko', 1.6);
     }
     return;
@@ -193,8 +179,8 @@ function doorInView() {
   return _v2.dot(_dv) / L > Math.cos(CFG.street.portalDeg * DEG);
 }
 // big signs painted in code (same pixel font as the street), with a hard drop shadow
-const SIGN_TEXT = { depot: ['TRAM DEPOT 7', '#ff9a3c'], yard: ['FIGHT!', '#f2c14e'], hall: ['FIGHT!', '#f2c14e'], volkov: ['THE BEAR', '#e8352b'],
-  depotClear: ['DEPOT CLEARED', '#33e0d0'], street: ['TRIPOINT SQUARE', '#c9a04a'], go: ['GO!', '#33e0d0'], goCheck: ['TO THE CHECKPOINT', '#33e0d0'],
+const SIGN_TEXT = { volkov: ['THE BEAR', '#e8352b'],
+  street: ['TRIPOINT SQUARE', '#c9a04a'], go: ['GO!', '#33e0d0'], goCheck: ['TO THE CHECKPOINT', '#33e0d0'],
   checkpoint: ['CHECKPOINT', '#f2ede4'], doorOpen: ['THE DOOR IS OPEN', '#ff9a3c'], square: ['FIGHT!', '#f2c14e'], road: ['FIGHT!', '#f2c14e'], last: ['LAST STRETCH', '#ff4f9a'] };
 for (const D of levelList()) Object.assign(SIGN_TEXT, D.signs || {});   // each level's own signs (src/levels.js)
 function paintSign(text, col) {
