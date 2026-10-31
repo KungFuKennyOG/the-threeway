@@ -2,11 +2,13 @@
 // ============================== props =======================================
 const props = [];
 const _spinAxis = new V3();
+const BAT_LIKE = new Set(['bat', 'pipe', 'flagpole', 'baton']);   // long things held by one end
+const THROWN = new Set(['potato', 'pot', 'cymbal', 'drumstick']);   // what throwers lob (they pile up on the floor; see updateProjectiles)
 class Prop {
   constructor(type, pos) {
     this.type = type; this.isProp = true; this.cfg = CFG.weapons[type]; this.alive = true;
     this.durability = this.cfg.durability; this.drunk = false; this.heldBy = null; this.heldByEnemy = null;
-    this.batLike = type === 'bat' || type === 'pipe';   // a long thing held by one end: same rig, pinning and hit point
+    this.batLike = BAT_LIKE.has(type);   // a long thing held by one end: same rig, pinning and hit point
     this.thrown = false; this.hostile = false; this.hitSet = new Set(); this.spin = 0; this.prevPos = new V3();
     { const fy = floorAt(pos.x, pos.z, pos.y); if (pos.y < fy) pos = pos.clone().setY(fy); }   // placed at y 0 over a raised floor: stand it on the floor
     const body = this.body = new Body('prop', this);
@@ -34,10 +36,19 @@ class Prop {
       if (type === 'bat') {
         tbox(acc, null, 0, 0.26, 0.04, 0.04, 0.045, 0.045, { '*': [0, 22, 8, 32] }, { sheetW: 8, sheetH: 32 });
         tbox(acc, null, 0.26, L, 0.045, 0.045, 0.075, 0.075, { '*': [0, 0, 8, 22], t: [0, 0, 8, 2] }, { sheetW: 8, sheetH: 32 });
-      } else {                       // the pipe: taped grip, straight steel, a valve fitting on the end
+      } else if (type === 'pipe') {  // the pipe: taped grip, straight steel, a valve fitting on the end
         tbox(acc, null, 0, 0.24, 0.05, 0.05, 0.05, 0.05, { '*': [0, 22, 8, 32] }, { sheetW: 8, sheetH: 32 });
         tbox(acc, null, 0.24, L - 0.07, 0.045, 0.045, 0.045, 0.045, { '*': [0, 4, 8, 22] }, { sheetW: 8, sheetH: 32, faces: 'fblr' });
         tbox(acc, null, L - 0.07, L, 0.075, 0.075, 0.075, 0.075, { '*': [0, 0, 8, 4] }, { sheetW: 8, sheetH: 32 });
+      } else if (type === 'flagpole') {   // varnished pole, brass butt cap, gilt finial, a small red flag at the tip
+        const S = { sheetW: 16, sheetH: 32 };
+        tbox(acc, null, 0, 0.06, 0.045, 0.045, 0.04, 0.04, { '*': [0, 28, 8, 32] }, S);
+        tbox(acc, null, 0.06, L - 0.05, 0.04, 0.04, 0.032, 0.032, { '*': [0, 4, 8, 28] }, Object.assign({ faces: 'fblr' }, S));
+        tbox(acc, null, L - 0.05, L + 0.07, 0.06, 0.06, 0.02, 0.02, { '*': [0, 0, 8, 4] }, S);
+        tbox(acc, null, L - 0.4, L - 0.1, 0.34, 0.012, 0.34, 0.012, { f: [8, 0, 16, 16], b: [8, 0, 16, 16], '*': [8, 16, 10, 18] }, Object.assign({ x: 0.19, faces: 'fblr' }, S));
+      } else {                       // the baton: black rubber, a gold ferrule, a wrist strap knob
+        tbox(acc, null, 0, 0.14, 0.036, 0.036, 0.034, 0.034, { '*': [0, 22, 8, 32] }, { sheetW: 8, sheetH: 32 });
+        tbox(acc, null, 0.14, L, 0.034, 0.034, 0.03, 0.03, { '*': [0, 0, 8, 22] }, { sheetW: 8, sheetH: 32 });
       }
       geo = acc.geometry(); mat = sharedMat(type);
       body.add('knob', pos.clone(), 0.035, 3);
@@ -66,16 +77,34 @@ class Prop {
       body.add('knob', pos.clone().add(new V3(0, 0.05, 0)), 0.04, 3);
       body.add('tip', pos.clone().add(new V3(0, L - 0.15, 0)), 0.14, 3);
       body.stick('knob', 'tip');
-    } else {                         // potato / pot: one particle that spins as it flies
+    } else {                         // potato / pot / cymbal / drumstick: one particle that spins as it flies
       const acc = new GeoAcc();
       if (type === 'potato') { box('potato', [-0.05, -0.04, -0.065], [0.05, 0.04, 0.065], { acc, uvs: { '*': [0, 0, 1, 1] } }); body.add('c', pos.clone(), 0.055, 2); }
-      else {
+      else if (type === 'cymbal') {   // a brass disc (two squares at 45°: an octagon) with a dome in the middle
+        const R = this.cfg.radius, a = R * 1.414 * 0.92;
+        for (const rot of [0, Math.PI / 4]) {
+          const v0 = acc.p.length;
+          tbox(acc, null, -0.006, 0.006, a, a, a, a, { '*': [0, 0, 16, 16], f: [0, 14, 16, 16], b: [0, 14, 16, 16], l: [0, 14, 16, 16], r: [0, 14, 16, 16] }, { sheetW: 16, sheetH: 16 });
+          const c = Math.cos(rot), sn = Math.sin(rot);
+          for (const A of [acc.p, acc.n]) for (let i = v0; i < A.length; i += 3) { const x = A[i], z = A[i + 2]; A[i] = x * c - z * sn; A[i + 2] = x * sn + z * c; }
+        }
+        tbox(acc, null, 0.006, 0.03, 0.08, 0.08, 0.04, 0.04, { '*': [6, 6, 10, 10] }, { sheetW: 16, sheetH: 16, faces: 'fblrt' });
+        body.add('c', pos.clone(), 0.055, 2);   // a small particle (like a potato's), so a squeezed hand catches it before a forearm bats it away
+      } else if (type === 'drumstick') {
+        const L = this.cfg.length;
+        tbox(acc, null, -L / 2, L / 2 - 0.03, 0.022, 0.022, 0.016, 0.016, { '*': [0, 0, 4, 16] }, { sheetW: 4, sheetH: 16, faces: 'fblrd' });
+        tbox(acc, null, L / 2 - 0.03, L / 2, 0.026, 0.026, 0.026, 0.026, { '*': [0, 0, 4, 2] }, { sheetW: 4, sheetH: 16 });
+        body.add('c', pos.clone(), 0.05, 2);
+      } else {
         box('pot', [-0.11, -0.08, -0.11], [0.11, 0.08, 0.11], { acc, uvs: { '*': [0, 0, 1, 1], t: [0, 0, 1, 0.25] } });
         box('pot', [0.11, 0.03, -0.02], [0.24, 0.05, 0.02], { acc, uvs: { '*': [0, 0.75, 1, 1] } });   // handle
         body.add('c', pos.clone(), 0.11, 2);
       }
       geo = acc.geometry(); mat = sharedMat(type);
-      this.spinQ = new Q(); _spinAxis.set(rand(-1, 1), 1, rand(-1, 1)).normalize(); this.spinAxis = _spinAxis.clone();
+      this.spinQ = new Q(); this.spinAxis = new V3();
+      if (type === 'cymbal') this.spinAxis.set(rand(-0.12, 0.12), 1, rand(-0.12, 0.12)).normalize();   // flat, like a frisbee
+      else if (type === 'drumstick') this.spinAxis.set(1, rand(-0.2, 0.2), rand(-0.3, 0.3)).normalize();   // end over end
+      else this.spinAxis.copy(_spinAxis.set(rand(-1, 1), 1, rand(-1, 1)).normalize());
     }
     this.mats = [mat];
     this.obj = new THREE.Mesh(geo, mat); this.obj.matrixAutoUpdate = false;
@@ -107,14 +136,14 @@ class Prop {
       setPart(this.obj, _pc.addVectors(b.seat.x, b.base.x).multiplyScalar(0.5), _bq, 1);
     } else {
       const c = b.c;
-      if (!this.heldBy && !this.heldByEnemy && !this.body.sleep) this.spin += c.v.length() * 0.06;
+      if (!this.heldBy && !this.heldByEnemy && !this.body.sleep) this.spin += c.v.length() * (this.cfg.spinRate || 0.06);
       this.spinQ.setFromAxisAngle(this.spinAxis, this.spin);
       setPart(this.obj, c.x, this.spinQ, 1);
     }
   }
   get airborne() { return this.thrown || this.hostile; }
   grabPoint(out) {
-    if (this.batLike) return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, 0.15);
+    if (this.batLike) return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, this.cfg.grip ? this.cfg.grip / this.cfg.length : 0.15);
     if (this.type === 'sign') return out.lerpVectors(this.body.by.knob.x, this.body.by.tip.x, 0.25);
     return out.copy(this.body.center.lengthSq() ? this.body.center : this.body.ps[0].x);
   }
@@ -133,7 +162,7 @@ class Prop {
     const b = this.body.by;
     if (this.type === 'bottle') { b.neck.pin.copy(h.fist); b.base.pin.copy(h.fist).addScaledVector(K, 0.26); }
     else if (this.type === 'stool') { b.base.pin.copy(h.fist).addScaledVector(K, 0.06); b.seat.pin.copy(h.fist).addScaledVector(K, 0.57); b.rim.pin.copy(b.seat.pin).addScaledVector(X, 0.2); }
-    else if (this.batLike) { b.knob.pin.copy(h.fist).addScaledVector(K, -0.06); b.tip.pin.copy(h.fist).addScaledVector(K, this.cfg.length - 0.06); }
+    else if (this.batLike) { const g = this.cfg.grip || 0.06; b.knob.pin.copy(h.fist).addScaledVector(K, -g); b.tip.pin.copy(h.fist).addScaledVector(K, this.cfg.length - g); }
     else if (this.type === 'sign') { b.knob.pin.copy(h.fist).addScaledVector(K, -0.1); b.tip.pin.copy(h.fist).addScaledVector(K, this.cfg.length - 0.25); }
     else if (this.type === 'crate' || this.type === 'bin') {   // held by the near edge, sticking out past the knuckles
       b.base.pin.copy(h.fist).addScaledVector(K, 0.12); b.seat.pin.copy(b.base.pin).addScaledVector(K, this.half * 2); b.rim.pin.copy(b.seat.pin).addScaledVector(X, this.cfg.size / 2);
@@ -261,7 +290,7 @@ function updateProjectiles() {
     }
   }
   // don't let the floor fill up with kitchenware
-  const lying = props.filter(p => (p.type === 'potato' || p.type === 'pot') && !p.heldBy && !p.heldByEnemy && !p.hostile && !p.thrown);
+  const lying = props.filter(p => THROWN.has(p.type) && !p.heldBy && !p.heldByEnemy && !p.hostile && !p.thrown);
   for (let i = 0; i < lying.length - PJ.maxLying; i++) { const p = lying[i]; scene.remove(p.obj); p.body.remove(); p.alive = false; props.splice(props.indexOf(p), 1); }
 }
 function projectilesInAir() { let n = 0; for (const p of props) if (p.hostile || (p.heldByEnemy && p.heldByEnemy.carry === p)) n++; return n; }
