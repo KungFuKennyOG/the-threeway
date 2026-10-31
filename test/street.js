@@ -45,7 +45,7 @@ try {
     const P = TW.ST.skylineMesh.geometry.attributes.position.array; let top = 0, at = null;
     for (let i = 1; i < P.length; i += 3) if (P[i] > top) { top = P[i]; at = [P[i - 1], P[i + 1]]; }
     check('Aoki Development is the tallest thing in the city', Math.abs(top - SKY.aoki.top) < 0.5 && Math.hypot(at[0] - SKY.aoki.at[0], at[1] - SKY.aoki.at[1]) < 5, `top ${top.toFixed(1)} m at ${at.map(v => v.toFixed(0))}`);
-    const eye = { square: [0, 1.6, 15], door: [2, 1.6, 7], crossing: [-40, 1.6, 140], parade: [-190, 1.6, 198], towerTop: [-234.6, 232, 198] };
+    const eye = { square: [0, 1.6, 15], door: [2, 1.6, 7], crossing: [-40, 1.6, 140], parade: [-190, 1.6, 198], towerTop: [-230, 81.6, 198], towerCrown: [-234.6, 150, 198] };
     const reach = (p) => Object.entries(eye).map(([k, e]) => [k, Math.hypot(p[0] - e[0], p[1] - e[1], p[2] - e[2])]);
     const tip = [SKY.aoki.at[0], SKY.aoki.top, SKY.aoki.at[1]], mast = [SKY.civic.at[0], SKY.civic.top, SKY.civic.at[1]];
     check('Aoki\'s tip and Civic Harmony\'s mast are inside the camera\'s far plane from the square, the door, the crossing, Parade Square and the Tower\'s top',

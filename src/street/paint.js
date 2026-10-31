@@ -250,7 +250,7 @@ const PAINT = {
   // ---- the Halcyon zeppelin: cream hull, gold deco ribs, navy belly band, FLY HALCYON down each flank
   hull() {   // u runs along the hull, v around it (the belly in the lower middle of the texture)
     const p = new Pix(32, 16); p.fill('#e6dac0');
-    p.rect(0, 10, 32, 1, PC.gold); p.rect(0, 11, 32, 3, '#1a2a5a'); p.rect(0, 14, 32, 1, PC.gold);
+    p.rect(0, 11, 32, 1, PC.gold); p.rect(0, 12, 32, 1, '#1a2a5a'); p.rect(0, 13, 32, 1, PC.gold);   // the belly band (row 12 = straight down)
     for (let x = 0; x < 32; x += 8) p.rect(x, 0, 1, 16, '#c9a04a');
     p.speck('#d6c8aa', 10); return p;
   },

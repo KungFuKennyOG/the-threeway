@@ -50,11 +50,11 @@ function aokiTower(acc, x, z, phi) {
   const secs = [[0, 150, 46, 41], [150, 262, 39, 34], [262, 334, 32, 27]], wAt = (y) => { for (const [a, b, w0, w1] of secs) if (y <= b) return w0 + (w1 - w0) * (y - a) / (b - a); return 27; };
   for (const [y0, y1, w0, w1] of secs) {
     frustum(acc, 'glassBlack', x, y0, z, w0, w0, w1, w1, y1 - y0, phi, { u: 23, v: 23, top: false, cell: 999 });
-    edgeStrips(acc, 'litRed', x, z, y0, y1, w0, w1, phi, 1.3);
+    edgeStrips(acc, 'litRed', x, z, y0, y1, w0, w1, phi, 2.4);
   }
   for (const y of [60, 105, 150, 192, 232, 262, 300]) {   // tiered tile eaves, a red neon line under each
     const w = wAt(y); frustum(acc, 'kawara', x, y, z, w + 9, w + 9, w + 1, w + 1, 3.2, phi, { u: 60, v: 6, top: false, cell: 999 });
-    sbox(acc, 'litRed', x, y - 1.2, z, w + 9.2, w + 9.2, 1.2, phi, { u: 4, v: 4, top: false, cell: 999 });
+    sbox(acc, 'litRed', x, y - 2, z, w + 9.2, w + 9.2, 2, phi, { u: 4, v: 4, top: false, cell: 999 });
   }
   // the red neon crown: three pagoda tiers of lit red lattice, each roof edged in red neon; AOKI on the first tier's four faces
   let y = 334;
@@ -318,7 +318,8 @@ function skylineLights() {
   // two more, on Civic Harmony's crown and the Royal Hotel's, keep finding the Halcyon's hull as it passes
   for (const [o, ph] of [[SKY.civicLight, 0], [SKY.royalLight, 2.1]]) ST.beams.push({ o, track: true, ph, len: 420, w0: 3, w1: 24, col: BEAM_GOLD.map(c => c * 0.6) });
   ST.halos = [
-    { c: SKY.aokiCrown, size: 120, col: [0.55, 0.06, 0.05], pulse: [4.5, 0.45] },   // Aoki's crown, a slow red pulse
+    { c: SKY.aokiCrown, size: 160, col: [0.85, 0.08, 0.06], pulse: [4.5, 0.5] },
+    { c: [SKY.aokiCrown[0], SKY.aokiCrown[1] - 20, SKY.aokiCrown[2]], size: 320, col: [0.3, 0.03, 0.04], pulse: [4.5, 0.6] },   // its red haze on the sky   // Aoki's crown, a slow red pulse
     { c: [SKY.aokiCrown[0], SKY.aoki.top - 4, SKY.aokiCrown[2]], size: 30, col: [0.7, 0.12, 0.08], pulse: [1.5, 0.2] },   // the needle's tip
     { c: SKY.civicMast, size: 70, col: [0.34, 0.26, 0.12] },   // the mooring mast's floodlights
     { zep: [0, zepR(-ZEP.L / 2 + 9) * 0.9 + 17.5, -ZEP.L / 2 + 9], size: 22, col: [1, 1, 1], blink: [1.3, 0.12] },   // the Halcyon's tail strobe
