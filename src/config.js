@@ -164,7 +164,7 @@ const CFG = {
           dropAfter: 1.5, raiseAfter: 8, panelHz: 4 },
   render: { desktopLines: 240, vrFramebufferScale: 0.9, camFar: 600, batchProps: true,
             desktopVertexSnap: true, vrVertexSnap: true,       // fine grid: a slight wobble, not a shake
-            desktopSnapLines: 600, vrSnapLines: 560,           // snap grid size in lines (higher = subtler)
+            desktopSnapLines: 760, vrSnapLines: 720,           // snap grid size in lines (higher = subtler; was 600 / 560)
             desktopAffine: true, vrAffine: false,
             colorBits: 6, ditherStrength: 0.5,                 // 6-bit colour per channel, soft 4x4 Bayer
             fogNear: 4.5, fogFar: 12.5 },

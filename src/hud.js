@@ -31,7 +31,7 @@ const TUNE = [
   { name: 'hit shove', get: () => CFG.physics.hitShoveMult, set: (v) => { CFG.physics.hitShoveMult = v; }, step: 0.1, min: 0.3, max: 2.5, fmt: (v) => 'x' + v.toFixed(1) },
   { name: 'knockback', get: () => CFG.reactions.knockbackMult, set: (v) => { CFG.reactions.knockbackMult = v; }, step: 0.25, min: 0.5, max: 5, fmt: (v) => v.toFixed(2) },
   { name: 'fist pitch', get: () => CFG.hands.modelPitchDeg, set: (v) => { CFG.hands.modelPitchDeg = v; if (xrMode) for (const h of handList) attachHandVR(h); }, step: 5, min: -70, max: 20, fmt: (v) => v + 'deg' },
-  { name: 'snap', get: () => CFG.render.vrSnapLines, set: (v) => { CFG.render.vrSnapLines = v; CFG.render.desktopSnapLines = v + 40; setRenderMode(xrMode); }, step: 40, min: 240, max: 1200, fmt: (v) => String(v) },
+  { name: 'snap', get: () => CFG.render.vrSnapLines, set: (v) => { CFG.render.vrSnapLines = v; CFG.render.desktopSnapLines = v + 40; setRenderMode(xrMode); }, step: 40, min: 240, max: 1200, fmt: (v) => String(v), oldDefaults: [560] },   // a save holding an old default isn't a choice: the new default stands
 ];
 function setQuality(level) {
   const L = CFG.perf.levels[level]; perf.level = level;
@@ -39,7 +39,7 @@ function setQuality(level) {
 }
 function saveTune() { try { localStorage.setItem('tw.tune', JSON.stringify(TUNE.map(t => t.get()))); } catch (e) { /* private mode */ } }
 function loadTune() {
-  try { const v = JSON.parse(localStorage.getItem('tw.tune') || 'null'); if (Array.isArray(v)) v.forEach((x, i) => { if (TUNE[i] && typeof x === 'number') TUNE[i].set(x); }); } catch (e) { /* none saved */ }
+  try { const v = JSON.parse(localStorage.getItem('tw.tune') || 'null'); if (Array.isArray(v)) v.forEach((x, i) => { const T = TUNE[i]; if (T && typeof x === 'number' && !(T.oldDefaults || []).includes(x)) T.set(x); }); } catch (e) { /* none saved */ }
 }
 function togglePerfPanel() {
   perfPanel.open = !perfPanel.open; perf.drawT = 0;
