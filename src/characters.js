@@ -46,6 +46,8 @@ function humanoid(p) {
   const idx = {}; parts.forEach(p => idx[p[0]] = p);
   return idx;
 }
+// a clipboard held in the left fist (paper on X2, the board's back on X3, its edges SW(2))
+const clipboard = (a) => tbox(a, null, -0.02, -0.36, 0.02, 0.26, 0.02, 0.26, { l: X2, r: X3, '*': SW(2) }, { x: 0.06, z: 0.04 });
 // a peaked cap: a crown flaring out over the head (X1 round its side, SW(1) on top) and a black visor (SW(0)).
 // The cap's band is painted on the face's top rows and on HEADS.
 function peakedCap(r, o = {}) {
@@ -208,7 +210,7 @@ const BODIES = {
     const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.54, chestD: 0.3, waist: 0.4, headSide: HEADS });
     r.hips[3].push((a) => tbox(a, null, 0.06, -0.58, 0.44, 0.3, 0.54, 0.38, { '*': TB }, { faces: 'fblr' }));   // coat to the knee
     peakedCap(r, { w: 0.32, d: 0.35, top: 0.37 });
-    r.handl[3].push((a) => tbox(a, null, -0.02, -0.36, 0.02, 0.26, 0.02, 0.26, { r: X2, l: X3, '*': SW(2) }, { x: 0.06, z: 0.04 }));   // the clipboard
+    r.handl[3].push(clipboard);
     return r;
   },
   clerk() {    // office clerk: shirtsleeves with red garters, a brown waistcoat, glasses, a bald crown; a rubber stamp in his fist
@@ -238,6 +240,28 @@ const BODIES = {
     const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.7, chestD: 0.44, waist: 0.6, neck: -0.02,
       head: [0.26, 0.3, 0.28], thighW: 0.22, headSide: HEADS, uv: { hips: { '*': TB } } });
     r.torso[3].push((a) => tbox(a, null, -0.02, 0.32, 0.62, 0.5, 0.68, 0.52, chest([32, 38, 48, 48]), { z: 0.04, faces: 'fblr' }));   // the belly
+    return r;
+  },
+  // ---- the bar's officials (sheets: tools/goons_officials.py)
+  harmony() {   // Columbia's Department of Civic Harmony: a pale-blue blazer, a white armband, khakis, a clipboard and a smile
+    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.56, chestD: 0.32, waist: 0.42, headSide: HEADS,
+      uv: { hips: { '*': TB } } });
+    r.uarml[3] = [(a) => tbox(a, null, 0.04, -0.31, 0.15, 0.15, 0.12, 0.13, { '*': X4 })];   // the armband
+    r.handl[3].push(clipboard);
+    r.hips[3].push((a) => tbox(a, null, -0.02, 0.12, 0.45, 0.3, 0.45, 0.3, chest([32, 44, 48, 48]), { faces: 'fblr' }));   // blazer hem
+    return r;
+  },
+  enforcer() {  // Civic Harmony enforcer: a navy double-breasted suit, a gold tie (front only), a fedora
+    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.62, chestD: 0.36, waist: 0.46, headSide: HEADS,
+      uv: { hips: { '*': TB } } });
+    r.head[3].push((a) => tbox(a, null, 0.24, 0.26, 0.4, 0.42, 0.4, 0.42, { '*': SW(1), t: SW(2), d: SW(1) }, { z: 0.01 }));   // the brim
+    r.head[3].push((a) => tbox(a, null, 0.26, 0.4, 0.27, 0.29, 0.24, 0.24, { '*': X1, t: SW(2) }, { z: 0.0, faces: 'fblrt' }));   // the crown, a black band
+    return r;
+  },
+  aokiagent() { // Aoki Development agent: a sleek black suit, a thin black tie, narrow sunglasses, slicked hair, the company's red pin
+    const r = humanoid({ torso: TA, legs: TD_L, arms: SLEEVE, hands: HAND, feet: TD_R, shoulder: 0.54, chestD: 0.3, waist: 0.37, thighW: 0.17, headSide: HEADS,
+      uv: { hips: { '*': TB } } });
+    r.hips[3].push((a) => tbox(a, null, 0.0, 0.12, 0.41, 0.29, 0.41, 0.29, chest([32, 44, 48, 48]), { faces: 'fblr' }));   // jacket hem
     return r;
   },
   ivan() {     // Krasnovian bouncer: wrestler frame in a tracksuit
@@ -317,6 +341,12 @@ Object.assign(POSES, {   // the Palace of Sport and Parade Square
   bandsman: { torso: [-3, 0, 0], head: [-6, 4, 0], uarml: [4, 0, -24], farml: [-40, 0, 0], uarmr: [4, 0, 24], farmr: [-60, -10, 0], thighl: [-4, 0, -6], thighr: [4, 0, 6] },
 });
 POSES.specialist = POSES.boxer;
+Object.assign(POSES, {   // the bar's officials
+  harmony: { torso: [-2, 0, 0], head: [-6, 8, 0], uarml: [-20, 0, -8], farml: [-70, 30, 0], uarmr: [4, 0, 10], farmr: [-20, 0, 0], thighl: [-2, 0, -4], thighr: [2, 0, 4] },
+  enforcer: { torso: [10, -10, 0], head: [6, 10, 0], uarml: [-56, 0, -24], farml: [-96, 0, 0], uarmr: [-44, 0, 24], farmr: [-104, 0, 0],
+    thighl: [-18, 0, -6], shinl: [20, 0, 0], thighr: [14, 0, 6], shinr: [10, 0, 0], hips: [0, 18, 0] },
+});
+POSES.aokiagent = POSES.kicker;
 Object.assign(POSES, {   // the Tower of Labor
   militia: POSES.wrestler,
   inspector: { torso: [-2, 0, 0], head: [-8, -6, 0], uarml: [-20, 0, -8], farml: [-70, 30, 0], uarmr: [2, 0, 8], farmr: [-14, 0, 0], thighl: [-2, 0, -4], thighr: [2, 0, 4] },
