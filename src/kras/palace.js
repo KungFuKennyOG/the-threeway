@@ -393,7 +393,7 @@ function buildPalaceInside(acc) {
     frustum(acc, 'darkwood', -31.2, 0.85, 190.8, 0.3, 0.3, 0.62, 0.62, 0.22, 0, { u: 1, v: 1, top: 'white', cell: 99 });
     plSolid(-31.5, 190.5, -30.9, 191.1, 0, 1.07);
     // the light: hard pools over the apparatus, darker between
-    for (const [x, z, r, k] of [[-45.4, 195, 7, 2.3], [-34, 194.6, 7, 2.3], [-40, 192.2, 6.5, 1.7], [-40, 196.8, 5.5, 1.2]]) plShade(acc, L, x, z, 4.6, H, LW, r, k); }
+    for (const [x, z, r, k] of [[-45.4, 195, 7.5, 2.3], [-34, 194.6, 7.5, 2.3], [-40, 192.2, 6.5, 1.7], [-40, 196.8, 5.5, 1.2], [-47.8, 191.6, 5.5, 1.4]]) plShade(acc, L, x, z, 4.6, H, LW, r, k); }
   // ---- the players' tunnel (the gym to the south vomitory) and the way out (the north vomitory to the north doors)
   const [cx, cz] = PL.bowlC, n = PL.sides, sn = Math.sin(Math.PI / n), rb = PL.backR, zs = PL.bowl[2], zn = PL.bowl[3], WT = PL.wallTop;
   for (const [z0, z1] of [[PL.gym[3], zs], [zn, PL.northZ]]) {
