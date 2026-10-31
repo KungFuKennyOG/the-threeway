@@ -1,2 +1,3 @@
 test/frames.json
 .claude/worktrees/
+__pycache__/
