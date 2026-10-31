@@ -25,6 +25,5 @@ const levelRects = () => levelList().flatMap(D => typeof D.rects === 'function' 
 const onLevelGround = (x, z, m = 0) => levelRects().some(([a, b, c, d]) => x > a - m && x < b + m && z > c - m && z < d + m);
 // Goons a level names that aren't built yet stand in as one that is, so levels can be written with their real cast
 // before the goons land (the stand-in goes away the moment CFG.enemies has the real one).
-const ENEMY_FALLBACK = { warden: 'laborer', sambo: 'conscript', lifter: 'wrestler', gymnast: 'conscript', guard: 'laborer', bandsman: 'cook',
-  specialist: 'wrestler', clerk: 'conscript', bodyguard: 'wrestler', orlova: 'ivan', chairman: 'ivan', inspector: 'conscript', militia: 'wrestler' };
+const ENEMY_FALLBACK = { warden: 'laborer' };
 const enemyType = (t) => (CFG.enemies[t] ? t : ENEMY_FALLBACK[t] || 'conscript');
