@@ -68,8 +68,13 @@ els.deskBtn.fire('click');
 step(3);
 try {
   // ---- the build: one baked mesh on the street atlas, in budget, nothing from the far city on it
-  check('Parade Square is one mesh on the street atlas, light baked in', PR.mesh && PR.mesh.geometry.attributes.bake && PR.mesh.material.uniforms.uBaked.value === 1 && D.outside().length === 1);
-  check('its triangles stay within budget', PR.tris < 12000, PR.tris + ' tris');
+  { const M = D.outside(), G = PR.mesh.geometry, A = G.attributes, n = A.position.array.length / 3, P = A.position.array; let at = 0, inside = true;
+    for (const m of M) { const [s, c] = m.geometry.userData.range, { center: o, radius: r } = m.geometry.userData; if (s !== at) inside = false; at = s + c;
+      for (let v = s; v < s + c; v++) if (Math.hypot(P[v * 3] - o[0], P[v * 3 + 1] - o[1], P[v * 3 + 2] - o[2]) > r) inside = false; }
+    check('Parade Square is one baked buffer on the street atlas, drawn as chunks over it (shared, nothing copied): every triangle in exactly one, each chunk\'s sphere holding its triangles',
+      PR.mesh === M[0] && A.bake && PR.mesh.material.uniforms.uBaked.value === 1 && M.length >= 6 && M.every(m => ['position', 'normal', 'uv', 'bake'].every(k => m.geometry.attributes[k] === A[k]) && m.userData.near && m.material === PR.mesh.material)
+      && at === n && inside, `${M.length} chunks, ${n / 3} triangles`); }
+  check('its triangles stay within budget (it\'s drawn on every view of the square: it was 7,590 before the crane, the clock tower and the rehearsal\'s clutter)', PR.tris < 6000, PR.tris + ' tris');
   check('its lamps are baked (four flood masts, sodium, the floats, the stand) and pushed for goons to be lit by', PR.lamps.length >= 12 && PR.lamps.every(l => TW.ST.lamps.includes(l)), PR.lamps.length + ' lights');
   { const P = TW.ST.skylineMesh.geometry.attributes.position.array, R = AW.rect(PR.rect); let n = 0;
     for (let i = 0; i < P.length; i += 3) if (P[i + 1] > 0.5 && P[i] > R[0] && P[i] < R[1] && P[i + 2] > R[2] && P[i + 2] < R[3]) n++;
@@ -156,7 +161,18 @@ try {
   [x, z] = walk(-55, 312.3);
   check('beside it, the square ends at the Tower\'s front', z <= PR.sq[3] + 1e-6, `z ${z.toFixed(2)}`);
   check('the floats are solid', PR.floats.every(([fx, fz]) => solidAt(fx, fz) && solidAt(fx, fz + 0.6)));
-  check('so are the reviewing stand, the bass drum, the portico\'s pillars, the masts', solidAt(-55, 307) && solidAt(-25, 307) && solidAt(-24.5, 296.2) && solidAt(-71.2, 281) && solidAt(-69.6, 257.6));
+  check('so are the reviewing stand, the bass drum, the portico\'s pillars, the masts', solidAt(-55, 307) && solidAt(-25, 307) && solidAt(-24.5, 296.2) && solidAt(-71.2, 281.5) && solidAt(-69.6, 257.6));
+  { const [x0, x1, z0, z1] = PR.crane.truck, [bx, bz] = PR.programme, [sx0, sx1, sz0, sz1] = PR.scaffold;
+    check('and the rehearsal\'s kit: the crane\'s truck and its outriggers, the scaffold tower, the programme board, the flag rack, the conductor\'s podium, the Zubr banner\'s poles',
+      solidAt((x0 + x1) / 2 + 0.6, (z0 + z1) / 2) && solidAt(x1 + 0.9, z0 + 3.2) && solidAt((sx0 + sx1) / 2 + 0.4, (sz0 + sz1) / 2) && solidAt(bx, bz) && solidAt(-59.6, 270.6) && solidAt(-24.5, 293.6) && solidAt(-55.6, 293.2)); }
+  { // the portrait hangs off the hook clear of everything: the boom passes over its corner, the Ministry's face and the portico stay behind it
+    const [px, pz, y0, y1, pw] = PR.portrait, { foot: F, tip: T } = PR.crane, at = (z) => { const k = (z - F[2]) / (T[2] - F[2]); return [F[0] + (T[0] - F[0]) * k, F[1] + (T[1] - F[1]) * k]; };
+    const [ex, ey] = at(pz - pw / 2);
+    check('the Chairman\'s portrait hangs from the crane\'s hook over the portico, out from the Ministry\'s face; the boom clears its corner and its tip is right over it',
+      px > PR.ministry[1] + 1 && y0 > 8.4 && ey - 0.5 > y1 && Math.abs(T[0] - px) < 0.01 && Math.abs(T[2] - pz) < 0.01 && Math.abs(pz - (PR.risalit[0] + PR.risalit[1]) / 2) < 0.01, `boom ${ey.toFixed(1)} m over the corner at ${y1} m`); }
+  { const P = PR.acc.p; let high = 0;   // the chalk, the cables and the cable ramp lie flat: down the route nothing stands but the paving
+    for (let i = 0; i < P.length; i += 3) if (P[i] > -42 && P[i] < -38 && P[i + 2] > 253 && P[i + 2] < 312 && P[i + 1] > 0.05) high++;
+    check('the route is clear all the way from the Palace\'s doors to the Tower\'s: its chalk, cables and the cable ramp lie flat on it', high === 0, high + ' vertices over 5 cm'); }
   check('ragdolls hit them too (world boxes)', [[-55, 1, 266], [-55, 4, 266.6], [-30, 2, 307], [-24.5, 1, 296.2]].map(([x, y, z]) => W(x, y, z)).every(({ x: bx, y: by, z: bz }) => TW.WORLD_BOXES.some(b => bx > b[0] && bx < b[3] && by > b[1] && by < b[4] && bz > b[2] && bz < b[5])));
   check('the gymnasts\' mats are floor, not an obstacle', stays(-61, 285));
 
