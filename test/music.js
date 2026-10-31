@@ -1,6 +1,7 @@
 // Headless checks for the music player (src/music.js): the level -> song table, seamless level changes (same song keeps
-// playing, another one crossfades), the fight / boss / menu mix, the volume, at most two decoded songs, and nothing
-// breaking without audio. Web Audio and fetch are stubbed; the clock is the test's.
+// playing, another one crossfades), Act 1's tracks following the fights (Volkov, Orlova, the glass lift and the tribune,
+// the SIGNED sting), the fight / boss / menu mix, the volume, at most two decoded songs, and nothing breaking without
+// audio. Web Audio and fetch are stubbed; the clock is the test's.
 'use strict';
 const fs = require('fs'), vm = require('vm'), path = require('path');
 const THREE = require('./three_stub.js');
@@ -48,7 +49,7 @@ class AudioContextStub {
   createBiquadFilter() { const f = new Node(); f.frequency = new Param(1000); return f; }
   createBuffer(ch, n) { return { getChannelData: () => new Float32Array(n) }; }
   createBufferSource() { return new Source(); }
-  decodeAudioData(ab) { this.decodes++; return Promise.resolve({ duration: 74, numberOfChannels: 2, from: ab.url }); }
+  decodeAudioData(ab) { this.decodes++; return Promise.resolve({ duration: /signed/.test(ab.url) ? 11.2 : 90, numberOfChannels: 2, from: ab.url }); }
 }
 const fetches = [];
 const fetchStub = (url) => { fetches.push(url); const ok = fs.existsSync(path.join(dir, url)); return Promise.resolve({ ok, status: ok ? 200 : 404, arrayBuffer: () => Promise.resolve({ url }) }); };
@@ -85,12 +86,15 @@ const musicSources = () => AC.sources.filter(s => s.loop);
     const F = TW.CFG.music;
     // ---- the table
     const stages = run('stageList()').map(s => s.name);
-    check('every stage maps to a song (and the title screen too)', ['menu', ...stages].every(n => M.tracks[n] && M.songs[M.tracks[n]]), stages.map(n => n + ':' + M.tracks[n]).join(' '));
+    check('every stage maps to a song (and the title screen too)', ['menu', ...stages].every(n => M.entry(n) && M.songs[M.entry(n)]), stages.map(n => n + ':' + M.entry(n)).join(' '));
     check('the bar, Tripoint Square and the road: the Threeway theme', ['bar', 'street', 'menu'].every(n => M.tracks[n] === 'threeway'));
-    check('the gate through the Tower: the Krasnovia theme', ['superblock', 'podezd', 'palace', 'parade', 'tower'].every(n => M.tracks[n] === 'krasnovia'));
+    check('the gate and Superblock 14: the Krasnovia theme; then Act 1\'s own: podezd, palace, parade, tower', M.tracks.superblock === 'krasnovia'
+      && ['podezd', 'palace', 'parade', 'tower'].every(n => M.entry(n) === n));
+    check('the bosses and the tribune have their tracks, the tribune carries the SIGNED sting', ['volkov', 'orlova', 'tribune'].every(n => M.songs[n] && !M.songs[n].oneShot) && M.songs.tribune.sting === 'signed' && M.songs.signed.oneShot);
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, 'assets/music/loop/loops.json'), 'utf8'));
-    const songsOk = Object.entries(M.songs).every(([k, S]) => fs.existsSync(path.join(dir, S.src)) && manifest[k] && near(S.start, manifest[k].loopStart, 1e-6) && near(S.end, manifest[k].loopEnd, 1e-6) && S.end > S.start + 30);
-    check('every song\'s loop file exists and its loop points match loops.json', songsOk, Object.keys(M.songs).join(', '));
+    const songsOk = Object.entries(M.songs).every(([k, S]) => fs.existsSync(path.join(dir, S.src)) && manifest[k] && (S.oneShot ? manifest[k].oneShot
+      : near(S.start, manifest[k].loopStart, 1e-6) && near(S.end, manifest[k].loopEnd, 1e-6) && S.end > S.start + 30));
+    check('every song\'s file exists and its loop points match loops.json (the sting: a one-shot there too)', songsOk, Object.keys(M.songs).join(', '));
 
     // ---- no audio: no AudioContext, no fetch. Play through level changes, a boss, the menu
     els.deskBtn.fire('click'); step(3);
@@ -98,7 +102,7 @@ const musicSources = () => AC.sources.filter(s => s.loop);
     try {
       run(`startStage('street')`); step(5);
       run(`LEVELS.superblock.start(true)`); step(5);
-      run(`startEncounter(0); MUSIC.cue('boss')`); step(10);
+      run(`startEncounter(0); MUSIC.cue('boss'); MUSIC.cue('signed')`); step(10);
       run(`openPause()`); step(3); run(`closeMenu(); quitToTitle()`); step(3);
       run(`AU.thud('heavy'); AU.roar()`);
     } catch (e) { threw = e; }
@@ -125,7 +129,7 @@ const musicSources = () => AC.sources.filter(s => s.loop);
     run(`LEVELS.superblock.start(true)`); await settle();
     const t1 = clock;
     const s1 = M.cur && M.cur.src;
-    check('street -> superblock: a new source with the Krasnovia theme (from the prefetched bytes)', s1 && s1 !== s0 && s1.buffer.from === M.songs.krasnovia.src && fetches.length === 2, fetches.length + ' fetches');
+    check('street -> superblock: a new source with the Krasnovia theme (from the prefetched bytes)', s1 && s1 !== s0 && s1.buffer.from === M.songs.krasnovia.src && fetches.filter(u => u === M.songs.krasnovia.src).length === 1, fetches.length + ' fetches');
     const outEnd = s0.stopAt, inLast = M.cur.g.gain.last(), oldG = M.fading[0] && M.fading[0].g.gain;
     check('...crossfades over CFG.music.fade: the old fades to 0 and stops, the new fades to 1', oldG && near(oldG.last()[1], 0) && near(oldG.last()[2] - s1.started[0], F.fade) && near(outEnd - s1.started[0], F.fade + 0.05)
       && near(inLast[1], 1) && near(inLast[2] - s1.started[0], F.fade), `fade ${F.fade}s, old stops at +${(outEnd - s1.started[0]).toFixed(2)}`);
@@ -133,11 +137,76 @@ const musicSources = () => AC.sources.filter(s => s.loop);
     step(Math.ceil((F.fade + 0.2) / DT));
     check('after the crossfade the old voice is gone and its song dropped', M.fading.length === 0 && s0.ended && !M.bufs.has('threeway') && M.bufs.size === 1, [...M.bufs.keys()].join(','));
 
-    // ---- on through Krasnovia: no restarts
-    for (const [n, from] of [['podezd', true], ['palace', true], ['parade', true], ['tower', true]]) {
-      run(`LEVELS.${n}.start(${from})`); await settle();
-      check(`-> ${n}: still the same Krasnovia source`, M.cur.src === s1 && s1.stopAt === undefined && TW.level.name === n);
-    }
+    // ---- Act 1: each level its own track, the bosses theirs
+    const src = () => M.cur && M.cur.src, song = () => M.cur && M.cur.song;
+    const fadeLen = (v) => v.g.gain.last()[2] - M.cur.src.started[0];   // a fading voice: how long after the new one started it ends
+    run(`LEVELS.podezd.start(true)`); await settle();
+    check('superblock -> podezd: crossfades to act1-podezd', song() === 'podezd' && src().buffer.from === M.songs.podezd.src && M.fading.length === 1);
+    step(Math.ceil((F.fade + 0.2) / DT));
+    run(`LEVELS.palace.start(true)`); await settle();
+    const sPal = src();
+    check('podezd -> palace: act1-palace', song() === 'palace' && sPal.buffer.from === M.songs.palace.src);
+    step(Math.ceil((F.fade + 0.2) / DT));
+    const encI = (lv, n) => run(`CFG.${lv}.encounters.findIndex(E => E.name === '${n}')`);
+    const fightThrough = (i) => { run(`startEncounter(${i})`); step(2); run(`clearEnemies(); game.queue = []; game.state = 'cleared'; game.timer = 0`); step(2); run(`game.state = 'walk'`); step(2); };
+    fightThrough(encI('palace', 'boulevard'));
+    check('the boulevard fight: act1-palace carries on (no restart inside a level)', src() === sPal && sPal.stopAt === undefined);
+    const dec0 = AC.decodes;
+    run(`startEncounter(${encI('palace', 'gym')})`); await settle();
+    check('the gym: still act1-palace, and Volkov\'s track is decoded ahead (two decoded)', src() === sPal && M.bufs.has('volkov') && M.bufs.size === 2 && AC.decodes === dec0 + 1, [...M.bufs.keys()].join(','));
+    run(`clearEnemies(); game.queue = []; game.state = 'walk'`); step(2);
+    const vi = encI('palace', 'volkov');
+    run(`startEncounter(${vi})`); await settle(1);
+    const sVol = src();
+    check('Volkov\'s sign: a quick crossfade into act1-volkov (CFG.music.bossFade), already decoded', song() === 'volkov' && sVol.buffer.from === M.songs.volkov.src && AC.decodes === dec0 + 1
+      && M.fading[0] && near(fadeLen(M.fading[0]), F.bossFade, 0.05) && near(M.cur.g.gain.last()[2] - sVol.started[0], F.bossFade), `fade ${F.bossFade}s`);
+    check('...no hard duck with his own track: just the mild fight dip', near(M.duck.gain.goal(), db(F.fightDb)) && M.bossUntil < 0);
+    run(`game.state = 'lost'; game.timer = 0`); step(Math.ceil(4 / DT)); await flush();
+    check('down against Volkov and back in: his track carries on (no restart, no duck on his sign again)', src() === sVol && sVol.stopAt === undefined && TW.game.state !== 'lost' && TW.level.encounter === vi && M.bossUntil < 0);
+    run(`clearEnemies(); game.queue = []; game.state = 'cleared'; game.timer = 0`); await settle();
+    check('he\'s down: back to act1-palace (a normal crossfade)', song() === 'palace' && src() !== sPal && M.fading[0] && M.fading[0].src === sVol && near(fadeLen(M.fading[0]), F.fade, 0.05));
+    step(Math.ceil((F.fade + 0.2) / DT));
+    run(`LEVELS.parade.start(true)`); await settle();
+    check('palace -> parade: act1-parade', song() === 'parade');
+    step(Math.ceil((F.fade + 0.2) / DT));
+    const sPar = src();
+    fightThrough(encI('parade', 'guard'));
+    check('the parade\'s fights: act1-parade carries on', src() === sPar && sPar.stopAt === undefined);
+    run(`LEVELS.tower.start(true)`); await settle();
+    const sTow = src();
+    check('parade -> tower: act1-tower', song() === 'tower');
+    step(Math.ceil((F.fade + 0.2) / DT));
+    fightThrough(encI('tower', 'lobby'));
+    run(`startEncounter(${encI('tower', 'offices')})`); await settle();
+    check('the lobby and the typing pool: act1-tower carries on; Orlova\'s track decoded ahead', src() === sTow && sTow.stopAt === undefined && M.bufs.has('orlova') && M.bufs.size === 2);
+    run(`clearEnemies(); game.queue = []; game.state = 'walk'`); step(2);
+    const ai = encI('tower', 'archive');
+    run(`startEncounter(${ai})`); await settle(1);
+    const sOrl = src();
+    check('Orlova\'s sign: a quick crossfade into act1-orlova', song() === 'orlova' && M.fading[0] && near(fadeLen(M.fading[0]), F.bossFade, 0.05) && near(M.duck.gain.goal(), db(F.fightDb)));
+    step(Math.ceil((F.bossFade + 0.3) / DT)); await settle();
+    check('during Orlova the tribune\'s track is decoded ahead (still two decoded)', M.bufs.has('tribune') && M.bufs.size === 2 && M.fading.length === 0, [...M.bufs.keys()].join(','));
+    run(`clearEnemies(); game.queue = []; game.state = 'cleared'; game.timer = 0`); step(3);
+    check('she\'s down: act1-orlova carries on (until the glass lift)', src() === sOrl && sOrl.stopAt === undefined);
+    step(Math.ceil((run('CFG.tower.clearedPause') + 0.3) / DT)); await settle();
+    const G = run(`TLIFTS.find(L => L.glass)`);
+    check('the glass lift opens on the night: crossfade to act1-tribune', G.phase !== 'shut' && song() === 'tribune' && M.fading[0] && M.fading[0].src === sOrl, G.phase);
+    const sTri = src();
+    check('...and the SIGNED sting is loaded (apart from the two)', M.stingBufs.has('signed') && M.bufs.size <= 2);
+    step(Math.ceil((F.fade + 0.2) / DT));
+    run(`rig.position.y = 190; player.floorY = 190; startEncounter(${encI('tower', 'chairman')})`); step(2);
+    check('the Chairman: the tribune (his fight\'s track) carries on, no hard duck, the fight dip', src() === sTri && sTri.stopAt === undefined && M.bossUntil < 0 && near(M.duck.gain.goal(), db(F.fightDb)));
+    const nSrc = AC.sources.length;
+    run(`clearEnemies(); game.queue = []; towerSigned(null)`); await settle(1);
+    const sting = AC.sources.slice(nSrc).find(x => x.buffer && /signed/.test(x.buffer.from));
+    check('SIGNED: the sting plays once (not looped), outside the duck', sting && !sting.loop && M.sting && M.sting.g.out === M.bus && TW.game.state === 'won');
+    check('...the music drops out under it, the tribune\'s source still running', M.duck.gain.goal() < 0.001 && src() === sTri && sTri.stopAt === undefined);
+    const tSting = sting.started[0];
+    step(Math.ceil((11.2 - F.stingOverlap - (clock - tSting) + 0.2) / DT));
+    check('...then the tribune comes back softly under ACT 1 COMPLETE', near(M.duck.gain.goal(), db(F.afterDb)) && M.duck.gain.last()[3] === F.stingReturn && src() === sTri, `${F.afterDb} dB at +${(clock - tSting).toFixed(1)} s`);
+    run(`LEVELS.tower.start(false)`); await settle(); step(Math.ceil((F.fade + 0.3) / DT));
+    check('restart the Tower: act1-tower again, the after-sting level gone (the lobby fight\'s dip only)', song() === 'tower' && !M.afterSting && near(M.duck.gain.goal(), ['intro', 'fight'].includes(TW.game.state) ? db(F.fightDb) : 1), TW.game.state);
+    check('Act 1 all the way: never more than two decoded songs or two voices', maxBufs <= 2 && maxVoices <= 2, `max ${maxBufs} decoded, ${maxVoices} voices`);
 
     // ---- the mix
     run(`LEVELS.superblock.start(false)`); await settle();
@@ -146,20 +215,17 @@ const musicSources = () => AC.sources.filter(s => s.loop);
     check('a fight dips the music ~3 dB', near(M.duck.gain.goal(), db(F.fightDb)) && near(F.fightDb, -3, 0.5), M.duck.gain.goal().toFixed(3));
     run(`game.state = 'lost'; game.timer = 0`); step(2);
     check('a loss brings it back', near(M.duck.gain.goal(), 1));
-    run(`LEVELS.palace.start(false)`); await settle();
-    const vi = run(`CFG.palace.encounters.findIndex(E => E.boss)`);
-    run(`startEncounter(${vi})`); step(2);
+    // a boss without his own track (the bar's Rocco & Ivan): the wave's fight starts with the boss sign
+    run(`startGame(); startWave(CFG.waves.length - 1)`); step(Math.ceil(2.1 / DT)); await flush();
     const bossT = clock;
-    check('a boss\'s intro (the stage flow\'s boss sign + roar) ducks hard', near(M.duck.gain.goal(), db(F.bossDb)) && F.bossDb <= -10 && M.duck.gain.last()[3] <= 0.1, `${F.bossDb} dB`);
+    check('the bar\'s boss round (no track of its own) ducks hard as it starts', TW.game.state === 'fight' && near(M.duck.gain.goal(), db(F.bossDb)) && F.bossDb <= -10 && M.duck.gain.last()[3] <= 0.1, `${F.bossDb} dB`);
     step(Math.ceil((F.bossHold + 0.3) / DT));
     check('...then comes back to the fight level after ~2 s', near(M.duck.gain.goal(), db(F.fightDb)) && TW.game.state === 'fight', `${(clock - bossT).toFixed(1)} s later`);
     run(`game.state = 'won'`); step(2);
     check('a win brings it back to normal', near(M.duck.gain.goal(), 1));
-    run(`startEncounter(${vi})`); step(2); run(`game.state = 'won'`); step(2);
+    run(`startWave(CFG.waves.length - 1)`); step(Math.ceil(2.1 / DT)); run(`game.state = 'won'`); step(2);
     check('a win during the boss duck ends it too', near(M.duck.gain.goal(), 1) && M.bossUntil < 0);
-    // the bar's boss round (Rocco & Ivan): the wave's fight starts with the boss sign
-    run(`startGame(); startWave(CFG.waves.length - 1)`); step(Math.ceil(2.1 / DT)); await flush();
-    check('the bar\'s boss round ducks hard as it starts', TW.game.state === 'fight' && near(M.duck.gain.goal(), db(F.bossDb)));
+    run(`startWave(CFG.waves.length - 1)`); step(Math.ceil(2.1 / DT));
     // menus
     run(`openPause()`); step(2);
     check('the pause menu: quieter still', near(M.duck.gain.goal(), db(F.menuDb + F.bossDb)) || near(M.duck.gain.goal(), db(F.menuDb + F.fightDb)));
@@ -182,7 +248,7 @@ const musicSources = () => AC.sources.filter(s => s.loop);
     run(`LEVELS.tower.start(false)`); await settle(2);
     check('rapid changes: at most two voices and two decoded songs at any time', maxVoices <= 2 && maxBufs <= 2, `max ${maxVoices} voices, ${maxBufs} decoded`);
     step(Math.ceil((F.fade + 0.3) / DT));
-    check('...and it settles on the level\'s song', M.cur.song === 'krasnovia' && M.fading.length === 0 && M.bufs.size === 1);
+    check('...and it settles on the level\'s song', M.cur.song === 'tower' && M.fading.length === 0 && M.bufs.size === 1);
 
     // ---- a file that won't load: silence, no throw
     M.songs.broken = { src: 'assets/music/loop/missing.ogg', start: 0.25, end: 60 };

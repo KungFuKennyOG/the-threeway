@@ -130,20 +130,28 @@ Through the Tower's big front doors from Parade Square, no cut. Krasnovia's seat
 
 ## Music
 
-The four sector arrival themes (`tools/music/`, composed in code) play in game as seamless loops. Code: `src/music.js`.
+The sector arrival themes and Act 1's own level and boss tracks (`tools/music/`, composed in code) play in game as seamless loops. Code: `src/music.js`.
 
 | Where | Track |
 | --- | --- |
 | The title screen (VR), the pause menu | The Threeway theme, quietly (`CFG.music.menuDb`): the title is an arcade cabinet in the empty bar, already beeping |
 | The bar, Tripoint Square and the road | The Threeway theme: the prologue, all in the Old Quarter, out the door with no cut |
-| The gate and Superblock 14, podezd 3, the Palace of Sport, Parade Square, the Tower of Labor | Krasnovia: it crossfades in as you walk past the checkpoint's boom |
+| The gate and Superblock 14 | Krasnovia: it crossfades in as you walk past the checkpoint's boom |
+| Podezd 3 | act1-podezd |
+| The Palace of Sport: the crossing, the boulevard, the gym | act1-palace |
+| Volkov | act1-volkov, from his sign (THE BEAR) until he's down, then back to act1-palace |
+| Parade Square | act1-parade |
+| The Tower of Labor: the lobby, the typing pool | act1-tower |
+| Orlova, in the archive | act1-orlova, from her sign until the glass lift opens |
+| The glass lift (from when it opens on the night after Orlova), the tribune, the Chairman | act1-tribune |
+| SIGNED · 1 OF 3 | the act1-signed sting: the music drops out under it, then the tribune comes back softly (−12 dB) under ACT 1 COMPLETE |
 
-- **Levels flow, and so does the music.** On a level change the same track keeps playing (no restart); a different one crossfades (equal power, `CFG.music.fade` 2.5 s).
-- **The mix:** a fight dips the music 3 dB, a boss's intro (the boss sign and the roar) ducks it 14 dB for 2 s, then back to the fight level; a win or a loss brings it back up. All in `CFG.music` (top of `src/music.js`).
+- **Levels flow, and so does the music.** On a change (of level, or of fight or area inside one) the same track keeps playing (no restart); a different one crossfades (equal power, `CFG.music.fade` 2.5 s; into a boss's own track 1 s, on his sign).
+- **The mix:** a fight dips the music 3 dB. A boss with his own track (Volkov, Orlova; the Chairman fights to the tribune's) gets a crossfade, not a duck. A boss without one (the bar's Rocco & Ivan) ducks it 14 dB for 2 s, then back to the fight level. A win or a loss brings it back up. All in `CFG.music` (top of `src/music.js`).
 - **Volume:** OPTIONS has a MUSIC bar (saved with the others), under the overall VOLUME.
-- **Starts with the click** that unlocks sound (Enter VR / Fight on desktop), on `AU`'s Web Audio context. Each track is one `AudioBufferSourceNode` looping between its loop points (no `<audio loop>`: it gaps). Tracks load lazily (fetch + decode), the current level's first; the next level's file is fetched ahead while you play. At most two decoded tracks are kept (Quest memory: ~27 MB each).
-- **A per-level track:** add it to `MUSIC.songs` (file and loop points) and point the level at it in `MUSIC.tracks` (by level name, as in `defineLevel`). A level with no entry is silent.
-- **The loops** (`assets/music/loop/`, Ogg Opus, ~0.9 MB each, 3.6 MB for all four; Columbia and Hinomoto are ready for later acts, and `python3 loops.py columbia_swing` makes the swing draft's when the diner wants it) are rendered by `tools/music/loops.py` with the generator's own `Song.render(loop_bars=...)` (the tail folded onto the head), with a quarter second of the loop's wrap on each side of the loop points so codec padding never lands on the seam. `python3 loops.py --check` verifies each seam (no click, no gap) and that the notes match the full renders in `assets/music/`.
+- **Starts with the click** that unlocks sound (Enter VR / Fight on desktop), on `AU`'s Web Audio context. Each track is one `AudioBufferSourceNode` looping between its loop points (no `<audio loop>`: it gaps). Tracks load lazily (fetch + decode), the one you need first; the next level's file is fetched ahead while you play, and the next likely track inside a level is decoded ahead (Volkov's from the gym, Orlova's from the typing pool, the tribune's during Orlova, the sting with the tribune). At most two decoded tracks at once, plus the small sting (Quest memory: ~30 MB per track).
+- **A per-level track:** add it to `MUSIC.songs` (file and loop points) and point the level at it in `MUSIC.tracks` (by level name, as in `defineLevel`). For music that follows a level's fights or areas, give the level `{ song, at, ahead }`: `at()` returns the track for where you are now (helpers: `MUSIC.fighting('volkov')`, `MUSIC.reached('archive')`), `ahead()` the one to decode ahead. A level with no entry is silent. A sting is a song with `oneShot: true`, played by `MUSIC.cue(name)`.
+- **The loops** (`assets/music/loop/`, Ogg Opus: the four themes at 96 kbps, ~0.9 MB each; Act 1's seven at 64 kbps, 0.5–0.75 MB each; the sting 0.14 MB; 8.1 MB in all. Columbia and Hinomoto are ready for later acts, and `python3 loops.py columbia_swing` makes the swing draft's when the diner wants it) are rendered by `tools/music/loops.py` with the generator's own `Song.render(loop_bars=...)` (the tail folded onto the head), with a quarter second of the loop's wrap on each side of the loop points so codec padding never lands on the seam. `python3 loops.py --check` verifies each seam (no click, no gap) and that the notes match the full renders in `assets/music/`. Volkov's and Orlova's ENRAGED sections play when the loop reaches them, not on the actual enrage (a later pass).
 
 ## Goons: the style rule
 
@@ -179,7 +187,7 @@ node test/palace.js     # 43 checks: off the cradle through the fence gap (no cu
 node test/tower.js      # 60 checks: from the menu, the shell + glow + floors + budgets (the outside < 8000 + 100 triangles), MSU massing (outer < inner < centre, symmetrical, <= 260 m), the searchlights sweep (cheaply, on any level), the cog static, nothing from the skylines on its ground, the old distant tower gone and the beacon on the spire, its proportions and fog, Act 1 west (the frame round-trips, each place further west than the last, the Tower dead ahead down the boulevard, nothing from the far city on any level's ground, clear sightlines to the cog from the square, the gate, the wing roof, the crossing, the boulevard and Parade Square), every fight on one floor, the four fights in order (doors and lifts shut mid-fight), the three lifts (smooth: < 60 mm a frame; the glass lift opens once Orlova's down, outside halfway up, 150 m), respawn on the right floor, Orlova's enrage, the tribune (outside, flat, the balustrade holds you), the Chairman signs out there (the hook too), rooms (in his office the city shows through his doors only), in from Parade Square with no cut, physics cost
 node test/bot.js 1 400 --mode=aggro --level=street   # the bot fights down the street to the checkpoint (--level=both: the bar, out the door, then the street; --level=superblock: the gate and the courtyard; --level=road: the street, through the boom, on into Superblock 14)
 node test/vr.js        # 71 checks: the title screen (coin, START), pause (Y, a passed-through menu button, a blurred session; freezes the world; stick picks; B resumes; restart; quit to title; stage select), the laborer's pipe (disarm, pick up), the conscript, level 2 in VR (start outside, stick walking, held in by the stretch), tiers, flick, block, parry, clinch, grab/throw, drink, perf panel + tuning, potato catch + throw-back, bat disarm + bat damage, riot shield block/counter/flank/shatter, high vs low kicks + retreat, locomotion
-node test/music.js     # 38 checks: every level maps to a track and every loop file is there, no audio (nothing throws, nothing plays), the bar's track first, bar -> street keeps the same source, street -> superblock crossfades (equal power; the next track fetched ahead), on through Krasnovia with no restart, fight dip, boss duck and back, win/lose, the bar's boss round, pause and title quiet, the MUSIC option, rapid changes (never more than two voices or decoded tracks), a track that won't load or decode
+node test/music.js     # 57 checks: every level maps to a track and every file is there (loops and the sting), no audio (nothing throws, nothing plays), the bar's track first, bar -> street keeps the same source, street -> superblock crossfades (equal power; the next level's file fetched ahead), on into podezd, the Palace (no restart through its fights, Volkov's track decoded ahead in the gym, a 1 s crossfade on his sign with no duck, a retry keeps it, back to the Palace's when he's down), Parade Square, the Tower (Orlova's ahead, her crossfade, the tribune's ahead during her fight, the glass lift opens into the tribune, the Chairman keeps it), SIGNED (the sting once, the music out under it, back softly under ACT 1 COMPLETE, gone on a restart), fight dip, the bar's boss duck and back, win/lose, pause and title quiet, the MUSIC option, rapid changes, never more than two voices or decoded tracks, a track that won't load or decode
 node test/physics.js   # 47 checks: heights for all 9 goons, skinned mesh vs skeleton, one mesh per goon/stool, shove + recover, launch, get-up, dominoes, the cook's lob accuracy, Rocco & Ivan tag + enrage
 node test/bot.js 1 400 --mode=aggro    # a bot plays all four rounds (catches pots, throws them back); prints hits, losses, catches, tags, per-round times, errors
 ```
@@ -205,7 +213,7 @@ Three.js r149 from jsDelivr, WebXR, synthesized placeholder sound effects, Web A
 | `src/rooms.js` | rooms + portals: what's drawn from where |
 | `src/characters.js` | goon bodies and poses, the player's hands |
 | `src/audio.js`, `src/fx.js` | placeholder sound, sprites and signs |
-| `src/music.js`, `assets/music/` | the music player (`MUSIC.tracks`: level -> track, crossfades, ducking, `CFG.music`); the themes and their game loops (`loop/`, from `tools/music/loops.py`) |
+| `src/music.js`, `assets/music/` | the music player (`MUSIC.tracks`: level (and its fights and areas) -> track, crossfades, ducking, stings, `CFG.music`); the themes, Act 1's tracks and their game loops (`loop/`, from `tools/music/loops.py`) |
 | `src/player.js`, `src/locomotion.js` | the player, XR + desktop input, hand/head tracking, moving and turning |
 | `src/physics.js` | the particle ragdoll solver, walls, collisions |
 | `src/props.js` | bottles, stools, bats, kitchenware, crates, bins, signs; prop batches |

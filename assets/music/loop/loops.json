@@ -34,5 +34,77 @@
   "loopSamples": 3302400,
   "loopStart": 0.25,
   "loopEnd": 69.05
+ },
+ "podezd": {
+  "file": "act1-podezd.ogg",
+  "bpm": 116,
+  "bars": 41,
+  "sampleRate": 48000,
+  "loopSamples": 4071724,
+  "loopStart": 0.25,
+  "loopEnd": 85.077583
+ },
+ "palace": {
+  "file": "act1-palace.ogg",
+  "bpm": 144,
+  "bars": 37,
+  "sampleRate": 48000,
+  "loopSamples": 2960000,
+  "loopStart": 0.25,
+  "loopEnd": 61.916667
+ },
+ "volkov": {
+  "file": "act1-volkov.ogg",
+  "bpm": 104,
+  "bars": 34,
+  "sampleRate": 48000,
+  "loopSamples": 3766153,
+  "loopStart": 0.25,
+  "loopEnd": 78.711521
+ },
+ "parade": {
+  "file": "act1-parade.ogg",
+  "bpm": 120,
+  "bars": 38,
+  "sampleRate": 48000,
+  "loopSamples": 3648000,
+  "loopStart": 0.25,
+  "loopEnd": 76.25
+ },
+ "tower": {
+  "file": "act1-tower.ogg",
+  "bpm": 126,
+  "bars": 40,
+  "sampleRate": 48000,
+  "loopSamples": 3657143,
+  "loopStart": 0.25,
+  "loopEnd": 76.440479
+ },
+ "orlova": {
+  "file": "act1-orlova.ogg",
+  "bpm": 150,
+  "bars": 38,
+  "sampleRate": 48000,
+  "loopSamples": 2918400,
+  "loopStart": 0.25,
+  "loopEnd": 61.05
+ },
+ "tribune": {
+  "file": "act1-tribune.ogg",
+  "bpm": 132,
+  "bars": 43,
+  "sampleRate": 48000,
+  "loopSamples": 3752727,
+  "loopStart": 0.25,
+  "loopEnd": 78.431813
+ },
+ "signed": {
+  "file": "act1-signed.ogg",
+  "bpm": 100,
+  "bars": 3,
+  "sampleRate": 48000,
+  "oneShot": true,
+  "samples": 537599,
+  "duration": 11.199979
  }
 }

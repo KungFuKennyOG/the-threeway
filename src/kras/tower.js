@@ -755,7 +755,7 @@ function towerSigned(e) {
   SIGNED.add(e ? e.type : 'chairman');
   level.arena = null; LOCKED.clear(); game.queue = [];
   game.state = 'won'; game.timer = 0;
-  showSign('signed' + Math.min(3, SIGNED.size), CFG.tower.signPause); AU.bell();
+  showSign('signed' + Math.min(3, SIGNED.size), CFG.tower.signPause); AU.bell(); MUSIC.cue('signed');
 }
 // the hook a leader goon with `signs: true` calls when he kneels at 0 hp (any sector's leader; the Chairman ends Act 1)
 function onLeaderSigned(e) {
@@ -764,7 +764,7 @@ function onLeaderSigned(e) {
     if (game.queue.length || enemies.some(o => o.alive && !(o.cfg && o.cfg.signs))) return;
     towerSigned(e); return;
   }
-  if (!SIGNED.has(e.type)) { SIGNED.add(e.type); showSign('signed' + Math.min(3, SIGNED.size), 3.0); AU.bell(); }
+  if (!SIGNED.has(e.type)) { SIGNED.add(e.type); showSign('signed' + Math.min(3, SIGNED.size), 3.0); AU.bell(); MUSIC.cue('signed'); }
 }
 defineLevel('tower', {
   menu: '7 · The Tower of Labor', cfg: () => CFG.tower, build: buildTower, rooms: towerRooms,
