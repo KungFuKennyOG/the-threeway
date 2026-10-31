@@ -124,6 +124,10 @@ Through the Tower's big front doors from Parade Square, no cut. Krasnovia's seat
 - **Lift 3 to the Chairman's office, under the cog:** oak panelling, a huge desk, flags, his portrait, and a panoramic window over the night city. The Chairman is no fighter, but he has a boss bar. Beat him and he signs the permit to reopen The Threeway: SIGNED · 1 OF 3, the permit lies on his desk, ACT 1 COMPLETE. (A leader goon with `signs: true` calls `onLeaderSigned(e)`; until the Chairman's own goon lands, beating the last fight counts as his signature.)
 
 
+## Goons: the style rule
+
+New or changed goons follow `docs/goon-style.md`. Each one is a character with one loud signature shape, pushed proportions, a distinct face, a dense hand-pixeled sheet and an idle pose with attitude. No uniform-only goons. Check every one in a lineup beside the originals.
+
 ## Quest performance
 
 - **Merged static geometry.** The whole bar room is one mesh on one atlas (`tools/bar_atlas.py` packs its textures; the shader tiles each texture inside its box of the atlas). The street is one mesh on a painted, mipmapped atlas, the skylines and far city another. Light is **baked per vertex** at build time with the shader's own formula, so any number of gas lamps is free; goons, props and hands are lit live by the 6 nearest lamps (the bar's six inside).
