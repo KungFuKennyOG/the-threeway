@@ -21,7 +21,63 @@ const BLOCKERS = [   // xz boxes nobody walks through
 const WALK = [
   { x0: -ROOM.wall, x1: ROOM.wall, z0: -ROOM.wall, z1: ROOM.wall, pad: 0.3, wx0: -(ROOM.x - 0.04), wx1: ROOM.x - 0.04, wz0: -(ROOM.z - 0.04), wz1: ROOM.z - 0.04, area: 'bar' },
 ];
-function addWalk(w) { w.pad = w.pad || 0; for (const [k, s] of [['x0', -1], ['x1', 1], ['z0', -1], ['z1', 1]]) if (w['w' + k] === undefined) w['w' + k] = w[k] + s * 0.01; WALK.push(w); }
+// Floors: a rectangle can carry a height. Flat: `y` (default 0). Ramp or stair flight: `y0` to `y1` along `along` ('x' or
+// 'z'), changing over `run: [a, b]` (coordinates along that axis, a < b; default the rect's own extent) and level at y0
+// before a, y1 after b, so a ramp's rect can overlap the floors at either end like any other walk rects (they must overlap
+// to connect). Stairs walk as a ramp; the treads are only drawn (stairSteps).
+//   addWalk({ x0: 0, x1: 8, z0: -4, z1: 3, pad: 0.3 })                                        // ground (y 0)
+//   addWalk({ x0: 2, x1: 4, z0: 2, z1: 9, y0: 0, y1: 3, along: 'z', run: [3, 8], pad: 0.3 })  // a flight up to 3 m
+//   addWalk({ x0: 0, x1: 8, z0: 8, z1: 12, y: 3, pad: 0.3 })                                  // the landing it reaches
+// Rects may overlap in xz at different heights (stacked floors): whatever is within CFG.floors.step of your height counts.
+function addWalk(w) { prepWalk(w); WALK.push(w); WALK.flat = floorsFlat(WALK); }
+function prepWalk(w) {
+  w.pad = w.pad || 0; for (const [k, s] of [['x0', -1], ['x1', 1], ['z0', -1], ['z1', 1]]) if (w['w' + k] === undefined) w['w' + k] = w[k] + s * 0.01;
+  w.ramp = w.y0 !== undefined && w.y1 !== undefined;
+  if (!w.ramp) w.y = w.y || 0;
+  else {
+    if (w.along !== 'x' && w.along !== 'z') throw new Error('addWalk: a ramp needs along: "x" or "z"');
+    if (!w.run) w.run = w.along === 'x' ? [w.x0, w.x1] : [w.z0, w.z1];   // where the height changes; flat at y0 / y1 either side of it
+  }
+  // floor lookups take anything inside the padded rect or its walls
+  w.fx0 = Math.min(w.x0 - w.pad, w.wx0); w.fx1 = Math.max(w.x1 + w.pad, w.wx1); w.fz0 = Math.min(w.z0 - w.pad, w.wz0); w.fz1 = Math.max(w.z1 + w.pad, w.wz1);
+}
+function floorsFlat(list) { return list.every(w => !w.ramp && !w.y); }   // every rect at y 0: the old one-floor fast path
+WALK.forEach(prepWalk); WALK.flat = floorsFlat(WALK);
+// floor height of one rect at x, z (a ramp is level past the ends of its run)
+function walkHeight(w, x, z) {
+  if (!w.ramp) return w.y;
+  const r = w.run, t = (clamp(w.along === 'x' ? x : z, r[0], r[1]) - r[0]) / (r[1] - r[0]);
+  return w.y0 + (w.y1 - w.y0) * t;
+}
+// The floor under x, z for something standing at height y (feet; omit for the top floor there): among the rects over
+// that spot, the nearest one you could step onto (no more than CFG.floors.step above y), the highest if several.
+// A rect's pad lets you reach its edge but doesn't hold you up: past its edge you're over whatever is below.
+function floorAt(x, z, y) {
+  const list = floorBands ? floorBands.get(Math.floor(z / BAND)) : WALK;
+  if (!list || list.flat) return 0;   // no rect over this band, or none raised
+  const lim = (y === undefined ? Infinity : y) + CFG.floors.step;
+  let bestH = -Infinity, bestD = Infinity, above = Infinity;
+  for (let i = 0; i < list.length; i++) {
+    const w = list[i];
+    if (x < w.fx0 || x > w.fx1 || z < w.fz0 || z > w.fz1 || (w.on && !w.on())) continue;
+    const h = walkHeight(w, x, z);
+    if (h > lim) { if (h < above) above = h; continue; }
+    const dx = x < w.x0 ? w.x0 - x : x > w.x1 ? x - w.x1 : 0, dz = z < w.z0 ? w.z0 - z : z > w.z1 ? z - w.z1 : 0, d = dx > dz ? dx : dz;
+    if (d < bestD - 1e-6 || (d < bestD + 1e-6 && h > bestH)) { bestD = d; bestH = h; }
+  }
+  if (bestH > -Infinity) return bestH;
+  return above < Infinity ? above : 0;   // below every floor here (spawned under it): the floor above; off every rect: y 0
+}
+// the treads of a flight, for drawing: n boxes [x0, y0, z0, x1, y1, z1] over its run, each top crossing the walk ramp at
+// the tread's middle (feet sink or float at most half a riser). Feed them to box() in the level's build.
+function stairSteps(w, n) {
+  const out = [], lo = Math.min(w.y0, w.y1), d = (w.y1 - w.y0) / n, [r0, r1] = w.run, L = (r1 - r0) / n;
+  for (let i = 0; i < n; i++) {
+    const a = r0 + L * i, b = a + L, top = w.y0 + d * (i + 0.5);
+    out.push(w.along === 'x' ? [a, lo, w.z0, b, top, w.z1] : [w.x0, lo, a, w.x1, top, b]);
+  }
+  return out;
+}
 // banded lookup so the street's many boxes don't cost the bar anything: boxes are filed by z band
 const BAND = 4;
 function bandIndex(list, get, margin) {
@@ -33,27 +89,43 @@ function bandIndex(list, get, margin) {
   return bands;
 }
 const NONE = [];
-let blockerBands = null, worldBoxBands = null, walkBands = null;
+let blockerBands = null, worldBoxBands = null, walkBands = null, floorBands = null;
 function indexWorld() {
   blockerBands = bandIndex(BLOCKERS, b => [b.z0, b.z1], 0.8);
   worldBoxBands = bandIndex(WORLD_BOXES, B => [B[2], B[5]], 0.6);
   walkBands = bandIndex(WALK, w => [w.z0, w.z1], 8);   // only the walkable rectangles near you are tested
+  for (const list of walkBands.values()) list.flat = floorsFlat(list);   // a band with no raised floor costs nothing extra
+  floorBands = bandIndex(WALK, w => [w.fz0, w.fz1], 0);   // floorAt: only the rects over that band
+  for (const list of floorBands.values()) list.flat = floorsFlat(list);
 }
 const blockersNear = (z) => (blockerBands && blockerBands.get(Math.floor(z / BAND))) || NONE;
 const boxesNear = (z) => (worldBoxBands && worldBoxBands.get(Math.floor(z / BAND))) || NONE;
-// keep an xz point (radius r) inside the walkable union; returns true if it had to move. walls: ragdoll particles
-function keepInWalk(p, r, walls) {
+// keep an xz point (radius r) inside the walkable union; returns true if it had to move. walls: ragdoll particles.
+// Where floors are raised, p.y matters: walking (p.y = feet), only rects within CFG.floors.step of you count, so a taller
+// edge is a wall either way; ragdoll particles (p.y = centre) are also free over anything lower, so they fall off ledges.
+// memo (optional, e.g. a particle): remembers the rect it was last inside, tested first (being inside any rect ends the search)
+function keepInWalk(p, r, walls, memo) {
   let best = null, bestD = 1e9, bx = 0, bz = 0;
   const list = (walkBands && walkBands.get(Math.floor(p.z / BAND))) || WALK;
+  const flat = list.flat, step = CFG.floors.step, py = walls ? p.y - r : p.y;
+  const m = memo && memo.wk;
+  if (m && (!m.on || m.on())) {
+    const inside = walls ? p.x >= m.wx0 + r && p.x <= m.wx1 - r && p.z >= m.wz0 + r && p.z <= m.wz1 - r
+      : p.x >= (m.x0 + r) - m.pad && p.x <= (m.x1 - r) + m.pad && p.z >= (m.z0 + r) - m.pad && p.z <= (m.z1 - r) + m.pad;
+    if (inside) { if (flat) return false; const h = walkHeight(m, p.x, p.z); if (h <= py + step && (walls || h >= py - step)) return false; }
+  }
   for (const w of list) {
     if (w.on && !w.on()) continue;
     let x0, x1, z0, z1;
     if (walls) { x0 = w.wx0 + r; x1 = w.wx1 - r; z0 = w.wz0 + r; z1 = w.wz1 - r; }
     else { x0 = (w.x0 + r) - w.pad; x1 = (w.x1 - r) + w.pad; z0 = (w.z0 + r) - w.pad; z1 = (w.z1 - r) + w.pad; }
     if (x0 > x1 || z0 > z1) continue;
-    if (p.x >= x0 && p.x <= x1 && p.z >= z0 && p.z <= z1) return false;
+    const inside = p.x >= x0 && p.x <= x1 && p.z >= z0 && p.z <= z1;
     const qx = clamp(p.x, x0, x1), qz = clamp(p.z, z0, z1), d = (p.x - qx) ** 2 + (p.z - qz) ** 2;
-    if (d < bestD) { bestD = d; best = w; bx = qx; bz = qz; }
+    if (!inside && d >= bestD) continue;
+    if (!flat) { const h = walkHeight(w, p.x, p.z); if (h > py + step || (!walls && h < py - step)) continue; }   // another floor
+    if (inside) { if (memo) memo.wk = w; return false; }
+    bestD = d; best = w; bx = qx; bz = qz;
   }
   if (!best) return false;
   p.x = bx; p.z = bz; return true;

@@ -1,7 +1,25 @@
 'use strict';
 // ============================== locomotion ==================================
 let snapReady = true;
-function updateLocomotion(dt) {
+function updateLocomotion(dt) { moveRig(dt); followFloor(dt); }
+// raised floors: the rig rides the floor under your head, eased (no sudden jumps in VR); a teleport snaps.
+// Anything that moves the rig itself (a respawn) can set rig.position.y to pick a floor in a stack: the floor at or
+// just below that height is the one you land on.
+const _fl = { x: 0, z: 0 };
+function followFloor(dt) {
+  let x = rig.position.x, z = rig.position.z;
+  if (xrMode) { camera.getWorldPosition(_v1); x = _v1.x; z = _v1.z; }   // in VR you stand anywhere in your play space
+  const F = CFG.floors, y = rig.position.y;
+  let ny;
+  if (y !== player.floorY || Math.hypot(x - _fl.x, z - _fl.z) > F.snapDist) ny = floorAt(x, z, y);   // moved by someone else
+  else {
+    const target = floorAt(x, z, y), m = F.maxRise * dt;
+    ny = y + clamp((target - y) * Math.min(1, dt * F.followRate), -m, m);
+    if (Math.abs(target - ny) < 1e-4) ny = target;
+  }
+  rig.position.y = ny; player.floorY = ny; _fl.x = x; _fl.z = z;
+}
+function moveRig(dt) {
   if (xrMode) {
     const L = hands.left.source && hands.left.source.gamepad, R = hands.right.source && hands.right.source.gamepad;
     if (L && L.axes.length >= 4 && !player.clinchedBy && !perfPanel.open) {
@@ -28,7 +46,7 @@ function updateLocomotion(dt) {
     if (R && (game.state === 'won') && R.buttons[4] && R.buttons[4].pressed) { if (level.name === 'street') startStreet(false); else if (level.name === 'depot') startDepot(false); else startGame(); }
     // keep the head inside the room and out of the bar
     camera.getWorldPosition(_v1);
-    _v2.copy(_v1); keepPlayerIn(_v2, 0.25);
+    _v2.copy(_v1); _v2.y = player.floorY; keepPlayerIn(_v2, 0.25);   // walk rects test your feet, not your head
     rig.position.x += _v2.x - _v1.x; rig.position.z += _v2.z - _v1.z;
     return;
   }
@@ -49,7 +67,7 @@ function updateLocomotion(dt) {
     rig.position.x += (-sin * f + cos * s) * sp;
     rig.position.z += (-cos * f - sin * s) * sp;
   }
-  _v1.set(rig.position.x, 0, rig.position.z); keepPlayerIn(_v1, 0.3);
+  _v1.set(rig.position.x, player.floorY, rig.position.z); keepPlayerIn(_v1, 0.3);
   rig.position.x = _v1.x; rig.position.z = _v1.z;
 }
 

@@ -3,6 +3,7 @@
 const player = {
   hp: CFG.player.health, head: new V3(), headVel: new V3(), headSpeed: 0, headHist: [], hurtT: 0, clinchedBy: null,
   headbuttCd: 0, crouch: 0,
+  floorY: 0,   // the floor you stand on (eased; the rig sits at this height, so head-relative checks just work)
 };
 function makeHand(side) {
   const left = side === 'left';

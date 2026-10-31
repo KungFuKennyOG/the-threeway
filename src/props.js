@@ -8,6 +8,7 @@ class Prop {
     this.durability = this.cfg.durability; this.drunk = false; this.heldBy = null; this.heldByEnemy = null;
     this.batLike = type === 'bat' || type === 'pipe';   // a long thing held by one end: same rig, pinning and hit point
     this.thrown = false; this.hostile = false; this.hitSet = new Set(); this.spin = 0; this.prevPos = new V3();
+    { const fy = floorAt(pos.x, pos.z, pos.y); if (pos.y < fy) pos = pos.clone().setY(fy); }   // placed at y 0 over a raised floor: stand it on the floor
     const body = this.body = new Body('prop', this);
     let geo, mat;
     if (type === 'bottle') {
@@ -244,7 +245,7 @@ function updateProjectiles() {
     const bodyTop = player.head.y - 0.22;
     const dxz = Math.hypot(_cs.x - player.head.x, _cs.z - player.head.z);
     const headHit = _cs.distanceTo(player.head) < r + PJ.headRadius;
-    const bodyHit = !headHit && dxz < r + PJ.bodyRadius && _cs.y > 0.3 && _cs.y < bodyTop;
+    const bodyHit = !headHit && dxz < r + PJ.bodyRadius && _cs.y > player.floorY + 0.3 && _cs.y < bodyTop;
     if (headHit || bodyHit) {
       p.hostile = false; p.thrown = false;
       hurtPlayer(Math.round(p.cfg.playerDmg * (headHit ? 1 : 0.7)));
@@ -254,7 +255,7 @@ function updateProjectiles() {
       q.x.copy(_cs); q.v.multiplyScalar(-0.25); q.v.y = 0.5;
       continue;
     }
-    if (q.x.y < r + 0.03 || p.body.sleep || NOW - (p.releasedAt || 0) > 3) {
+    if (q.x.y < floorAt(q.x.x, q.x.z, q.x.y - r) + r + 0.03 || p.body.sleep || NOW - (p.releasedAt || 0) > 3) {
       p.hostile = false;
       if (p.type === 'potato' && q.v.length() > 5) p.break(q.x);
     }
