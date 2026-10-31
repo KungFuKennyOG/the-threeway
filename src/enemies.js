@@ -85,7 +85,9 @@ class Enemy {
     this.pull = CFG.physics.activePull;
     this.maxHp = this.cfg.hp; this.benched = false; this.enraged = false;
     this.weapon = null; this.carry = null; this.batDir = new V3(0, 1, 0); this.throwCd = rand(1.0, 2.0); this.lobType = Math.random() < 0.5 ? 'potato' : 'pot';
+    if (this.cfg.throws) this.lobType = this.cfg.throws[0];
     this.shieldHp = this.cfg.shield || 0; this.counterCd = 0; this.kickLow = false;
+    this.dodgeCd = 0; this.dodgeDir = new V3(); this.shoveV = new V3(); this.shoveT = 1e9; this.nextWindup = 0;
     if (this.cfg.weapon) this.equip(new Prop(this.cfg.weapon, this.pos));
     this.drawParts();
   }
@@ -123,17 +125,18 @@ class Enemy {
     const w = this.weapon; if (!w) return;
     const wr = this.body.by.wrR.x;
     const f = _pa.set(Math.sin(this.yaw), 0, Math.cos(this.yaw)), r = _pb.set(-f.z, 0, f.x);
-    const want = _pc, st = this.state;
+    const want = _pc, st = this.state, D = w.cfg.dirs || BAT_DIRS;
+    const dirOf = (k) => want.set(0, D[k][0], 0).addScaledVector(f, D[k][1]).addScaledVector(r, D[k][2]);
     let rate = 10;
-    if (st === 'windup') want.set(0, 0.85, 0).addScaledVector(f, -0.5).addScaledVector(r, 0.2);
+    if (st === 'windup') dirOf('windup');
     else if (st === 'strike') { want.subVectors(this.lockTarget, wr); want.y -= 0.05; rate = 26; }
-    else if (st === 'whiff' || (st === 'recover' && this.timer < 0.25)) { want.set(0, -0.6, 0).addScaledVector(f, 0.6).addScaledVector(r, -0.5); rate = 14; }
-    else want.set(0, 0.75, 0).addScaledVector(f, -0.55).addScaledVector(r, 0.25);   // resting on the shoulder
+    else if (st === 'whiff' || (st === 'recover' && this.timer < 0.25)) { dirOf('whiff'); rate = 14; }
+    else dirOf('rest');   // resting on the shoulder (the flagpole: upright)
     want.normalize();
     this.batDir.lerp(want, Math.min(1, rate * dt)).normalize();
-    const b = w.body.by, L = w.cfg.length;
-    b.knob.pin.copy(wr).addScaledVector(this.batDir, -0.06);
-    b.tip.pin.copy(wr).addScaledVector(this.batDir, L - 0.06);
+    const b = w.body.by, L = w.cfg.length, g = w.cfg.grip || 0.06;
+    b.knob.pin.copy(wr).addScaledVector(this.batDir, -g);
+    b.tip.pin.copy(wr).addScaledVector(this.batDir, L - g);
     w.body.wake();
   }
   updateCarry() {
@@ -147,7 +150,7 @@ class Enemy {
     this.carry = null; p.heldByEnemy = null;
     const S = p.body.ps[0].x, T = _pd.copy(player.head); T.y -= 0.12;
     const dist = Math.hypot(T.x - S.x, T.z - S.z);
-    const tf = clamp(dist / 7, 0.45, 0.85);
+    const lt = p.cfg.lobT || [0.45, 0.85], tf = clamp(dist / (p.cfg.lob || 7), lt[0], lt[1]);   // cymbals fly flatter and faster
     const v = _pa.subVectors(T, S).divideScalar(tf); v.y -= 0.5 * CFG.physics.gravity * tf;
     p.body.drag = 0.02;
     p.unpinAll(v);
@@ -213,12 +216,12 @@ class Enemy {
     for (let i = this.faceStart * 2, n = (this.faceStart + this.faceCount) * 2; i < n; i += 2) { a[i] = b[i] + o[0]; a[i + 1] = b[i + 1] + o[1]; }
     uv.needsUpdate = true;
   }
-  hittable() { return this.alive && !['ragdoll', 'ko', 'getup', 'dead'].includes(this.state); }
+  hittable() { return this.alive && !['ragdoll', 'ko', 'getup', 'dead'].includes(this.state) && !(this.state === 'dodge' && this.timer < (this.cfg.dodgeIframes || 0.2)); }
   grabbable() { return this.alive && ['enter', 'approach', 'circle', 'windup', 'recover', 'whiff', 'flinch', 'stagger', 'keepaway', 'lobWind', 'lobRelease', 'retreat'].includes(this.state); }
   guarding() { return this.cfg.highGuard && ['enter', 'approach', 'circle', 'recover'].includes(this.state); }
   shieldUp() { return this.shieldHp > 0 && ['enter', 'approach', 'circle', 'windup', 'recover', 'whiff', 'flinch'].includes(this.state); }
   facing() { return new V3(Math.sin(this.yaw), 0, Math.cos(this.yaw)); }
-  atkKey() { return this.weapon ? 'batboy-bat' : this.cfg.kicker ? (this.kickLow ? 'kickLow' : 'kickHigh') : this.type; }
+  atkKey() { return this.weapon ? (this.weapon.cfg.pose || 'batboy') + '-bat' : this.cfg.kicker ? (this.kickLow ? 'kickLow' : 'kickHigh') : this.type; }
   shieldBlock(tier, weapon, point, hand) {   // a hit on the riot shield: chips it, and he answers with the baton
     this.shieldHp -= (tier === 'heavy' ? 2 : 1) + (weapon ? 1 : 0);
     this.poise -= 3; AU.clank(); if (hand) buzz(hand, 0.45, 50);
@@ -274,6 +277,7 @@ class Enemy {
   }
   // knockdown / launch: go limp with a real push at the point you hit
   knockdown(dir, kind, ko, at) {
+    if (ko && this.cfg.signs) { this.signDown(); return; }   // the Chairman doesn't go flying: he kneels and signs
     const launch = kind === 'launch';
     this.goLimp();
     const k = CFG.reactions.knockbackMult / 2.5;
@@ -285,7 +289,9 @@ class Enemy {
   }
   markKO() {
     if (!this.alive) return;
-    this.alive = false; this.setFace('ko');
+    if (this.cfg.signs && this.state !== 'ragdoll') { this.signDown(); return; }
+    this.alive = false; if (this.cfg.signs) return;   // knocked out mid-flight: he kneels and signs once he's settled
+    this.setFace('ko');
     fx(['fx_stars0', 'fx_stars1', 'fx_stars2'], this.body.by.head.x.clone().add(new V3(0, 0.3, 0)), { life: 1.2, frameTime: 0.08 });
   }
   grabbedBy(h) {
@@ -335,6 +341,9 @@ class Enemy {
     if (this.cooldown > 0) this.cooldown -= dt;
     if (this.impactCd > 0) this.impactCd -= dt;
     if (this.counterCd > 0) this.counterCd -= dt;
+    if (this.shoveT < CFG.ai.shoveTime) this.pushPlayer(dt);   // the lifter's punch is still moving you
+    if (this.dodgeCd > 0) this.dodgeCd -= dt;
+    if (this.cfg.dodgeChance && this.dodgeCd <= 0 && (this.state === 'approach' || this.state === 'circle' || this.state === 'recover')) this.watchFists();
 
     const toP = _v1.set(player.head.x - this.pos.x, 0, player.head.z - this.pos.z);
     const dist = toP.length();
@@ -397,16 +406,31 @@ class Enemy {
         this.faceToward(toP, dt);
         if (this.state === 'whiff') pose = attackPose(this.atkKey(), this.side, 'strike');
         if (this.timer >= (this.recoverTime || 0.45)) {
-          if (this.combo > 0 && this.hasToken && dist < c.reach + 0.4) { this.combo--; this.side = this.side === 'r' ? 'l' : 'r'; if (c.kicker) this.kickLow = this.side === 'l'; this.windupTime = c.comboWindup || c.windup; this.setState('windup'); AU.grunt(); this.attachWindFx(); this.telegraph(); }
+          if (this.combo > 0 && this.hasToken && dist < c.reach + 0.4) { this.combo--; this.side = this.side === 'r' ? 'l' : 'r'; if (c.kicker) this.kickLow = this.side === 'l'; this.windupTime = this.nextWindup || c.comboWindup || c.windup; this.nextWindup = 0; this.setState('windup'); AU.grunt(); this.attachWindFx(); this.telegraph(); }
           else { this.releaseToken(); this.cooldown = rand(...CFG.ai.attackCooldown) * (c.retreat ? 0.5 : 1); this.setState(c.retreat ? 'retreat' : 'approach'); }
         }
         break;
       }
       case 'retreat': {   // the kicker darts back out of reach after a combo, then circles for another way in
         this.faceToward(toP, dt);
+        if (c.cartwheel) {   // the gymnast cartwheels out sideways and back: the whole body wheels about the hips
+          const T = c.cartwheel, k = Math.min(1, this.timer / T);
+          _v2.set(-toP.z, 0, toP.x).normalize().multiplyScalar(this.circleDir * 0.8).addScaledVector(_v3.copy(toP).normalize(), -0.6);
+          if (k < 1) this.moveTo(_v2.multiplyScalar(2).add(this.pos), c.speed * 0.9, dt);
+          pose = Object.assign({}, POSES.cartwheel); pose.hips = [0, 0, -this.circleDir * 360 * k]; rate = 30;
+          if (k >= 1) { this.cur.hips[2] += this.circleDir * 360; this.setState('circle'); }
+          break;
+        }
         _v2.copy(this.pos).addScaledVector(_v3.copy(toP).normalize(), -1.2);
         moving = dist < c.retreat && this.timer < 1.0 ? this.moveTo(_v2, c.speed * 0.8, dt) : false;
         if (!moving) this.setState('circle');
+        break;
+      }
+      case 'dodge': {   // the specialist slips your punch: a quick step out of its line, then straight back in
+        this.faceToward(toP, dt);
+        pose = POSES.dodge; rate = 16;
+        if (this.timer < CFG.ai.dodgeTime) { this.pos.addScaledVector(this.dodgeDir, CFG.ai.dodgeStep * (1 - this.timer / CFG.ai.dodgeTime) * dt); }
+        else { this.cooldown = 0; this.setState('approach'); }
         break;
       }
       case 'flinch': {
@@ -461,6 +485,7 @@ class Enemy {
         if (this.throwCd <= 0 && dist > 1.8 && dist < 7 && projectilesInAir() < CFG.projectiles.maxInAir) {
           this.carry = new Prop(this.lobType, this.body.by.wrR.x);
           this.lobType = this.lobType === 'pot' ? 'potato' : (Math.random() < 0.6 ? 'potato' : 'pot');
+          if (c.throws) this.lobType = c.throws[Math.random() < 0.5 ? 0 : 1];
           this.carry.heldByEnemy = this; this.carry.body.ignore = this.body; this.carry.pinAll();
           this.setState('lobWind'); AU.grunt();
           this.windFx = loopFx(['fx_windup', 'fx_windup', 'fx_spark', 'fx_windup'], () => this.carry ? this.carry.body.ps[0].x : this.body.by.wrR.x, 0.07);
@@ -481,6 +506,13 @@ class Enemy {
       }
       case 'ragdoll': {
         this.rootAtPelvis();
+        return;
+      }
+      case 'signed': {   // beaten, he kneels where he is and stays (he isn't going anywhere: he has a permit to sign)
+        this.rootY = -0.45 * this.s;
+        this.pull = CFG.physics.activePull; this.body.pull = this.pull; this.body.drag = 0.8;
+        this.faceToward(toP, dt);
+        this.applyPose(POSES.kneel, 4, dt);
         return;
       }
       case 'getup': {
@@ -534,7 +566,7 @@ class Enemy {
         const still = sp < 0.45;   // at rest anywhere: the floor, the bar, a table
         if (still) {
           this.settleT += 1 / CFG.physics.hz;
-          if (!this.alive && this.settleT > 0.4) this.setState('ko');
+          if (!this.alive && this.settleT > 0.4) { if (this.cfg.signs) this.signDown(); else this.setState('ko'); }
           else if (this.alive && this.settleT >= CFG.reactions.getUpTime) this.startGetup();
         } else this.settleT = Math.max(0, this.settleT - 0.25 / CFG.physics.hz);
         if (P.pelvis.v.length() < 2) this.flying = false;
@@ -542,7 +574,7 @@ class Enemy {
     }
   }
   startGetup() {
-    if (!this.alive) { this.setState('ko'); return; }
+    if (!this.alive) { if (this.cfg.signs) this.signDown(); else this.setState('ko'); return; }
     this.rootAtPelvis();
     if (pushOutXZ(this.pos, 0.32)) this.pos.y = floorAt(this.pos.x, this.pos.z, this.pos.y);
     this.yaw = Math.atan2(player.head.x - this.pos.x, player.head.z - this.pos.z);
@@ -566,7 +598,7 @@ class Enemy {
   startWindup() {
     this.combo = (this.cfg.combo || 1) - 1;
     this.side = (this.type === 'boso' || this.weapon || this.cfg.thrower) ? 'r' : (Math.random() < 0.5 ? 'l' : 'r');
-    if (this.cfg.kicker) { this.kickLow = Math.random() < 0.45; this.side = this.kickLow ? 'l' : 'r'; }
+    if (this.cfg.kicker) { this.kickLow = Math.random() < (this.cfg.lowChance || 0.45); this.side = this.kickLow ? 'l' : 'r'; }
     this.windupTime = this.cfg.windup;
     this.setState('windup');
     AU.grunt();
@@ -589,11 +621,72 @@ class Enemy {
       // the punch bounces off your forearms
       this.shove(this.body.by[(this.cfg.kicker ? 'an' : 'wr') + S].x, _v2.subVectors(shoulder, this.lockTarget).setY(0).normalize(), 2.2);
       this.setState('recover'); this.recoverTime = 0.7; this.combo = Math.max(0, this.combo - 1);
+      if (this.cfg.shovePlayer) this.startShove(this.cfg.shovePlayer * 0.45);   // even blocked, the lifter's punch moves you
       return;
     }
-    hurtPlayer(this.cfg.dmg);
+    const sweep = low && this.cfg.sweep;
+    hurtPlayer(sweep ? this.cfg.sweep.dmg : this.cfg.dmg);
     if (this.weapon) { AU.wood(); fx(['fx_heavy', 'fx_dust'], this.weapon.hitPoint(new V3()), { frameTime: 0.05 }); for (const h of handList) buzz(h, 1.0, 140); }
     this.setState('recover'); this.recoverTime = this.weapon ? 0.8 : 0.45;
+    if (this.cfg.shovePlayer) { this.startShove(this.cfg.shovePlayer); AU.thud('heavy'); label('heavy', player.head.clone().add(_v3.set(0, 0.25, 0))); }
+    if (sweep) {   // the sweep: your legs go, he follows straight up with a quick one
+      AU.thud('heavy'); for (const h of handList) buzz(h, 1.0, 220);
+      label('swept', player.head.clone().add(_v3.set(0, -0.5, 0)).addScaledVector(camera.getWorldDirection(new V3()), 0.9));
+      this.combo = Math.max(1, this.combo); this.nextWindup = this.cfg.sweep.followWindup; this.recoverTime = 0.3;
+      game.sweeps = (game.sweeps || 0) + 1;
+    }
+  }
+  // ---- the lifter's punch: you're pushed back along the punch, eased out (walls hold you), over CFG.ai.shoveTime
+  startShove(m) {
+    this.shoveV.set(player.head.x - this.pos.x, 0, player.head.z - this.pos.z); if (this.shoveV.lengthSq() < 1e-6) this.shoveV.copy(this.facing());
+    this.shoveV.normalize().multiplyScalar(m); this.shoveT = 0;
+  }
+  pushPlayer(dt) {
+    const T = CFG.ai.shoveTime, t0 = this.shoveT, t1 = Math.min(T, t0 + dt); this.shoveT = t1;
+    const ease = (t) => 1 - (1 - t / T) * (1 - t / T), k = ease(t1) - ease(t0);
+    const p = _v3.set(player.head.x + this.shoveV.x * k, player.floorY, player.head.z + this.shoveV.z * k);
+    keepPlayerIn(p, 0.25);
+    rig.position.x += p.x - player.head.x; rig.position.z += p.z - player.head.z;
+    player.head.x = p.x; player.head.z = p.z;
+  }
+  // ---- the specialist: a fast fist coming at him in reach, and sometimes he slips it (back or to the side)
+  watchFists() {
+    const ch = this.body.by.chest.x, A = CFG.ai;
+    for (const h of handList) {
+      if ((h.held && !h.held.isProp) || h.speed < A.dodgeSpeed) continue;
+      const to = _v2.subVectors(ch, h.fist), d = to.length();
+      if (d > A.dodgeRange * this.s / 0.89 || h.vel.dot(to) < 0.6 * h.speed * d) continue;
+      this.dodgeCd = A.dodgeCooldown;
+      if (Math.random() < this.cfg.dodgeChance) this.startDodge(h.vel);
+      return;
+    }
+  }
+  startDodge(fistVel) {
+    const away = _v2.set(this.pos.x - player.head.x, 0, this.pos.z - player.head.z).normalize();
+    const side = _v3.set(-fistVel.z, 0, fistVel.x); if (side.lengthSq() < 1e-6) side.set(-away.z, 0, away.x);
+    side.normalize(); if (Math.random() < 0.5) side.negate();
+    this.dodgeDir.copy(away).multiplyScalar(0.55).addScaledVector(side, 0.85).normalize();
+    for (const p of this.body.ps) p.v.addScaledVector(this.dodgeDir, 1.6);   // the body really moves out of the way
+    this.setState('dodge'); AU.whiff();
+    label('dodge', this.body.by.head.x.clone().add(_v3.set(0, 0.3, 0)));
+    game.dodges = (game.dodges || 0) + 1;
+  }
+  // ---- a leader with signs: true at 0 hp: no ragdoll, no KO. He kneels where he stands, stays, and signs (onLeaderSigned)
+  signDown() {
+    if (this.state === 'signed') return;
+    this.releaseToken(); killFx(this.windFx); this.windFx = null; killFx(this.starsFx); this.starsFx = null;
+    this.dropWeapon(); this.dropCarry();
+    if (this.heldBy) { this.heldBy.held = null; this.heldBy.desk.mode = 'guard'; this.heldBy = null; }
+    if (this.pinned) { this.pinned.pin = null; this.pinned = null; }
+    for (const p of this.body.ps) p.pin = null;
+    if (player.clinchedBy === this) player.clinchedBy = null;
+    if (this.state === 'ragdoll' || this.state === 'held') this.rootAtPelvis();
+    this.alive = false; this.hp = 0; this.flying = false; this.body.sim = true; this.freeze = 0;
+    this.yaw = Math.atan2(player.head.x - this.pos.x, player.head.z - this.pos.z);
+    this.setState('signed'); this.setFace('hurt');
+    if (typeof bossBars !== 'undefined') for (let i = bossBars.length - 1; i >= 0; i--) if (bossBars[i].e === this) { scene.remove(bossBars[i].g); bossBars.splice(i, 1); }
+    AU.thud('solid');
+    if (typeof onLeaderSigned === 'function') onLeaderSigned(this);
   }
   resolveGrab() {
     const flat = _v2.set(player.head.x - this.pos.x, 0, player.head.z - this.pos.z).length();
@@ -685,6 +778,7 @@ class Enemy {
   }
 }
 const ZERO3 = [0, 0, 0];
+const BAT_DIRS = { windup: [0.85, -0.5, 0.2], whiff: [-0.6, 0.6, -0.5], rest: [0.75, -0.55, 0.25] };   // where a bat points [up, forward, right]
 function tokensInUse() { let n = 0; for (const e of enemies) if (e.hasToken) n++; return n; }
 function pushOutXZ(p, r, includeBlockers = true) {
   let moved = keepInWalk(p, r);   // false | true (wall) | the blocker box. p.y: the feet (matters only on raised floors)

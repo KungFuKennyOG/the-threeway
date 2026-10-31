@@ -59,7 +59,15 @@ const CFG = {
     crate:  { dmg: 9, poiseMult: 2.0, durability: 2, grabRadius: 0.34, hitRadius: 0.24, reach: 0.5, size: 0.46 },
     bin:    { dmg: 7, poiseMult: 1.7, durability: 99, grabRadius: 0.32, hitRadius: 0.24, reach: 0.5, size: 0.44, height: 0.62 },
     sign:   { dmg: 11, poiseMult: 1.8, durability: 5, grabRadius: 0.24, hitRadius: 0.17, reach: 1.1, length: 1.25 },
-    swingMult: { stool: 1.2, bat: 1.3, pipe: 1.25, sign: 1.25, bin: 1.1 },   // big things hit as if swung a bit faster
+    // the honour guard's: a long varnished pole with a small red flag. Held 0.3 m up from the butt; he levels it and lunges
+    // (dirs: where it points [up, forward, right] when resting / winding up / after a whiff; pose: the arms' attack pose)
+    flagpole: { dmg: 11, poiseMult: 2.2, durability: 99, grabRadius: 0.24, hitRadius: 0.11, reach: 1.6, length: 1.9, grip: 0.3, pose: 'pole',
+                dirs: { rest: [1, 0.08, 0.06], windup: [0.18, 0.75, 0.3], whiff: [-0.25, 0.9, -0.4] } },
+    baton:  { dmg: 8, poiseMult: 1.6, durability: 99, grabRadius: 0.2, hitRadius: 0.08, reach: 0.5, length: 0.5 },   // Inspector Orlova's short rubber baton
+    // the brass band's: cymbals fly flat and spin (a frisbee), drumsticks tumble. lob: how fast they fly (m/s over the ground)
+    cymbal:    { dmg: 8, poiseMult: 1.6, durability: 99, grabRadius: 0.22, hitRadius: 0.14, playerDmg: 9, lob: 10, lobT: [0.32, 0.7], spinRate: 0.35, radius: 0.15 },
+    drumstick: { dmg: 4, poiseMult: 1.0, durability: 3, grabRadius: 0.17, hitRadius: 0.06, playerDmg: 5, lob: 8, lobT: [0.38, 0.75], spinRate: 0.12, length: 0.4 },
+    swingMult: { stool: 1.2, bat: 1.3, pipe: 1.25, sign: 1.25, bin: 1.1, flagpole: 1.3, baton: 1.2 },   // big things hit as if swung a bit faster
     drinkHeal: 30, drinkTime: 0.8, mouthRadius: 0.16,
     thrownHitSpeed: 3.0,
     throwAssistDeg: 20,       // thrown props curve a little toward a goon inside this cone
@@ -67,7 +75,9 @@ const CFG = {
   // thrown kitchenware: hits your head/body, bounces off a forearm block, or gets caught
   projectiles: { catchRadius: 0.24, deskCatchRange: 2.6, headRadius: 0.17, bodyRadius: 0.2, blockRadius: 0.09, maxInAir: 2, maxLying: 6 },
   player: { health: 100, clinchDps: 5, clinchTime: 3.0, clinchSlam: 15, armHitsToBreak: 2, standHeight: 1.68 },
-  ai: { kickStrikeTime: 0.2, tokens: 2, circleRadius: 2.0, attackCooldown: [1.2, 2.2], strikeTime: 0.16, lungeTime: 0.25, batStrikeTime: 0.22 },
+  ai: { kickStrikeTime: 0.2, tokens: 2, circleRadius: 2.0, attackCooldown: [1.2, 2.2], strikeTime: 0.16, lungeTime: 0.25, batStrikeTime: 0.22,
+        dodgeSpeed: 2.4, dodgeRange: 0.8, dodgeTime: 0.32, dodgeStep: 3.2, dodgeCooldown: 0.7,   // the specialist's slip: fists this fast, this close
+        shoveTime: 0.35 },                                                                        // the lifter's punch pushes you over this long
   enemies: {
     // scale: the art-set models are built ~2 m tall; this brings them to ~1.75–1.8 m
     boso:     { hp: 40, poise: 40, speed: 1.3,  reach: 0.78, windup: 0.75, dmg: 10, combo: 1, scale: 0.86 },
@@ -90,6 +100,30 @@ const CFG = {
     // Krasnovia weapon goon: a laborer with a length of steel pipe. Slower and heavier than Bat Boy's bat; swat it loose and it's yours
     laborer:  { hp: 70, poise: 75, speed: 1.1, reach: 1.1, windup: 1.15, dmg: 18, combo: 1, weapon: 'pipe', unarmedReach: 0.8, unarmedDmg: 10, unarmedWindup: 0.8, scale: 0.9 },
     ivan:     { hp: 190, poise: 150, speed: 1.15, reach: 0.95, windup: 0.85, dmg: 0, combo: 1, grabber: true, boss: true, clinchDps: 7, clinchSlam: 18, armHitsToBreak: 3, scale: 0.96 },
+    // ---- the Palace of Sport and Parade Square
+    // a young sambo fighter: kicker archetype, mostly low. A low kick that lands is a SWEEP (more damage), and he follows straight up
+    sambo:    { hp: 45, poise: 40, speed: 2.3, reach: 0.95, windup: 0.5, dmg: 7, combo: 2, comboWindup: 0.4, kicker: true, retreat: 2.2, lowChance: 0.7,
+                sweep: { dmg: 13, followWindup: 0.3 }, scale: 0.89 },
+    // a gymnast: the fastest goon, weak kicks, and she cartwheels back out of reach (cartwheel: seconds per wheel)
+    gymnast:  { hp: 35, poise: 30, speed: 3.0, reach: 0.95, windup: 0.42, dmg: 5, combo: 2, comboWindup: 0.34, kicker: true, retreat: 3.2, cartwheel: 0.7, scale: 0.87 },
+    // a weightlifter: a slow heavy (boxer archetype, one punch). The punch shoves you back (shovePlayer: metres; half if you block it)
+    lifter:   { hp: 130, poise: 140, speed: 0.95, reach: 0.84, windup: 1.1, dmg: 15, combo: 1, shovePlayer: 0.9, scale: 0.97 },
+    // the honour guard: levels his flagpole and lunges from 1.5 m. Swat the pole mid-lunge and it's yours
+    guard:    { hp: 70, poise: 70, speed: 1.1, reach: 1.45, windup: 1.25, dmg: 15, combo: 1, weapon: 'flagpole', unarmedReach: 0.8, unarmedDmg: 9, unarmedWindup: 0.8, scale: 0.9 },
+    // the brass band: thrower archetype, cymbals and drumsticks; slaps if you corner him
+    bandsman: { hp: 45, poise: 40, speed: 1.35, reach: 0.78, windup: 0.6, dmg: 6, combo: 1, thrower: true, throws: ['cymbal', 'drumstick'], keepAway: [3.0, 5.0], throwWindup: 0.8, throwCooldown: [1.8, 3.0], scale: 0.87 },
+    // the specialist: an elite boxer, quick and sharp. dodgeChance: when your fist comes at him fast, he sometimes slips it (back or sideways)
+    specialist: { hp: 80, poise: 70, speed: 2.0, reach: 0.76, windup: 0.36, dmg: 9, combo: 3, comboWindup: 0.2, dodgeChance: 0.45, dodgeIframes: 0.2, scale: 0.89 },
+    // ---- the Tower of Labor (the Ministry of Order)
+    militia:   { hp: 80, poise: 85, speed: 1.1, reach: 0.9, windup: 0.85, dmg: 0, combo: 1, grabber: true, scale: 0.9 },          // a wrestler in uniform: clinches
+    inspector: { hp: 40, poise: 35, speed: 1.15, reach: 0.78, windup: 0.85, dmg: 9, combo: 1, scale: 0.88 },                   // fodder with a clipboard
+    clerk:     { hp: 35, poise: 30, speed: 1.4, reach: 0.76, windup: 0.75, dmg: 8, combo: 1, scale: 0.87 },                    // fodder, a bit quicker, a rubber stamp
+    bodyguard: { hp: 90, poise: 85, speed: 1.5, reach: 0.76, windup: 0.5, dmg: 9, combo: 2, comboWindup: 0.3, highGuard: true, scale: 0.94 },   // a sturdy boxer
+    // Inspector Vera Orlova: quick combos with a short rubber baton (swat it loose and she boxes, quicker still)
+    orlova:    { hp: 180, poise: 130, speed: 1.6, reach: 0.95, windup: 0.6, dmg: 12, combo: 3, comboWindup: 0.42, weapon: 'baton',
+                 unarmedReach: 0.76, unarmedDmg: 8, unarmedWindup: 0.42, boss: true, scale: 0.9 },
+    // the Chairman: no fighter (slow, light). signs: at 0 hp he kneels where he stands and signs (onLeaderSigned), no ragdoll
+    chairman:  { hp: 120, poise: 120, speed: 0.8, reach: 0.8, windup: 1.2, dmg: 6, combo: 1, boss: true, signs: true, scale: 0.97 },
   },
   boss: { tagCooldown: 4.0, benchRadius: 2.9, enrageSpeed: 1.25, enrageWindup: 0.75 },
   waves: [ ['boso', 'kicker'], ['secguard', 'boxer', 'batboy'], ['cook', 'wrestler', 'kicker', 'batboy', 'boso'], ['rocco', 'ivan'] ],

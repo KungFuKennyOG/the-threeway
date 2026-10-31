@@ -32,7 +32,7 @@ const freeze = (e) => { e.cooldown = 1e9; e.cfg = Object.assign({}, e.cfg, { spe
 try {
   // ---- scale + standing heights
   const H = {};
-  const ALL = ['boso', 'boxer', 'wrestler', 'batboy', 'cook', 'rocco', 'ivan', 'secguard', 'kicker'];
+  const ALL = Object.keys(TW.CFG.enemies);   // every goon there is (the Palace's, the Parade's, the Tower's, the officials' too)
   for (const t of ALL) {
     const e = new TW.Enemy(t); freeze(e); e.placeAt(0, 2.5, Math.PI); e.state = 'circle'; TW.enemies.push(e);
     step(90);
@@ -51,7 +51,7 @@ try {
     e.remove();
   }
   for (const t of Object.keys(H)) {
-    const [lo, hi] = TW.CFG.enemies[t].boss ? [1.8, 2.02] : [1.6, 1.92];
+    const [lo, hi] = TW.CFG.enemies[t].boss ? [1.72, 2.02] : [1.6, 1.92];   // bosses: Inspector Orlova is a tall woman, the Bear a giant
     check(`${t}: realistic height`, H[t].top > lo && H[t].top < hi, `top of head ${H[t].top.toFixed(2)} m, pelvis ${H[t].pelvis.toFixed(2)}, feet ${H[t].foot.toFixed(2)}`);
   }
 
