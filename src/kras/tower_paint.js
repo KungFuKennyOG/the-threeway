@@ -13,8 +13,8 @@ Object.assign(PAINT, {
     for (let f = 0; f < 2; f++) {
       const y = f * 16; p.rect(0, y + 13, 32, 3, '#a4967a'); p.rect(0, y + 13, 32, 1, '#c4b698');   // a spandrel per floor
       for (let x = 0; x < 32; x += 8) {
-        const lit = prng() < 0.28, warm = prng() < 0.75;
-        p.rect(x + 3, y + 3, 4, 8, '#3a3026'); p.rect(x + 4, y + 4, 2, 7, lit ? (warm ? '#ffc070' : '#ffe2a8') : '#1c1816', lit ? EM : 255);
+        const lit = prng() < 0.16, warm = prng() < 0.75;
+        p.rect(x + 3, y + 3, 4, 8, '#3a3026'); p.rect(x + 4, y + 4, 2, 7, lit ? (warm ? '#ffc070' : '#ffe2a8') : '#2a241e', lit ? EM : 255);
         if (lit) p.rect(x + 4, y + 7, 2, 1, '#a8703c', EM);
         p.rect(x + 3, y + 11, 4, 1, '#c4b698');                                                   // the sill
       }
@@ -24,8 +24,8 @@ Object.assign(PAINT, {
   },
   twTrim() { const p = new Pix(8, 8); p.fill('#c8bca0'); p.rect(0, 0, 8, 1, '#e2d6ba'); p.rect(0, 7, 8, 1, '#8e826a'); p.speck('#b4a88c', 4); return p; },   // plain floodlit stone (pinnacles, plinths, the tribune)
   twGold() {   // the crown's gilt: brighter than any other gold in the city, self-lit (bands, ribs, the lantern's frame)
-    const p = new Pix(16, 8); p.fill('#ffd25a', EM); p.rect(0, 0, 16, 1, '#fff6c8', EM); p.rect(0, 7, 16, 1, '#c8902a', EM);
-    for (let x = 1; x < 16; x += 4) { p.rect(x, 2, 2, 4, '#ffe98a', EM); p.set(x + 2, 3, '#d8a03a', EM); } return p;
+    const p = new Pix(16, 8); p.fill('#f0b43c', EM); p.rect(0, 0, 16, 1, '#ffe080', EM); p.rect(0, 7, 16, 1, '#a8701c', EM);
+    for (let x = 1; x < 16; x += 4) { p.rect(x, 2, 2, 4, '#ffcc50', EM); p.set(x + 2, 3, '#c08424', EM); } return p;
   },
   twLantern() {   // the crown's lantern: a ring of tall arched openings blazing gold between dark stone columns (one repeat = 4 m x 9 m)
     const p = new Pix(16, 32); p.fill('#5e5240');
@@ -72,11 +72,11 @@ Object.assign(PAINT, {
     return p;
   },
   twGlass() {   // the glass lift's panes: clear, with a few streaks of reflected light (the rest isn't drawn)
-    const p = new Pix(16, 16);
-    for (let k = 0; k < 3; k++) { const x0 = 2 + k * 5; for (let y = 0; y < 16; y++) { const x = x0 + Math.floor(y / 3); if (x < 16 && (y + k) % 4 !== 3) p.set(x, y, k === 1 ? '#c8e0e8' : '#8aa8b4', 230); } }
-    p.rect(0, 15, 16, 1, '#a8c0c8', 230); return p;
+    const p = new Pix(16, 32);   // one repeat = a whole pane: two short diagonal glints, nothing else
+    for (const [x0, y0, n] of [[3, 4, 6], [5, 5, 3], [10, 20, 5]]) for (let k = 0; k < n; k++) p.set(x0 + k, y0 + k * 2, '#b8d4dc', 230);
+    return p;
   },
-  twStatue() { const p = new Pix(8, 8); p.fill('#c6bfae'); p.rect(0, 0, 8, 1, '#e4dccb'); p.rect(0, 7, 1, 1, '#8e8878'); p.speck('#b0a998', 5); p.speck('#d6cfbe', 3); return p; },   // the heroes: floodlit pale granite
+  twStatue() { const p = new Pix(8, 8); p.fill('#a49c8a'); p.rect(0, 0, 8, 1, '#c4bca8'); p.rect(0, 7, 1, 1, '#6e6858'); p.speck('#8e8878', 5); p.speck('#b4ac9a', 3); return p; },   // the heroes: floodlit pale granite
   twBalustrade() {   // the tribune's parapet: stone balusters under a rail (one repeat = 2 m x 1.1 m)
     const p = new Pix(16, 9); p.fill('#c8bca0'); p.rect(0, 2, 16, 6, '#3a3026');
     for (let x = 1; x < 16; x += 3) { p.rect(x, 2, 2, 6, '#b8ac90'); p.set(x, 4, '#d8ccb0'); p.set(x + 1, 6, '#8e826a'); }
@@ -235,10 +235,10 @@ Object.assign(PAINT, {
     for (let x = 3; x < 32; x += 8) { p.rect(x, 13, 3, 2, '#e6e2d6'); p.set(x + 1, 13, '#8a1c18'); }
     return p;
   },
-  greenShade() { const p = new Pix(8, 4); p.fill('#2e7a4a'); p.rect(0, 0, 8, 1, '#5aa874'); p.rect(0, 3, 8, 1, '#ffe8a0', EM); return p; },   // a bankers' lamp's shade, glowing on its underside
+  greenShade() { const p = new Pix(8, 4); p.fill('#2a9a52', EM); p.rect(0, 0, 8, 1, '#7ad890', EM); p.rect(0, 1, 8, 1, '#48b868', EM); p.rect(0, 3, 8, 1, '#ffe8a0', EM); return p; },   // a bankers' lamp: green glass, lit through
   // ---- the archive canyon
   archiveTall() {   // floor-to-ceiling steel shelving: eight shelves of boxes and ledgers (one repeat = 2 m x 4 m: half the height)
-    const p = new Pix(16, 32); p.fill('#1c1a16');
+    const p = new Pix(16, 32); p.fill('#2a2620');
     for (let s = 0; s < 8; s++) {
       const y = s * 4; p.rect(0, y + 3, 16, 1, '#7a7a72');
       for (let x = 0; x < 15; x += 2) { if (prng() < 0.1) continue; const c = ['#b89a6a', '#a88a5a', '#c4a676', '#5a6a8a', '#7a5a3a', '#8a3a2a'][Math.floor(prng() * 6)]; p.rect(x, y, 2, 3, c); p.set(x, y + 1, '#ece4cc'); }

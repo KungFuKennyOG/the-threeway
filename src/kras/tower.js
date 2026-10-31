@@ -3,15 +3,16 @@
 // Krasnovia's seat of power and the end of Act 1, built like Moscow State University: a central tower of five stepped
 // tiers (146 m) between four lower wing towers that step up to it (two inner towers to 104 m, two outer ones to 60 m,
 // low wings joining them), pinnacles on every setback, floodlit worker statues on the setbacks, giant red banners down
-// the faces. On the central tower, the Chairman's stage (146-188 m) with his tribune hanging off its south face, then the
-// crown: a blazing gold lantern, a gilt spire, and the gilded cog at 226 m (static, self-lit, haloed: the brightest thing
+// the faces. On the central tower, the Chairman's stage (146-200 m) with his tribune hanging off its south face at 190 m,
+// then the crown: a blazing gold lantern, a gilt spire, and the gilded cog at 226 m (static, self-lit, haloed: the brightest thing
 // in the sky), its tip at 252 m. Six searchlights sweep the sky from the podium and the wing towers, seen from the whole act.
 // It stands at the far west end of the route, dead ahead down the boulevard, ~300 m from Tripoint Square.
 //
 // In through the big south doors from Parade Square (no cut): the marble lobby (militia, inspectors); lift 1 up to the
 // Ministry's typing pool (clerks under the Chairman's eight-metre portrait); lift 2 up to the archive, a canyon of shelving
-// (Inspector Orlova at her interrogation desk under one bulb); then the glass lift, up the OUTSIDE of the south face, 138 m
+// (Inspector Orlova at her interrogation desk under one bulb); then the glass lift, up the OUTSIDE of the south face, 150 m
 // with Parade Square and the city falling away below; out onto the Chairman's tribune right under the cog, in the wind.
+// Up there the air clears (twAltitudeFog): the city's fog pulls back with your height, so the whole city lies below you.
 // Beat the Chairman out there and he kneels and signs the permit to reopen The Threeway: 1 of 3, and Act 1 is complete.
 // No stairs (VR): lifts do all the climbing, enclosed (the glass car too) and eased. Authored with +z running in from the
 // square, laid into the world by the ACT1_WEST frame (src/levels.js): the south doors face east, back down the boulevard.
@@ -41,15 +42,15 @@ CFG.tower = {
       spawn: [['clerk', -45, 318.5, 12], ['clerk', -35, 321.5, 12], ['clerk', -45, 325, 12], ['bodyguard', -40, 315.6, 12]] },
     { name: 'archive', at: [-56, -24, 316.6, 333.0, 39, 41.5], respawn: [-47, 332.4, 40, 0], sign: 'orlova', boss: true, enrageAt: 0.5, lock: ['twLift2', 'twLift3'],
       spawn: [['bodyguard', -35.5, 322, 40], ['orlova', -43, 328.6, 40]] },
-    { name: 'chairman', at: [-50, -30, 316.0, 334.6, 177, 179.5], respawn: [-40, 317.2, 178, Math.PI], sign: 'chairman', boss: true, lock: ['twLift3'],
-      spawn: [['chairman', -40, 326.6, 178]] },   // out of his office's doors onto the tribune
+    { name: 'chairman', at: [-50, -30, 316.0, 334.6, 189, 191.5], respawn: [-40, 317.2, 190, Math.PI], sign: 'chairman', boss: true, lock: ['twLift3'],
+      spawn: [['chairman', -40, 326.6, 190]] },   // out of his office's doors onto the tribune
   ],
   get enrageAt() { const E = this.encounters[level.encounter]; return (E && E.enrageAt) || 0; },   // read by the stage flow (src/street/fight.js)
   props: [['bin', -50.8, 313.2, 0], ['bin', -29.2, 313.2, 0],
           ['stool', -47.6, 320.2, 12], ['stool', -32.4, 323.8, 12], ['stool', -47.4, 327.6, 12], ['bin', -33, 316.6, 12], ['bottle', -32.6, 330.8, 12],
           ['crate', -44.4, 331.2, 40], ['crate', -44.6, 332.0, 40], ['crate', -35.4, 331.4, 40], ['bottle', -36.6, 325.4, 40],
-          ['bottle', -45.0, 329.6, 179.05], ['bottle', -45.0, 330.2, 179.05]],
-  light: { inAmbient: [0.11, 0.095, 0.1], officeAmbient: [0.1, 0.1, 0.09], archiveAmbient: [0.06, 0.07, 0.07], topAmbient: [0.08, 0.075, 0.1] },
+          ['bottle', -45.0, 329.6, 191.05], ['bottle', -45.0, 330.2, 191.05]],
+  light: { inAmbient: [0.11, 0.095, 0.1], officeAmbient: [0.17, 0.165, 0.14], archiveAmbient: [0.085, 0.1, 0.09], topAmbient: [0.08, 0.075, 0.1] },
 };
 const TWR = {
   foot: [-64, -16, 312, 348],                                          // the central tower's base tier (the podium)
@@ -64,15 +65,15 @@ const TWR = {
   lobby:   { r: [-52, -28, 312, 333.8], y: 0, h: 10 },
   office:  { r: [-62, -18, 313, 333.8], y: 12, h: 6 },                 // the typing pool, the whole width of the podium
   archive: { r: [-56, -24, 316.3, 333.8], y: 40, h: 9, walk: [0.6, 0.6, 0] },   // walk: insets [w, e, s] where shelves line the walls
-  top:     { r: [-45.6, -34.4, 325.3, 334.7], y: 178, h: 5.4 },       // the Chairman's office, in the stage
-  stage: [-46, -34, 325, 335, 146, 188],                               // the Chairman's stage on the central tower's roof
+  top:     { r: [-45.6, -34.4, 325.3, 334.7], y: 190, h: 5.4 },       // the Chairman's office, in the stage
+  stage: [-46, -34, 325, 335, 146, 200],                               // the Chairman's stage on the central tower's roof
   tribune: [-50, -30, 315.6, 325],                                     // his tribune, hanging off the stage's south face (floor: top.y)
   odoor: [-43, -37, 3.8],                                              // the doors from his office onto the tribune: x0, x1, height
   ddesk: [-46.6, 319.2],                                               // the signing table on the tribune
   desks: [-59.5, -56.5, -53.5, -50.5].flatMap(x => [x, -80 - x]),      // the typing pool's desk columns (x), both sides of the aisle
   deskRows: [315.2, 317.6, 320.0, 322.4, 324.8, 327.2],
   shelves: [[-56, -55.4], [-53.05, -52.15], [-49.75, -48.85], [-31.15, -30.25], [-27.85, -26.95], [-24.6, -24]],   // the archive's canyon walls [x0, x1]
-  spire: 252, cogY: 226, cogD: 28,
+  spire: 252, cogY: 226, cogD: 32,
   shell: null, glow: null, meshes: {}, tris: {}, lamps: {}, permit: null, beams: null,
   signed: false, signT: 0, act1: false, gustT: 0,
 };
@@ -81,7 +82,7 @@ const TWR = {
 const TLIFTS = [
   { name: '1', car: [-32.4, -29.6, 333.4, 336.2], stops: [0, 12], needs: [0], lock: 'twLift1', rooms: ['twLobby', 'twOffice'], arrive: 'twMinistry' },
   { name: '2', car: [-48.4, -45.6, 333.4, 336.2], stops: [12, 40], needs: [1], lock: 'twLift2', rooms: ['twOffice', 'twArchive'], arrive: 'twArchive' },
-  { name: '3', car: [-41.4, -38.6, 312.8, 315.6], stops: [40, 178], needs: [2], lock: 'twLift3', rooms: [], arrive: 'twTop', glass: true },
+  { name: '3', car: [-41.4, -38.6, 312.8, 315.6], stops: [40, 190], needs: [2], lock: 'twLift3', rooms: [], arrive: 'twTop', glass: true },
 ];
 for (const L of TLIFTS) Object.assign(L, { y: L.stops[0], stop: 0, phase: 'open', t: 0, doors: 1, rect: null, group: null, leaves: [] });
 const SIGNED = new Set();   // the leaders who've signed the permit (one per sector: three in all)
@@ -167,19 +168,19 @@ function towerLobby(acc, lamps) {
   const F = TWR.lobby, [x0, x1, z0, z1] = F.r, H = F.h, [d0, d1, dh] = TWR.door;
   twWalls(acc, 'marbleWall', F.r, 0, H, { s: [[d0, d1, dh]], n: twLiftGaps(F) }, 3, H, '', 5);
   twFloor(acc, 'marble', F.r, 0.004, 2); twCeil(acc, 'coffer', F.r, H, 2.4);
-  for (const [a, b, c, d] of [[x0, x1, z0, z0 + 0.5], [x0, x1, z1 - 0.5, z1], [x0, x0 + 0.5, z0, z1], [x1 - 0.5, x1, z0, z1]]) sbox(acc, 'twGold', (a + b) / 2, H - 0.45, (c + d) / 2, b - a, d - c, 0.45, 0, twO({ top: false }));   // a gilt cornice
+  for (const [a, b, c, d] of [[x0, x1, z0, z0 + 0.5], [x0, x1, z1 - 0.5, z1], [x0, x0 + 0.5, z0, z1], [x1 - 0.5, x1, z0, z1]]) sbox(acc, 'gilt', (a + b) / 2, H - 0.45, (c + d) / 2, b - a, d - c, 0.45, 0, twO({ top: false }));   // a gilt cornice
   aq(acc, 'carpetRed', [-41.3, 0.014, 328.2], [-38.7, 0.014, 328.2], [-38.7, 0.014, z0], [-41.3, 0.014, z0], [0, 0, 1, (328.2 - z0) / 2.6], [0, 1, 0], 2.6);
   // the doors stand open, folded back against the wall inside; the lintel over them
   for (const [x, s] of [[d0 - 2, 1], [d1 + 2, -1]]) plate(acc, 'bronzeDoor', x, dh / 2, z0, 4, dh, 0, 0.06, s > 0 ? [0, 0, 1, 1] : [1, 0, 0, 1]);
   aq(acc, 'marbleWall', [d0, dh, z0 - 0.6], [d1, dh, z0 - 0.6], [d1, dh, z0], [d0, dh, z0], [0, 0, 2, 0.1], [0, -1, 0], 4);
   // six marble columns, full height, gilt capitals and bases (holes in the walk area: TW_HOLES.lobby)
   for (const x of [-46.5, -33.5]) for (const z of [317, 322.5, 328]) {
-    sbox(acc, 'marbleWall', x, 0, z, 1.2, 1.2, H, 0, { u: 1.2, v: H, top: false, cell: 99 }); sbox(acc, 'twGold', x, H - 1.0, z, 1.6, 1.6, 0.55, 0, twO({ top: false }));
+    sbox(acc, 'marbleWall', x, 0, z, 1.2, 1.2, H, 0, { u: 1.2, v: H, top: false, cell: 99 }); sbox(acc, 'gilt', x, H - 1.0, z, 1.6, 1.6, 0.55, 0, twO({ top: false }));
     sbox(acc, 'marbleWall', x, 0, z, 1.45, 1.45, 0.5, 0, { u: 1.4, v: H, top: 'marble', tu: 2 });
   }
   // the mosaic across the north wall, and the hero in front of it: a bronze steelworker throwing up a gold cog
   plate(acc, 'mosaicLabor', -40, 5.6, z1, 14.4, 7.2, Math.PI, 0.03);
-  sbox(acc, 'twGold', -40, 9.3, z1 - 0.1, 15, 0.2, 0.25, 0, twO({ top: false })); sbox(acc, 'twGold', -40, 1.85, z1 - 0.1, 15, 0.2, 0.15, 0, twO({ top: false }));
+  sbox(acc, 'gilt', -40, 9.3, z1 - 0.1, 15, 0.2, 0.25, 0, twO({ top: false })); sbox(acc, 'gilt', -40, 1.85, z1 - 0.1, 15, 0.2, 0.15, 0, twO({ top: false }));
   sbox(acc, 'marbleWall', -40, 0, 330, 3.2, 3.2, 2.2, 0, { u: 3.2, v: 4, top: 'marble', tu: 2 });
   sbox(acc, 'twGold', -40, 1.7, 328.38, 2, 0.04, 0.24, 0, twO({}));
   twGiant(acc, 'bronze', -40, 2.2, 330, 4.8, Math.PI, 'cog', 0);
@@ -208,7 +209,7 @@ function twDesk(acc, lamps, x, z, y) {   // a typist's desk facing south (the po
   plate(acc, 'ceilTile', x + 0.4, y + 0.725, z, 0.28, 0.36, 0, 0, [0, 0, 1, 1]);
   frustum(acc, 'greenShade', x + 0.45, y + 1.02, z - 0.15, 0.34, 0.2, 0.14, 0.1, 0.12, 0, twO({ top: 'greenShade', tu: 99 }));
   sbox(acc, 'darkwood', x - 0.1, y, z + 0.62, 0.44, 0.42, 0.46, 0, twO({}));
-  twLight(lamps, x + 0.45, y + 0.95, z - 0.15, '#ffe0a0', 2.2, 0.55);
+  twLight(lamps, x + 0.45, y + 0.95, z - 0.15, '#c8ffb0', 2.6, 0.8);
 }
 function towerOffices(acc, lamps, live) {
   const F = TWR.office, [x0, x1, z0, z1] = F.r, y = F.y, H = F.h;
@@ -217,7 +218,7 @@ function towerOffices(acc, lamps, live) {
   for (const z of TWR.deskRows) for (const x of TWR.desks) twDesk(acc, lamps, x, z, y);   // (holes in the walk area: TW_HOLES.office)
   // the portrait wall: the Chairman, 8 m wide, flags, the ministers either side, the slogan over them
   plate(acc, 'portraitGiant', -40, y + 3.2, z0, 9.6, 5.6, 0, 0.04);
-  for (const [a, b] of [[-45.2, -44.8], [-35.2, -34.8]]) sbox(acc, 'twGold', (a + b) / 2, y, z0 + 0.25, 0.5, 0.5, H, 0, twO({}));
+  for (const [a, b] of [[-45.2, -44.8], [-35.2, -34.8]]) sbox(acc, 'gilt', (a + b) / 2, y, z0 + 0.25, 0.5, 0.5, H, 0, twO({}));
   for (const x of [-46.6, -33.4]) plate(acc, 'flag_kras', x, y + 3.6, z0, 1.9, 1.3, 0, 0.06);
   for (const s of [-1, 1]) {
     for (let k = 0; k < 4; k++) plate(acc, 'portraits', -40 + s * (8.6 + k * 3.2), y + 2.4, z0, 1.4, 1.75, 0, 0.03, [k / 4, 0, (k + 1) / 4, 1]);
@@ -231,9 +232,9 @@ function towerOffices(acc, lamps, live) {
   for (const s of [-1, 1]) sbox(acc, 'gilt', -40 + s * 11, y + H - 0.35, z1 - 0.4, 21.6, 0.14, 0.14, 0, twO({}));
   for (const x of [-42.6, -40, -37.4]) sbox(acc, 'gilt', x, y + 3.2, z1 - 0.4, 0.14, 0.14, H - 3.5, 0, twO({}));
   // light: pendant lamps down the aisles (the green desk lamps are baked in too)
-  for (const x of [-55, -40, -25]) for (const z of [316.5, 321.5, 326.5]) { const L = twLamp(acc, lamps, x, y + H, z, '#ffe2b0', 9, x === -40 ? 1.25 : 1.0, 'litWarm', 0.5); if (x === -40) live.push(L); }
+  for (const x of [-55, -40, -25]) for (const z of [316.5, 321.5, 326.5]) { const L = twLamp(acc, lamps, x, y + H, z, '#ffe2b0', 12, x === -40 ? 1.5 : 1.25, 'litWarm', 0.6); if (x === -40) live.push(L); }
   for (const x of [-47, -33]) live.push(twLamp(acc, lamps, x, y + H, 331.2, '#ffe2b0', 7, 1.0, 'litWarm', 0.4));
-  twLight(lamps, -40, y + 0.6, 315.5, '#ffc890', 7, 1.1);                   // the portrait, lit from below
+  for (const x of [-43, -37]) twLight(lamps, x, y + 0.5, 314.6, '#ffc890', 8, 1.6);   // the portrait, floodlit from below
   twLiftSigns(acc, F); twShaft(acc, TLIFTS[1]);
 }
 // ---- the Ministry archive: a canyon of floor-to-ceiling shelving under green lamps, the card-index wall, and Inspector
@@ -262,7 +263,7 @@ function towerArchive(acc, lamps, live) {
   for (const [dx, h] of [[0.15, 0.2], [0.55, 0.12]]) sbox(acc, 'archiveShelf', -40 + dx, y + 0.76, 327.4, 0.36, 0.28, h, 0, twO({ top: 'ceilTile', tu: 99 }));
   sbox(acc, 'darkwood', -40, y, 328.6, 0.6, 0.55, 0.5, 0, twO({})); sbox(acc, 'darkwood', -40, y + 0.5, 328.85, 0.6, 0.08, 0.7, 0, twO({}));   // her chair
   sbox(acc, 'darkwood', -40, y, 325.9, 0.46, 0.46, 0.46, 0, twO({})); sbox(acc, 'darkwood', -40, y + 0.46, 325.7, 0.46, 0.06, 0.5, 0, twO({}));   // the other chair
-  live.push(twHung(acc, lamps, -40, y + H, y + 2.4, 327.2, '#ffe2b0', 7, 2.0, true));   // the one bulb
+  live.push(twHung(acc, lamps, -40, y + H, y + 2.4, 327.2, '#ffe2b0', 8.5, 2.6, true));   // the one bulb
   // the glass lift's door: a gilt frame, and over it a lit sign
   for (const x of [g0 - 0.15, g1 + 0.15]) sbox(acc, 'twGold', x, y, z0 + 0.06, 0.3, 0.12, 2.7, 0, twO({}));
   sbox(acc, 'twGold', (g0 + g1) / 2, y + 2.4, z0 + 0.06, g1 - g0 + 0.6, 0.12, 0.3, 0, twO({}));
@@ -270,10 +271,10 @@ function towerArchive(acc, lamps, live) {
   for (const s of [-1, 1]) plate(acc, 'portraits', -40 + s * 4.2, y + 3.4, z0, 1.4, 1.75, 0, 0.03, [s < 0 ? 0.75 : 0.5, 0, s < 0 ? 1 : 0.75, 1]);
   plate(acc, 'flag_kras', -40, y + 5.2, z0, 2.4, 1.6, 0, 0.04);
   // light: green lamps hung down the canyons, the bulb over her desk (above), the night at the glass door
-  for (const x of [-54.2, -50.95, -29.05, -25.8]) for (const z of [320.2, 325.2, 330.2]) twHung(acc, lamps, x, y + H, y + 3.4, z, '#d8ffc0', 4.6, 1.1);
+  for (const x of [-54.2, -50.95, -29.05, -25.8]) for (const z of [320.2, 325.2, 330.2]) twHung(acc, lamps, x, y + H, y + 3.4, z, '#d8ffc0', 5.5, 1.4);
   for (const z of [320.5, 326]) live.push(twHung(acc, lamps, -45.5, y + H, y + 3.9, z, '#d8ffc0', 6, 0.9), twHung(acc, lamps, -34.5, y + H, y + 3.9, z, '#d8ffc0', 6, 0.9));
   live.push(twLight(lamps, -40, y + 1.6, z0 + 0.8, '#7a9ad8', 6.5, 0.9));
-  twLight(lamps, -38.5, y + 0.6, z1 - 1.6, '#ffc070', 6, 0.7);            // the card wall, from below
+  for (const x of [-42, -35]) twLight(lamps, x, y + 0.5, z1 - 1.8, '#ffc070', 7, 1.2);   // the card wall, from below
   twLiftSigns(acc, F); twShaft(acc, TLIFTS[1]);
 }
 // ---- the Chairman's office in the stage: oak, the desk, his portrait, the decanters; the glazed doors onto the tribune
@@ -361,7 +362,7 @@ function towerShell(acc, lamps, live) {
     for (let y = 33; y < yTop; y += 5) plate(acc, 'litWarm', x + (x < cx ? -0.14 : 0.14), y, rz, 0.16, 0.3, x < cx ? -Math.PI / 2 : Math.PI / 2, 0);
   }
   const faceZ = (y) => { for (let i = T.length - 1; i >= 0; i--) if (y >= T[i][4]) return i === T.length - 1 && y >= TWR.stage[4] ? TWR.stage[2] : T[i][2]; return T[0][2]; };
-  for (let y = 36; y < yTop; y += 12) { if (y > TWR.top.y - 2 && y < TWR.top.y + 2) continue; const fz = faceZ(y); sbox(acc, 'iron', cx, y, (rz + fz) / 2, g1 - g0 + 0.7, fz - rz, 0.22, 0, twO({})); }
+  for (let y = 42; y < yTop; y += 24) { if (y > TWR.top.y - 2 && y < TWR.top.y + 2) continue; const fz = faceZ(y); sbox(acc, 'iron', cx, y, (rz + fz) / 2, g1 - g0 + 0.7, fz - rz, 0.22, 0, twO({})); }
   sbox(acc, 'iron', cx, 30, rz, g1 - g0 + 1.2, gd - gc + 1.2, 2.4, 0, twO({ top: 'roofDark' }));                  // the housing at the bottom
   frustum(acc, 'twGold', cx, yTop, rz, g1 - g0 + 1.4, gd - gc + 1.2, 0.6, 0.6, 1.6, 0, twO({}));                  // the canopy at the top
   // the stage: the Chairman's floor, the doors onto the tribune; the tribune itself hangs off its south face on corbels
@@ -379,7 +380,7 @@ function towerShell(acc, lamps, live) {
   // the balustrade (no falling): along the front (a gate where the glass lift docks) and down both sides
   const bal = (x0, z0, x1, z1) => sbox(acc, 'twBalustrade', (x0 + x1) / 2, TY, (z0 + z1) / 2, Math.max(0.3, x1 - x0), Math.max(0.3, z1 - z0), 1.1, 0, { u: 2, v: 1.1, top: 'twTrim', tu: 99, cell: 99 });
   bal(ta, tc, g0 - 0.3, tc + 0.3); bal(g1 + 0.3, tc, tb, tc + 0.3); bal(ta, tc, ta + 0.3, td); bal(tb - 0.3, tc, tb, td);
-  for (const x of [g0 - 0.45, g1 + 0.45]) sbox(acc, 'twTrim', x, TY, tc + 0.15, 0.4, 0.4, 1.4, 0, twO({ top: 'twGold' }));
+  for (const x of [g0 - 0.45, g1 + 0.45]) sbox(acc, 'twTrim', x, TY, tc + 0.15, 0.4, 0.4, 1.2, 0, twO({ top: 'twGold' }));
   // flags at the corners, four lamp standards, the signing table set out for the ceremony
   for (const x of [ta + 1.2, tb - 1.2]) { cyl(acc, 'gilt', x, TY, tc + 1.2, 0.08, 0.06, 7.5, 4, twO({})); plate(acc, 'flag_kras', x + (x < cx ? 1.5 : -1.5), TY + 6.6, tc + 1.2, 3.0, 2.0, 0, 0, [0, 0, 1, 1], true); }
   for (const [x, z] of [[ta + 0.7, td - 0.8], [tb - 0.7, td - 0.8], [ta + 0.7, tc + 4.6], [tb - 0.7, tc + 4.6]]) {
@@ -391,11 +392,11 @@ function towerShell(acc, lamps, live) {
   sbox(acc, 'gilt', kx + 0.5, TY + 0.78, kz - 0.1, 0.14, 0.14, 0.12, 0, twO({}));                                   // the ink stand
   // above the stage: the cornice's pinnacles, the lantern blazing gold, the gilt spire, the cog, the mast
   for (const [x, z] of [[sa + 0.7, sc + 0.7], [sb - 0.7, sc + 0.7], [sa + 0.7, sd - 0.7], [sb - 0.7, sd - 0.7]]) twPin(acc, x, sy1, z, 1.3, 12);
-  cyl(acc, 'twLantern', cx, sy1, cz, 4.7, 4.4, 9, 8, { u: 2 * Math.PI * 4.7 / 8, v: 9, cell: 99 });
-  cyl(acc, 'twGold', cx, sy1 + 9, cz, 5.0, 4.8, 0.9, 8, { u: 4, v: 99, cell: 99 });
-  cyl(acc, 'twGold', cx, sy1 + 9.9, cz, 4.2, 0.9, 216 - sy1 - 9.9, 8, { u: 4, v: 99, cell: 99 });
+  cyl(acc, 'twLantern', cx, sy1, cz, 4.7, 4.4, 7, 8, { u: 2 * Math.PI * 4.7 / 8, v: 7, cell: 99 });
+  cyl(acc, 'twGold', cx, sy1 + 7, cz, 5.0, 4.8, 0.9, 8, { u: 4, v: 99, cell: 99 });
+  cyl(acc, 'twGold', cx, sy1 + 7.9, cz, 4.2, 0.9, 217 - sy1 - 7.9, 8, { u: 4, v: 99, cell: 99 });
   for (const ph of [0, Math.PI / 2]) plate(acc, 'twCog', cx, TWR.cogY, cz, TWR.cogD, TWR.cogD, ph, 0, [0, 0, 1, 1], true);
-  cyl(acc, 'twGold', cx, 216, cz, 0.9, 0.08, TWR.spire - 216, 6, { u: 4, v: 99, cell: 99 });
+  cyl(acc, 'twGold', cx, 217, cz, 0.9, 0.08, TWR.spire - 217, 6, { u: 4, v: 99, cell: 99 });
   ST.beacons.push([cx, TWR.spire + 1.5, cz]);   // the Krasnovian beacon blinks on top
   // the searchlights' lamps (their beams are the glow mesh's)
   for (const [x, y, z, az] of CFG.tower.search) {
@@ -411,13 +412,14 @@ function towerShell(acc, lamps, live) {
   for (const x of [-62.5, -17.5]) { sbox(acc, 'iron', x, 0, 310.8, 0.5, 0.5, 0.8, 0, twO({})); sbox(acc, 'flood', x, 0.8, 310.8, 0.8, 0.4, 0.5, 0, twO({})); twSolid(x - 0.4, 310.4, x + 0.4, 311.2, 0, 1.3); }
   for (const x of [-56, -40, -24]) twLight(lamps, x, 2, 300, '#ffc070', 44, 1.5);
   for (const [y, z, r, k] of [[31, 306, 34, 1.5], [55, 312, 30, 1.4], [75, 316, 40, 1.3], [117, 318, 32, 1.3], [147, 318, 36, 1.2]]) for (const x of [-52, -28]) twLight(lamps, x, y, z, '#ffc890', r, k);
-  for (const x of [-54, -26]) twLight(lamps, x, 31, 309, '#fff0d0', 14, 2.2);           // the podium's heroes
-  for (const x of [-80, 0]) twLight(lamps, x, 2, 312, '#ffc070', 34, 1.4);
-  for (const x of [-68, -12]) twLight(lamps, x, 23, 315, '#fff0d0', 13, 2.0);
-  for (const x of [-104, 24]) twLight(lamps, x, 2, 316, '#ffc070', 26, 1.3);
+  for (const x of [-54, -26]) twLight(lamps, x, 30.5, 309.5, '#ffe2b0', 13, 1.15);         // the podium's heroes, lit from below
+  for (const x of [-80, 0]) { twLight(lamps, x, 2, 312, '#ffc070', 34, 1.4); twLight(lamps, x, 36, 308, '#ffc890', 30, 1.2); twLight(lamps, x, 66, 314, '#ffd8a0', 22, 1.2); }
+  for (const x of [-68, -12]) twLight(lamps, x, 22.5, 316, '#ffe2b0', 12, 1.15);
+  for (const x of [-104, 24]) { twLight(lamps, x, 2, 316, '#ffc070', 26, 1.3); twLight(lamps, x, 30, 314, '#ffc890', 20, 1.1); }
   for (const x of [-66, -14]) twLight(lamps, x, 12, cz, '#ffb060', 30, 0.9);
   twLight(lamps, cx, sy1 + 4, cz - 10, '#ffd890', 22, 1.8); twLight(lamps, cx, sy1 + 22, cz - 8, '#ffe0a0', 26, 1.6);
   twLight(lamps, cx, TY - 6, tc - 4, '#ffd8a0', 14, 1.6);                                  // under the tribune
+  for (const x of [ta + 1, tb - 1]) twLight(lamps, x, TY + 0.6, tc + 1.5, '#ffd8a0', 24, 1.5);   // the stage, washed from the tribune's front corners
 }
 // ---- the glow (one small additive mesh): the searchlight beams and the halos (moved in its own onBeforeRender), and the
 // Chairman's doors as they look from below (hidden once you're up there, where the real office shows through them)
@@ -440,7 +442,7 @@ function twGlowMesh() {
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setAttribute('bake', new THREE.Float32BufferAttribute(B, 3));
-  const m = new THREE.Mesh(g, makeMat('street', { baked: true, fog: C.glowFog, depthWrite: false }));
+  const m = new THREE.Mesh(g, makeMat('street', { baked: true, fog: C.glowFog, depthWrite: false, side: THREE.DoubleSide }));
   m.material.blending = THREE.AdditiveBlending || 2; m.material.transparent = true; m.renderOrder = 5;
   m.frustumCulled = false; m.matrixAutoUpdate = false; m.updateMatrix();
   m.material.uniforms.uFogNear = { value: CFG.street.fog.near }; m.material.uniforms.uFogFar = { value: CFG.street.fog.far };
@@ -459,36 +461,52 @@ function twGlowTick(t, cam) {
   const m = TWR.glow; if (!m) return;
   const g = m.geometry, Pa = g.attributes.position, P = Pa.array, C = CFG.tower, [lx, lz] = ACT1_WEST.toLocal(cam.x, cam.z);
   _twE.set(lx, cam.y, lz);
-  const quad = (i, a, b, c, d) => { for (const [j, v] of [[0, a], [1, b], [2, c], [3, a], [4, c], [5, d]]) { P[(i + j) * 3] = v.x; P[(i + j) * 3 + 1] = v.y; P[(i + j) * 3 + 2] = v.z; } };
+  // one corner: centre (cx, cy, cz) + side * s + up * u, written as vertex i (no allocations: this runs every frame)
+  const put = (i, cx, cy, cz, S, s, U, u) => { const o = i * 3; P[o] = cx + S.x * s + U.x * u; P[o + 1] = cy + S.y * s + U.y * u; P[o + 2] = cz + S.z * s + U.z * u; };
+  const TRI = [0, 1, 2, 0, 2, 3];
   // the halos: square billboards round the cog and round the crown's lantern
   const halo = (i, x, y, z, r) => {
     _twD.set(x - _twE.x, y - _twE.y, z - _twE.z).normalize(); _twS.set(-_twD.z, 0, _twD.x); if (_twS.lengthSq() < 1e-6) _twS.set(1, 0, 0); _twS.normalize(); _twU.crossVectors(_twS, _twD).normalize();
-    const c = (sx, sy) => new V3(x + (_twS.x * sx + _twU.x * sy) * r, y + (_twS.y * sx + _twU.y * sy) * r, z + (_twS.z * sx + _twU.z * sy) * r);
-    quad(i, c(-1, 1), c(1, 1), c(1, -1), c(-1, -1));
+    for (let j = 0; j < 6; j++) { const c = TRI[j]; put(i + j, x, y, z, _twS, (c === 0 || c === 3 ? -r : r), _twU, (c < 2 ? r : -r)); }
   };
-  halo(6, -40, TWR.cogY, 330, TWR.cogD * 1.25); halo(12, -40, TWR.stage[5] + 4.5, 330, 15);
+  halo(6, -40, TWR.cogY, 330, TWR.cogD * 1.05); halo(12, -40, TWR.stage[5] + 3.5, 330, 13);
   // the beams: two quads each (lamp -> halfway -> far end), turned about their own axis to face the eye
+  const L = C.beamLen, w0 = C.beamW[0] / 2, w1 = C.beamW[1] / 2;
   for (let k = 0; k < C.search.length; k++) {
-    const [x, y, z] = C.search[k]; twBeamDir(k, t, _twD); _twA.set(x, y, z);
+    const s = C.search[k]; twBeamDir(k, t, _twD); _twA.set(s[0], s[1], s[2]);
     _twS.subVectors(_twE, _twA).cross(_twD); if (_twS.lengthSq() < 1e-6) _twS.set(1, 0, 0); _twS.normalize();
-    const pts = [0, 0.4, 1].map(f => _twB.copy(_twA).addScaledVector(_twD, C.beamLen * f).clone()), wd = [0, 0.4, 1].map(f => (C.beamW[0] + (C.beamW[1] - C.beamW[0]) * f) / 2);
-    for (let q = 0; q < 2; q++) {
-      const a = pts[q].clone().addScaledVector(_twS, -wd[q]), b = pts[q].clone().addScaledVector(_twS, wd[q]);
-      const c = pts[q + 1].clone().addScaledVector(_twS, wd[q + 1]), d = pts[q + 1].clone().addScaledVector(_twS, -wd[q + 1]);
-      quad(18 + k * 12 + q * 6, a, b, c, d);
+    for (let q = 0; q < 2; q++) for (let j = 0; j < 6; j++) {
+      const c = TRI[j], f = c < 2 ? (q ? 0.4 : 0) : (q ? 1 : 0.4), side = c === 0 || c === 3 ? -1 : 1;
+      put(18 + k * 12 + q * 6 + j, s[0], s[1], s[2], _twS, side * (w0 + (w1 - w0) * f), _twD, L * f);
     }
   }
   Pa.needsUpdate = true;
+  twAltitudeFog(level.name === 'tower' ? cam.y : 0);
   // the doors' glow only while you're not up there to see the real thing through them
   const hide = level.name === 'tower' && player.floorY > 150;
   if (g.setDrawRange) g.setDrawRange(hide ? 6 : 0, Infinity);
   if (TWR.permit) TWR.permit.visible = TWR.signed && hide;
   TWR.glowT = t;
 }
+// Up the tower the air clears: every outdoor mesh carries its own copy of the street's fog distances (CFG.street.fog), which
+// fog everything past 130 m to black, so from the glass lift and the tribune they're pushed out with your eye's height
+// (and put back the moment you're low again, or on any other level: the glow's tick calls this wherever it's drawn).
+const TW_FOG = { list: null, k: 0, rise: 20, span: 120, near: 150, far: 430 };
+function twAltitudeFog(eyeY) {
+  const F = CFG.street.fog, k = clamp((eyeY - TW_FOG.rise) / TW_FOG.span, 0, 1);
+  if (Math.abs(k - TW_FOG.k) < 0.004 && (k > 0 || TW_FOG.k === 0)) return;
+  if (!TW_FOG.list) {   // (once: every mesh with its own copy of the street's fog)
+    TW_FOG.list = []; const seen = new Set();
+    const walk = (o) => { const u = o.material && o.material.uniforms; if (u && u.uFogNear && u.uFogNear !== SU.uFogNear && u.uFogNear.value === F.near && u.uFogFar.value === F.far && !seen.has(u.uFogNear)) { seen.add(u.uFogNear); TW_FOG.list.push(u); } for (const c of o.children || []) walk(c); };
+    walk(scene);
+  }
+  TW_FOG.k = k;
+  for (const u of TW_FOG.list) { u.uFogNear.value = F.near + k * TW_FOG.near; u.uFogFar.value = F.far + k * TW_FOG.far; }
+}
 function twLiftCarMesh(L) {   // the car (walls, floor, ceiling lamp) and two brass leaves that slide apart; it rides as a group
   const acc = new GeoAcc(), [a, b, c, d] = L.car, A = a - 0.02, B = b + 0.02, H = 2.45;
   if (L.glass) {   // glass on three sides (both faces of each pane), gilt posts and a rail, a marble floor, a gilt crown
-    for (const [x0, z0, x1, z1] of [[A, c, B, c], [B, c, B, d], [A, d, A, c]]) { wall(acc, 'twGlass', x0, z0, x1, z1, 0.05, H, 1.4, 1.2, { cell: 99 }); wall(acc, 'twGlass', x1, z1, x0, z0, 0.05, H, 1.4, 1.2, { cell: 99 }); }
+    for (const [x0, z0, x1, z1] of [[A, c, B, c], [B, c, B, d], [A, d, A, c]]) { wall(acc, 'twGlass', x0, z0, x1, z1, 0.05, H, 1.4, H, { cell: 99 }); wall(acc, 'twGlass', x1, z1, x0, z0, 0.05, H, 1.4, H, { cell: 99 }); }
     for (const [x, z] of [[A, c], [B, c], [A, d], [B, d]]) sbox(acc, 'twGold', x, 0, z, 0.1, 0.1, H, 0, twO({}));
     for (const [x0, z0, x1, z1] of [[A, c + 0.06, B, c + 0.06], [B - 0.06, c, B - 0.06, d], [A + 0.06, c, A + 0.06, d]]) sbox(acc, 'twGold', (x0 + x1) / 2, 1.0, (z0 + z1) / 2, Math.max(0.06, x1 - x0), Math.max(0.06, z1 - z0), 0.06, 0, twO({}));
     sbox(acc, 'twGold', (a + b) / 2, -0.35, (c + d) / 2, b - a + 0.2, d - c + 0.2, 0.36, 0, twO({ top: false }));
@@ -654,7 +672,7 @@ function updateTower(dt) {
     else if (L.phase === 'opening') { L.doors = Math.min(1, L.doors + dt / C.doorTime); if (L.doors >= 1) { L.phase = 'open'; CFG.floors.maxRise = C.restRise; } }
     L.rect.y = L.y + 0.001;
   }
-  placeTowerLifts();
+  placeTowerLifts(); twAltitudeFog(player.head.y);
   if (player.floorY > 150 && (TWR.gustT -= dt) < 0) { TWR.gustT = 5 + (NOW * 7.3) % 4; AU.noise(2.2, 0.16, 320); }   // the wind up there
   // the Chairman: until his own goon lands (with `signs: true`, calling onLeaderSigned), beating the last fight is his signature
   const last = C.encounters.length - 1;

@@ -200,8 +200,8 @@ try {
   until(() => L[2].phase === 'open', 200);
   jump = ride(L[2]);
   check('the glass lift takes you up the outside of the south face to the tribune, right under the cog', L[2].stop === 1 && Math.abs(TW.player.floorY - TWR.top.y) < 0.05
-    && L[2].car[3] <= TWR.tiers[1][2] && TWR.cogY - TWR.cogD / 2 > TWR.top.y + 20 && TWR.cogY - TWR.cogD / 2 < TWR.top.y + 45, `y ${TW.player.floorY.toFixed(2)}`);
-  check('smoothly, all 138 m of it', jump < comfort, (jump * 1000).toFixed(1) + ' mm');
+    && L[2].car[3] <= TWR.tiers[1][2] && TWR.cogY - TWR.cogD / 2 > TWR.top.y + 12 && TWR.cogY - TWR.cogD / 2 < TWR.top.y + 40, `y ${TW.player.floorY.toFixed(2)}`);
+  check('smoothly, all 150 m of it', jump < comfort, (jump * 1000).toFixed(1) + ' mm');
   check('halfway up you\'re outside, in the enclosed glass car: the city, the tower and the searchlights are drawn', !!midRide && midRide.room === 'outside' && midRide.sky && midRide.shell && midRide.glow && midRide.inCar, JSON.stringify(midRide));
   walkTo(-40, 318.5);
   until(() => TW.level.encounter === 3, 60);
