@@ -63,6 +63,40 @@ try {
   { const Pp = PL.inMesh.geometry.attributes.position.array; let out = 0, top = 0;   // (the inside mesh is built in the frame's coordinates)
     for (let i = 0; i < Pp.length; i += 3) if (Pp[i + 2] > PL.gym[3] + 0.01) { if (Math.hypot(Pp[i] - PL.drum[0], Pp[i + 2] - PL.drum[1]) > PL.drum[2] + 0.01) out++; top = Math.max(top, Pp[i + 1]); }
     check('the round bowl (stands, back wall, saucer ceiling, both tunnels) fits inside the drum', out === 0 && top <= PL.roofY + 0.01, `${out} vertices outside, top ${top.toFixed(1)} m`); }
+  // ---- the stadium outside (its own mesh): the oval bowl round everything, the Tower of Labor over it, the masts
+  { const S = PL.shell, inShell = (x, z, m = 0) => z >= PL.annex[2] - 1e-6 && ((x - S.c[0]) / (S.a - m)) ** 2 + ((z - S.c[1]) / (S.b - m)) ** 2 <= 1 + 1e-9;
+    const Pp = PL.inMesh.geometry.attributes.position.array; let out = 0;
+    for (let i = 0; i < Pp.length; i += 3) if (!inShell(Pp[i], Pp[i + 2]) && Pp[i + 2] < PL.northZ - 0.01) out++;
+    const [fx0, fz0] = run('plShellPt(0)'), [fx1, fz1] = run(`plShellPt(${S.n})`), [nx, nz] = run(`plShellPt(${(S.n - 1) / 2})`);
+    check('the stadium\'s oval takes in the whole inside (foyer, gym, bowl); its flat front is the foyer\'s, its north wall the north doors\'',
+      out === 0 && Math.abs(fz0 - PL.annex[2]) < 1e-6 && Math.abs(fz1 - PL.annex[2]) < 1e-6 && Math.abs(fx0 - PL.annex[1]) < 1e-6 && Math.abs(fx1 - PL.annex[0]) < 1e-6
+      && Math.abs(S.c[1] + S.b * Math.cos(S.D / 2) - PL.northZ) < 1e-6, `${out} inside vertices outside it; north wall z ${(S.c[1] + S.b * Math.cos(S.D / 2)).toFixed(3)} vs ${PL.northZ.toFixed(3)}`);
+    check('it is a big low oval: ~64 m across, ~73 m long, its roof rising to 18.5 m (open over the middle, the floodlit stands and floor in it)',
+      S.a * 2 > 60 && S.b * 2 > 70 && S.lipY >= 16 && S.lipY <= 20 && PL.hazeSides.length > S.n / 2);
+    check('its lid sits over the inside\'s saucer, so from up high the inside never shows through the open top', S.pitchY > PL.roofY + 0.5 && S.standY > S.pitchY);
+    check('four lattice masts, near three times its height, outside it, leaning in', PL.masts.length === 4 && PL.masts.every(([bx, bz, tx, tz, h]) => h > 2.5 * S.lipY && !inShell(bx, bz, -2) && Math.hypot(tx - S.c[0], tz - S.c[1]) < Math.hypot(bx - S.c[0], bz - S.c[1])));
+    // sightlines against the outside mesh (local): the doors from the boulevard; the Tower of Labor's upper tiers, crown,
+    // cog and spire from the boulevard's start and from the crossing
+    const Op = PL.outMesh.geometry.attributes.position.array;
+    const blocked = (o, t) => {
+      const dx = t[0] - o[0], dy = t[1] - o[1], dz = t[2] - o[2];
+      for (let i = 0; i < Op.length; i += 9) {
+        const e1x = Op[i + 3] - Op[i], e1y = Op[i + 4] - Op[i + 1], e1z = Op[i + 5] - Op[i + 2], e2x = Op[i + 6] - Op[i], e2y = Op[i + 7] - Op[i + 1], e2z = Op[i + 8] - Op[i + 2];
+        const px = dy * e2z - dz * e2y, py = dz * e2x - dx * e2z, pz = dx * e2y - dy * e2x, det = e1x * px + e1y * py + e1z * pz;
+        if (Math.abs(det) < 1e-9) continue;
+        const sx = o[0] - Op[i], sy = o[1] - Op[i + 1], sz = o[2] - Op[i + 2], u = (sx * px + sy * py + sz * pz) / det; if (u < 0 || u > 1) continue;
+        const qx = sy * e1z - sz * e1y, qy = sz * e1x - sx * e1z, qz = sx * e1y - sy * e1x, v = (dx * qx + dy * qy + dz * qz) / det; if (v < 0 || u + v > 1) continue;
+        const tt = (e2x * qx + e2y * qy + e2z * qz) / det; if (tt > 1e-4 && tt < 0.999) return true;
+      }
+      return false;
+    };
+    const doors = [-40, 1.4, PL.annex[2] - 0.2];
+    check('nothing stands on the boulevard\'s axis: the doors are in view from its start and all the way up', [152.4, 158, 164, 170, 176].every(z => !blocked([-40, 1.7, z], doors)));
+    const crossing = AW.toLocal(-40, 145), tierTop = (k) => run('TWR').tiers[k][5], up = [];
+    for (let y = (tierTop(2) + tierTop(3)) / 2; y <= 252; y += 4) for (const x of [-46, -40, -34]) up.push([x, y, 330]);
+    const hid = (o) => up.filter(t => blocked(o, t)).length;
+    check('from the boulevard\'s start and from the crossing the Tower of Labor rises clear over it: the upper half of its fourth tier and all above (the fifth tier, crown, cog and spire)',
+      hid([-40, 1.7, 152.4]) === 0 && hid([-40, 1.7, 153.4]) === 0 && hid([crossing[0], 1.7, crossing[1]]) === 0, `${hid([-40, 1.7, 152.4])} / ${hid([-40, 1.7, 153.4])} / ${hid([crossing[0], 1.7, crossing[1]])} of ${up.length} points hidden`); }
   { const solid = (lx, lz) => { const [x, z] = AW.toWorld(lx, lz); return TW.BLOCKERS.some(b => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1); }, lane = [];
     for (let z = PL.gym[2] + 0.5; z < PL.gym[3]; z += 0.5) lane.push([-40, z], [-37.5, z]);
     check('the gym\'s podium, pommel horse and vault are solid (cover); the way through the middle is clear', solid(-34.5, 198.6) && solid(-45.4, 195) && solid(-34, 191.75) && !lane.some(([x, z]) => solid(x, z))); }

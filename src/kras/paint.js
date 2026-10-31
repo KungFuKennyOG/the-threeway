@@ -201,7 +201,58 @@ Object.assign(PAINT, {
     for (const y0 of [0, 16]) for (let k = 0; k < 16; k++) { p.set(Math.round(k * 7 / 15), y0 + k, '#4a4e56'); p.set(7 - Math.round(k * 7 / 15), y0 + k, '#4a4e56'); }
     return p;
   },
+  plLatticeTall() {   // the stadium masts' lattice (cut out): four 3 m bays per repeat, the legs heavier
+    const p = new Pix(8, 64), c = '#5a5e66';
+    p.rect(0, 0, 1, 64, c); p.rect(7, 0, 1, 64, c); for (let y = 0; y < 64; y += 16) { p.rect(0, y, 8, 1, c); for (let k = 0; k < 16; k++) { p.set(Math.round(k * 7 / 15), y + k, '#4a4e56'); p.set(7 - Math.round(k * 7 / 15), y + k, '#4a4e56'); } }
+    return p;
+  },
   plFloodBank() { const p = new Pix(16, 12); p.fill('#2a2c30'); for (let j = 0; j < 3; j++) for (let i = 0; i < 4; i++) { plpDisc(p, 2 + i * 4, 2 + j * 4, 1.5, '#fff4d8', EM); p.set(2 + i * 4, 2 + j * 4, '#ffffff', EM); } return p; },
+  // ---- the stadium from outside: a light bank's back (its frame, light spilling round the lamp hoods), the floodlight
+  // haze over the rim and the shafts falling into the bowl (screen-door dither: dense at the source, thinning out), the
+  // stands and the pitch seen from above in floodlight, and the marquee boards facing the boulevard
+  plGates() {   // eight bays of the ground storey (A to H): a lit sector letter over a gate to the stands, the turnstiles inside
+    const p = new Pix(128, 20);
+    for (let k = 0; k < 8; k++) {
+      const x = k * 16; p.rect(x, 0, 16, 20, '#d6c08e'); p.speck('#cbb482', 4);
+      p.rect(x + 4, 0, 8, 9, '#f2c14e', EM); p.rect(x + 5, 1, 6, 7, '#b8231e', EM); p.text('ABCDEFGH'[k], x + 6, 1, '#fff4e0', EM);
+      p.rect(x + 2, 10, 12, 10, '#efe6d2'); p.rect(x + 3, 11, 10, 9, '#3a2a20');
+      p.rect(x + 3, 11, 10, 4, '#e8a050', EM); p.rect(x + 3, 11, 10, 1, '#ffd890', EM);
+      for (let t = 0; t < 3; t++) { p.rect(x + 4 + t * 3, 15, 2, 4, '#8a8478'); p.set(x + 4 + t * 3, 15, '#c8c0b0'); }
+      p.rect(x + 3, 19, 10, 1, '#5a4636');
+    }
+    return p;
+  },
+  plBrimUnder() { const p = new Pix(16, 8); p.fill('#3a3632'); p.rect(0, 0, 16, 1, '#2a2622'); for (const x of [3, 11]) { p.rect(x, 3, 2, 2, '#fff0c8', EM); p.set(x, 2, '#ffd890', EM); } return p; },   // one repeat = one bay
+  plFloodBack() {
+    const p = new Pix(16, 12); p.fill('#24262a'); p.rect(0, 0, 16, 1, '#fff0c8', EM); p.rect(0, 11, 16, 1, '#3a3c42');
+    for (let j = 0; j < 3; j++) for (let i = 0; i < 4; i++) { p.rect(1 + i * 4, 1 + j * 4, 3, 3, '#3a3c42'); p.set(2 + i * 4, 1 + j * 4, '#ffe6b0', EM); }
+    p.rect(0, 0, 1, 12, '#ffe6b0', EM); p.rect(15, 0, 1, 12, '#ffe6b0', EM); return p;
+  },
+  plHaze() {   // the floodlight glow over the rim: bottom row dense, thinning to nothing at the top (ordered dither)
+    const p = new Pix(8, 16), B = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+    for (let y = 0; y < 16; y++) for (let x = 0; x < 8; x++) { const d = Math.pow((y + 1) / 16, 1.6) * 0.9; if (B[(x & 3) + (y & 3) * 4] / 16 < d) p.set(x, y, y > 11 ? '#ffe8b8' : '#ffd890', EM); }
+    return p;
+  },
+  plShaft() {   // a floodlight's beam: dense at the bank (top), thinning down into the bowl
+    const p = new Pix(8, 32), B = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+    for (let y = 0; y < 32; y++) for (let x = 0; x < 8; x++) { const e = Math.abs(x - 3.5) / 4, d = (0.62 - y / 32 * 0.5) * (1 - e * e * 0.7); if (B[(x & 3) + (y & 3) * 4] / 16 < d) p.set(x, y, '#fff2d4', EM); }
+    return p;
+  },
+  plPitchTop() { const p = new Pix(16, 16); p.fill('#e8cc98', EM); p.speck('#f4dcb0', 30, EM); p.speck('#d8b880', 14, EM); return p; },   // the floor under the floods, from far above
+  plStandsTop() {   // the stands from far above, full and floodlit: rows of coats and faces, a few scarves
+    const p = new Pix(16, 8); p.fill('#7a5a46');
+    for (let y = 0; y < 8; y += 2) { p.rect(0, y, 16, 1, '#a07a5a'); for (let x = (y >> 1) & 1; x < 16; x += 2) p.set(x, y + 1, ['#5a4a4a', '#4a5260', '#c8402e', '#e0b08c', '#6a5a44'][Math.floor(prng() * 5)]); }
+    return p;
+  },
+  plMarquee() {   // two boards (top and bottom half): red, gilt-edged, lit lettering
+    const p = new Pix(96, 56);
+    for (const [y0, big, small] of [[0, 'TONIGHT', 'VOLKOV  VS  GUEST'], [28, 'SOLD OUT', 'ALL STANDS FULL']]) {
+      p.rect(0, y0, 96, 28, '#f2c14e', EM); p.rect(1, y0 + 1, 94, 26, '#8a1612', EM);
+      p.bigText(big, Math.round((96 - (big.length * 12 - 2)) / 2), y0 + 3, '#fff0c0', EM, 2);
+      p.text(small, Math.round((96 - textW(small)) / 2), y0 + 19, '#f2c14e', EM);
+    }
+    return p;
+  },
 });
 // ---- East Station, on Station Square north of the level crossing (src/kras/palace.js)
 Object.assign(PAINT, {
