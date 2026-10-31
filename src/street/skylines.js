@@ -31,7 +31,7 @@ function buildSkylines() {
     sbox(acc, 'roofDark', hx, y, z, 260, 6, 1.5, 0.08 * (k ? -1 : 1), { u: 8, v: 8, cell: 999 });
     sbox(acc, k ? 'litWarm' : 'litRed', hx, y + 1.5, z, 260, 6.2, 0.35, 0.08 * (k ? -1 : 1), { u: 4, v: 4, top: false, cell: 999 });
   }
-  // Krasnovia: concrete panel slabs on a regular grid, the Tower of Labor, the TV tower
+  // Krasnovia: concrete panel slabs on a regular grid, the TV tower
   const [kx, kz] = STREET.kras;
   for (let i = -4; i <= 4; i++) for (let j = -3; j <= 3; j++) {
     const x = kx + i * 36, z = kz + j * 42; if (Math.abs(i) <= 1 && Math.abs(j) <= 1) continue;
@@ -40,12 +40,8 @@ function buildSkylines() {
     sbox(acc, 'panel', x, 0, z, long ? 30 : 11, long ? 11 : 30, h, 0, { u: 12, v: 12, top: 'roofDark', tu: 8, cell: 999 });
     if ((i * 3 + j) % 5 === 0) plate(acc, 'banner', x, h * 0.55, z + (long ? 5.5 : 15), 5, 18, 0, 0.2);
   }
-  let y = 0;
-  for (const [w, d, h] of [[64, 50, 54], [48, 38, 42], [34, 27, 34], [20, 17, 28]]) { sbox(acc, 'stepped', kx, y, kz, w, d, h, 0, { u: 10, v: 10, top: 'roofDark', tu: 8, cell: 999 }); y += h; }
-  cyl(acc, 'gilt', kx, y, kz, 2, 0.2, 36, 6, { cell: 999 });
-  plate(acc, 'cog', kx, y + 14, kz, 13, 13, 0, 1.2, [0, 0, 1, 1], true);
-  ST.beacons.push([kx, y + 36, kz]);
-  const tx = -48, tz = kz + 120;   // TV tower: right on the road's sightline
+  // (the Tower of Labor is a level of its own now, with its beacon on its spire: src/kras/tower.js)
+  const tx = -22, tz = 420;   // TV tower: on the road's sightline, just right of Superblock 14's point block (clear of the Tower of Labor)
   cyl(acc, 'concrete', tx, 0, tz, 7, 2.5, 200, 8, { u: 8, v: 8, cell: 999 });
   cyl(acc, 'stepped', tx, 135, tz, 10, 13, 12, 10, { u: 8, v: 8, cell: 999 });
   cyl(acc, 'iron', tx, 200, tz, 1, 0.3, 40, 4, { cell: 999 });
