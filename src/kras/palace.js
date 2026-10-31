@@ -301,7 +301,7 @@ function buildPalaceCrossing(acc) {
 const plAng = (i) => -Math.PI / 2 + (i - 0.5) * 2 * Math.PI / PL.sides;
 const plAt = (r, a) => [PL.bowlC[0] + Math.cos(a) * r, PL.bowlC[1] + Math.sin(a) * r];
 // the stands: a ring of tiers round the floor (the boards, then the crowd on every riser), open south and north for the
-// vomitories, whose cheeks step up with the tiers; solid where you'd land on them
+// vomitories, whose cheeks step up with the tiers
 function plTiers(acc) {
   const B = PL.bank, n = PL.sides, top = (k) => B.front + k * B.rise, R = (k) => PL.floorR + k * B.depth;
   for (let i = 0; i < n; i++) {
@@ -319,8 +319,8 @@ function plTiers(acc) {
       else wall(acc, 'crowd', xa, za, xb, zb, top(k - 1), top(k), 4, B.rise, { u0: (i * 0.37 + k * 0.29) % 1 });
       aq(acc, 'concrete', [xd, top(k), zd], [xc, top(k), zc], [xb, top(k), zb], [xa, top(k), za], [0, 0, len / 2, B.depth / 2], [0, 1, 0], 99);
     }
-    for (const f of [0.25, 0.75]) { const [x, z] = plAt(R(0) + 1.1, a0 + (a1 - a0) * f); plSolid(x - 0.9, z - 0.9, x + 0.9, z + 0.9, 0, top(1)); }
-    { const [x, z] = plAt(R(0) + 3.8, (a0 + a1) / 2); plSolid(x - 1.6, z - 1.6, x + 1.6, z + 1.6, 0, top(B.rows - 1)); }
+    // a box under the front rows for props that land there (goons and ragdolls are kept on the floor by the walk rects)
+    { const [x, z] = plAt(R(0) + 1.4, (a0 + a1) / 2); WORLD_BOXES.push([x - 1.2, 0, z - 1.2, x + 1.2, top(2), z + 1.2]); }
   }
 }
 // an iron lamp shade hanging from the ceiling at height y, lit underneath
@@ -382,8 +382,8 @@ function buildPalaceInside(acc) {
     // the rings, the climbing ropes
     for (const x of [-34.25, -33.75]) { sbox(acc, 'darkwood', x, 2.56, 194.8, 0.04, 0.04, H - 2.9, 0, { u: 1, v: 1, top: false, cell: 99 }); plate(acc, 'gymRing', x, 2.42, 194.8, 0.3, 0.3, 0, 0, [0, 0, 1, 1], true); }
     for (const x of [-48.6, -47.8, -47]) { sbox(acc, 'gymRope', x, 0.25, 192, 0.06, 0.06, H - 0.6, 0, { u: 0.06, v: 2, top: false, cell: 99 }); sbox(acc, 'gymRope', x, 0.2, 192, 0.13, 0.13, 0.22, 0, { u: 0.13, v: 0.22, cell: 99 }); }
-    // the podium, 2 · 1 · 3, under the mural: red and white, numbered, cover in a fight
-    [[-35.8, 0.55, 1], [-34.5, 0.8, 0], [-33.2, 0.4, 2]].forEach(([x, h, k]) => {
+    // the podium, 2 · 1 · 3 as you face it, under the mural: red and white, numbered, cover in a fight
+    [[-33.2, 0.55, 1], [-34.5, 0.8, 0], [-35.8, 0.4, 2]].forEach(([x, h, k]) => {
       sbox(acc, 'gymPodSide', x, 0, 198.6, 1.3, 1.0, h, 0, { u: 1.3, v: 0.8, top: 'padRed', tu: 1, cell: 99 });
       plate(acc, 'gymPodNum', x, h - 0.26, 198.1, 0.5, 0.4, Math.PI, 0.01, [k / 3, 0, (k + 1) / 3, 1]);
     });
@@ -393,7 +393,7 @@ function buildPalaceInside(acc) {
     frustum(acc, 'darkwood', -31.2, 0.85, 190.8, 0.3, 0.3, 0.62, 0.62, 0.22, 0, { u: 1, v: 1, top: 'white', cell: 99 });
     plSolid(-31.5, 190.5, -30.9, 191.1, 0, 1.07);
     // the light: hard pools over the apparatus, darker between
-    for (const [x, z, r, k] of [[-45.4, 195, 7.5, 2.3], [-34, 194.6, 7.5, 2.3], [-40, 192.2, 6.5, 1.7], [-40, 196.8, 5.5, 1.2], [-47.8, 191.6, 5.5, 1.4]]) plShade(acc, L, x, z, 4.6, H, LW, r, k); }
+    for (const [x, z, r, k] of [[-45.4, 195, 7.5, 2.3], [-34, 194.6, 7.5, 2.3], [-40, 192.2, 6.5, 1.7], [-40, 194.3, 5.5, 1.2], [-47.8, 191.6, 5.5, 1.4]]) plShade(acc, L, x, z, 4.6, H, LW, r, k); }
   // ---- the players' tunnel (the gym to the south vomitory) and the way out (the north vomitory to the north doors)
   const [cx, cz] = PL.bowlC, n = PL.sides, sn = Math.sin(Math.PI / n), rb = PL.backR, zs = PL.bowl[2], zn = PL.bowl[3], WT = PL.wallTop;
   for (const [z0, z1] of [[PL.gym[3], zs], [zn, PL.northZ]]) {
