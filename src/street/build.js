@@ -95,8 +95,14 @@ function plate(acc, key, cx, cy, cz, w, h, phi, off = 0.04, uv = [0, 0, 1, 1], t
   aq(acc, key, [x0, cy + h / 2, z0], [x1, cy + h / 2, z1], [x1, cy - h / 2, z1], [x0, cy - h / 2, z0], uv, LN(phi, 0, 1), 99);
   if (two) aq(acc, key, [x1, cy + h / 2, z1], [x0, cy + h / 2, z0], [x0, cy - h / 2, z0], [x1, cy - h / 2, z1], uv, LN(phi, 0, -1), 99);
 }
+// the underside of a roof that overhangs its walls: without it you look up through the back of the roof into the sky
+function soffit(acc, key, cx, y, cz, w, d, phi) {
+  const P = (lx, lz) => { const [x, z] = LP(cx, cz, phi, lx, lz); return [x, y, z]; };
+  aq(acc, key, P(-w / 2, d / 2), P(w / 2, d / 2), P(w / 2, -d / 2), P(-w / 2, -d / 2), [0, 0, 1, 1], [0, -1, 0], 99);
+}
 function tileRoof(acc, cx, y, cz, w, d, phi, h = 2.2, over = 0.7) {   // Hinomoto tile roof: upturned tips, red brackets
   frustum(acc, 'kawara', cx, y, cz, w + over * 2, d + over * 2, w * 0.4, d * 0.15, h, phi, { u: 3.2, v: 3.2, top: 'kawara', tu: 3.2, cell: 3 });
+  soffit(acc, 'darkwood', cx, y - 0.01, cz, w + over * 2, d + over * 2, phi);
   for (const [sx, sz] of [[-1, -1], [1, -1], [1, 1], [-1, 1]]) { const [tx, tz] = LP(cx, cz, phi, sx * (w / 2 + over + 0.1), sz * (d / 2 + over + 0.1)); sbox(acc, 'kawara', tx, y - 0.05, tz, 0.35, 0.35, 0.4, phi, { u: 1.6, v: 1.6 }); }
   for (let k = 0; k < Math.max(2, Math.round(w / 2.4)); k++) { const sx = -w / 2 + 0.6 + k * (w - 1.2) / Math.max(1, Math.round(w / 2.4) - 1); const [bx, bz] = LP(cx, cz, phi, sx, d / 2 + 0.3); sbox(acc, 'lacquer', bx, y - 0.55, bz, 0.18, 0.6, 0.55, phi, { u: 1, v: 1 }); }
 }
@@ -127,6 +133,7 @@ function tenement(acc, b) {
   else {
     const rk = b.roof === 'copper' ? 'copper' : 'mansard', inset = Math.min(1.6, Math.min(w, d) * 0.3);
     frustum(acc, rk, cx, top, cz, w + 0.3, d + 0.3, w - inset * 2, d - inset * 2, 3.0, 0, { u: 4.4, v: 3.0, top: rk === 'copper' ? 'copperTop' : 'slate', tu: 3, skip: b.roofSkip });
+    soffit(acc, 'slate', cx, top - 0.01, cz, w + 0.3, d + 0.3, 0);
     sbox(acc, 'gilt', cx, top - 0.1, cz, w + 0.36, d + 0.36, 0.14, 0, { u: 2, v: 1, top: false });
   }
   if (b.onion) {   // a Krasnovian onion-domed corner turret
