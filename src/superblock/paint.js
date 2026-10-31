@@ -43,9 +43,9 @@ Object.assign(PAINT, {
     for (let a = 0; a < 10; a++) { const t = a / 10 * Math.PI * 2; p.set(16 + Math.round(Math.cos(t) * 4), 25 + Math.round(Math.sin(t) * 4), '#f2c14e'); }
     p.rect(15, 24, 2, 2, '#f2c14e'); return p;
   },
-  krasSign() {   // over the gate: KRASNOVIAN UNION, cream on red, gold rules
+  krasSign() {   // over the gate: KRASNOVIAN SECTOR (of Vostburg, not the country), cream on red, gold rules
     const p = new Pix(104, 14); p.fill('#b8231e', EM); p.rect(0, 0, 104, 1, '#f2c14e', EM); p.rect(0, 13, 104, 1, '#f2c14e', EM);
-    p.text('KRASNOVIAN UNION', 4, 4, '#f4ead0', EM); return p;
+    p.text('KRASNOVIAN SECTOR', 2, 4, '#f4ead0', EM); return p;
   },
   blockSign() {   // enamel house plate by the door: block 14
     const p = new Pix(32, 16); p.fill('#1a3a7a', EM); p.rect(0, 0, 32, 1, '#e6dac0', EM); p.rect(0, 15, 32, 1, '#e6dac0', EM);
