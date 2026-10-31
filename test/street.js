@@ -189,6 +189,31 @@ try {
   check('inside with the door shut: the street, skylines and sky aren\'t drawn', TW.ST.streetGroup.every(o => !o.visible) && TW.ST.barGroup.every(o => o.visible));
   const bm = TW.ST.barMesh;
   check('the whole bar room is one mesh on one atlas', bm && bm.material.uniforms.uAtlas.value === 1 && bm.geometry.attributes.arect && TW.ST.barGroup.length <= 5, TW.ST.barGroup.length + ' bar meshes');
+  // ---- the bar's polish: the back bar, three windows, the brass Tripoint, the corners: still one mesh, in budget
+  check('the bar room stays lean: one atlas mesh under 2,500 triangles', TW.roomTris() < 2500 && bm.geometry.attributes.position.count / 3 === TW.roomTris(), TW.roomTris() + ' tris (960 before the polish)');
+  {
+    const p0 = Array.from(bm.geometry.attributes.position.array); step(30);
+    const p1 = bm.geometry.attributes.position.array, F = run('BAR_FAN'), moved = [];
+    for (let i = 0; i < p0.length; i++) if (p0[i] !== p1[i]) moved.push(i);
+    check('the ceiling fan turns inside the bar\'s one mesh (only its blades move; no extra draw call)', F.n === 24 && moved.length > 0 && moved.every(i => i >= F.i0 * 3 && i < (F.i0 + F.n) * 3) && TW.ST.barGroup.length <= 5, moved.length + ' floats moved');
+  }
+  {
+    const solids = run('BAR_SOLIDS'), have = (B) => TW.WORLD_BOXES.some(W => W.every((v, i) => v === B[i]));
+    const blocked = (x, z) => { const q = V(x, 0, z); TW.pushOutXZ(q, 0.2); return Math.hypot(q.x - x, q.z - z) > 0.05; };
+    check('the corner furniture is solid: booth, chess table, pachinko and the back counter stop you and goons, and props collide with them',
+      solids.every(have) && [[4.4, 4.05], [-4.2, 3.55], [-4.8, -3.9], [0, -4.9]].every(([x, z]) => blocked(x, z)));
+    // the fight floor and the walk behind the bar stay clear: the spawn by the door, where goons gather, the start, behind the bar
+    const free = [[0, 4.4], [-2.2, 1.6], [2.2, 3.2], [0, 2.4], [0, -1.4], [-1.2, -2.4], [1.2, -2.4], [3.6, -3.7], [3.6, -4.3], [4.2, -4.3], [0, -4.3], [-3.6, -4.3], [-2, -4.36], [2, -4.36], [4.2, 2.85]];
+    check('the fight floor, the door\'s spawn, the start and the walk behind the bar (0.83 m: goons fit, 0.64) stay clear', free.every(([x, z]) => !blocked(x, z)),
+      free.filter(([x, z]) => blocked(x, z)).map(a => a.join(',')).join(' '));
+    const T = run('TRIPOINT'), L = run('BAR_LINES');
+    check('the three brass Accords lines come in under the door and meet at the Tripoint disc, where you start', Math.hypot(T.x, T.z + 1.4) < T.r && L.length === 3 && L[0][0] === 0 && L[0][1] > 4.9 && L.slice(1).every(([x]) => Math.abs(x) > 4.9));
+    run('clearEnemies(); stockProps();');
+    const b1 = new TW.Prop('bottle', V(4.4, 1.2, 4.1)), b2 = new TW.Prop('bottle', V(-4.1, 1.2, 3.45)); b1.body.wake(); b2.body.wake(); step(150);
+    const bottom = (b) => Math.min(...b.body.ps.map(q => q.x.y - q.r));
+    check('a bottle set down on the diner booth\'s table or the chess table rests on it', Math.abs(bottom(b1) - 0.77) < 0.05 && Math.abs(bottom(b2) - 0.74) < 0.05, bottom(b1).toFixed(2) + ' / ' + bottom(b2).toFixed(2));
+    run('stockProps();');
+  }
   step(2);
   const batches = [...run('propBatches').values()].filter(b => b.mesh.visible);
   const stoolVerts = TW.props.filter(q => q.type === 'stool' && q.shown).reduce((n, q) => n + q.obj.geometry.attributes.position.count, 0);

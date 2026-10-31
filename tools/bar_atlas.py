@@ -4,7 +4,10 @@ Writes assets/tex/bar_atlas.png and src/bar_atlas.js (where each texture sits in
 import json
 from PIL import Image
 KEYS = ['banner', 'barfront', 'black', 'bottles', 'brass', 'brick', 'ceiling', 'chrome', 'cola', 'concrete', 'counter', 'darkwood', 'felt',
-        'jukebox', 'lantern', 'menuboard', 'neon_hino', 'neon_open', 'sodium', 'teal', 'tile', 'window', 'wood_floor', 'wood_panel', 'zep_strip']
+        'jukebox', 'lantern', 'menuboard', 'neon_hino', 'neon_open', 'sodium', 'teal', 'tile', 'window', 'wood_floor', 'wood_panel', 'zep_strip',
+        # tools/bar_room.py: the other two windows and the square's, the back bar, the booths, the walls' stories
+        'window_kras', 'window_hino', 'window_sq', 'mirror', 'shelf', 'emblem', 'accords', 'photos', 'poster_halcyon', 'pachinko',
+        'backbits', 'medallion', 'formica', 'vinyl', 'chess', 'glow', 'fan']
 imgs = {k: Image.open(f'assets/tex/{k}.png').convert('RGBA') for k in KEYS}
 W = 256; x = y = rowh = 0; at = {}
 for k in sorted(KEYS, key=lambda k: (-imgs[k].height, -imgs[k].width)):
