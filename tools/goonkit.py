@@ -29,9 +29,10 @@ class Sheet:
         for y, row in enumerate(rows):
             for x, ch in enumerate(row):
                 if ch != ' ' and pal.get(ch): s.px(x0 + x, y0 + y, pal[ch])
-    def save(s, path):
+    def get(s, x, y): return s.im.getpixel((x, y))
+    def save(s, path, maxc=16):   # goon sheets allow 32 colours (the hand-pixeled originals use 17 to 29); props and signs keep 16
         cols = {c for c in s.im.getdata() if c[3]} if hasattr(s.im, 'getdata') else set()
-        assert len(cols) <= 16, (path, len(cols), sorted('#%02x%02x%02x' % c[:3] for c in cols))
+        assert len(cols) <= maxc, (path, len(cols), sorted('#%02x%02x%02x' % c[:3] for c in cols))
         s.im.save(path)
         return len(cols)
 
@@ -46,6 +47,8 @@ def strip(S, name, rows, pal, w=16):   # rows of a panel narrower than 16 (TD_L 
     x0, y0 = PANEL.get(name, (None, None)) if name in PANEL else name
     S.map(x0, y0, rows, pal)
 
+def hsh(x, y, k=0): return ((x * 374761393 + y * 668265263 + k * 2246822519) ^ ((x + 7) * (y + 13) * 1274126177)) % 1000003 % 1000
+
 class Pane:
     """a 16x16 panel (or any offset) on a sheet: rect / px / map in panel coordinates"""
     def __init__(s, sheet, ox, oy): s.s, s.ox, s.oy = sheet, ox, oy
@@ -53,6 +56,33 @@ class Pane:
     def rect(s, x, y, w, h, c): s.s.rect(s.ox + x, s.oy + y, w, h, c)
     def fill(s, c, w=16, h=16): s.rect(0, 0, w, h, c)
     def map(s, rows, pal, x=0, y=0): s.s.map(s.ox + x, s.oy + y, rows, pal)
+    # ---- the flair kit: lines, outlines, discs, dither and grain, for folds, seams, wear and motifs
+    def get(s, x, y): return s.s.get(s.ox + x, s.oy + y)
+    def hl(s, x, y, w, c): s.rect(x, y, w, 1, c)
+    def vl(s, x, y, h, c): s.rect(x, y, 1, h, c)
+    def outline(s, x, y, w, h, c): s.hl(x, y, w, c); s.hl(x, y + h - 1, w, c); s.vl(x, y, h, c); s.vl(x + w - 1, y, h, c)
+    def checker(s, x, y, w, h, c, ph=0):
+        for j in range(h):
+            for i in range(w):
+                if (i + j + ph) % 2 == 0: s.px(x + i, y + j, c)
+    def disc(s, cx, cy, r, c):   # a filled circle about (cx, cy) in pixel units (7.5 centres it on a 16-px panel)
+        for j in range(int(cy - r - 1), int(cy + r + 2)):
+            for i in range(int(cx - r - 1), int(cx + r + 2)):
+                if (i - cx) ** 2 + (j - cy) ** 2 <= r * r: s.px(i, j, c)
+    def grain(s, frm, to, p, k=0, x=0, y=0, w=16, h=16):   # flecks: a share p of the frm-coloured pixels turn to `to` (deterministic)
+        f = H(frm)
+        for j in range(y, y + h):
+            for i in range(x, x + w):
+                if s.get(i, j) == f and hsh(s.ox + i, s.oy + j, k) < p * 1000: s.px(i, j, to)
+    def stitch(s, x, y, n, c, horiz=True, gap=2):
+        for t in range(0, n, gap):
+            if horiz: s.px(x + t, y, c)
+            else: s.px(x, y + t, c)
+    def swap(s, frm, to, x=0, y=0, w=16, h=16):
+        f = H(frm)
+        for j in range(y, y + h):
+            for i in range(x, x + w):
+                if s.get(i, j) == f: s.px(i, j, to)
 
 # ---------------------------------------------------------------- faces
 # A face is 32x32: crown rows 0..top-1 (hair or a cap band), side bands at columns 0-2 / 29-31 (hair, ears, cap),
@@ -172,3 +202,46 @@ def sign(text, colour, path, shadow='#10060c'):
         for d in (1, 2): im.rect((cx + d) * 2, (cy + d) * 2, 2, 2, shadow)
     for (cx, cy) in cells: im.rect(cx * 2, cy * 2, 2, 2, colour)
     im.save(path)
+
+# ---------------------------------------------------------------- the flair kit: motifs and faces (docs/goon-style.md)
+import math
+def cog(P, cx, cy, r, col, dark=None, hole=None, teeth=8):   # Krasnovia's gold cogwheel, r ~ 2.5 (6 px) to 7 (15 px); dark shades its lower right
+    rin = r * 0.7
+    for j in range(int(cy - r - 2), int(cy + r + 3)):
+        for i in range(int(cx - r - 2), int(cx + r + 3)):
+            dx, dy = i - cx, j - cy; d = math.hypot(dx, dy); a = math.atan2(dy, dx)
+            tooth = math.cos(a * teeth) > 0.05
+            if d <= rin or (d <= r and tooth):
+                P.px(i, j, dark if dark and dx + dy > 0.35 * (r + rin) else col)
+            if hole and d <= r * 0.3: P.px(i, j, hole)
+def star5(P, x, y, c):   # a 5x5 star
+    P.map(['  #  ', ' ### ', '#####', ' ### ', ' # # '], {'#': c}, x, y)
+def medal(P, x, y, rib, metal, dark):   # a 3x5 medal: a two-colour ribbon over a disc
+    P.map(['aba', 'aba', 'mmm', 'mdm', ' m '], {'a': rib[0], 'b': rib[1], 'm': metal, 'd': dark}, x, y)
+def faces3(S, fn):   # fn(P, v): v 0 normal, 1 hurt, 2 KO, each on its own 32x32
+    for v, (ox, oy) in enumerate(((0, 0), (32, 0), (0, 32))): fn(Pane(S, ox, oy), v)
+def eye(P, v, x, y, w, white, pupil, lid, look=0, h=3):
+    """an eye at (x, y), w wide: v0 open (a lid line, the white, a pupil), v1 squeezed shut, v2 an X"""
+    if v == 0:
+        P.rect(x, y, w, 1, lid); P.rect(x, y + 1, w, h - 1, white)
+        pw = 2 if w >= 4 else 1
+        P.rect(x + (w - pw) // 2 + look, y + 1, pw, h - 1, pupil)
+    elif v == 1:
+        P.rect(x, y + 1, w, 1, pupil); P.px(x - 1, y, pupil); P.px(x + w, y, pupil); P.rect(x + 1, y + 2, max(1, w - 2), 1, lid)
+    else:
+        n = min(w, 5)
+        for i in range(n): P.px(x + i, y - 1 + i, pupil); P.px(x + n - 1 - i, y - 1 + i, pupil)
+def mouth_hurt(P, x, y, w, dark, teeth, h=4):   # a clenched grimace: teeth between dark lips
+    P.rect(x, y, w, h, dark); P.rect(x + 1, y + 1, w - 2, h - 2, teeth)
+    for i in range(x + 3, x + w - 1, 3): P.vl(i, y + 1, h - 2, dark)
+def mouth_ko(P, x, y, w, dark, tongue, h=4):   # hanging open
+    P.rect(x, y, w, h, dark); P.rect(x + 2, y + h - 2, w - 4, 2, tongue)
+def pane(S, name): return S.at(name)
+def remap(S, m):   # fold near-duplicate shades together to stay within the colour budget
+    mm = {H(a): H(b) for a, b in m.items()}
+    for y in range(S.im.height):
+        for x in range(S.im.width):
+            c = S.im.getpixel((x, y))
+            if c in mm: S.im.putpixel((x, y), mm[c])
+def bevel(P, base, hi, lo, x=0, y=0, w=16, h=16):   # a lit top-left edge, a shadowed bottom-right one
+    P.rect(x, y, w, h, base); P.hl(x, y, w, hi); P.vl(x, y, h, hi); P.hl(x, y + h - 1, w, lo); P.vl(x + w - 1, y, h, lo)
