@@ -151,7 +151,7 @@ try {
     C.encounters.every(E => E.spawn.every(([, x, z, y]) => y >= E.at[4] && y <= E.at[5] && inside(x, z, E.at, 0.2) && !inBlocker(x, z, y))), C.encounters.map(E => E.name).join(', '));
   check('the cast: militia + inspectors, clerks + a bodyguard, Inspector Orlova (boss) + a bodyguard, the Chairman (boss)',
     C.encounters[0].spawn.every(s => ['militia', 'inspector'].includes(s[0])) && C.encounters[1].spawn.every(s => ['clerk', 'bodyguard'].includes(s[0]))
-    && C.encounters[2].boss && C.encounters[2].spawn.some(s => s[0] === 'orlova') && C.encounters[2].spawn.some(s => s[0] === 'bodyguard') && C.encounters[3].boss && C.encounters[3].spawn.map(s => s[0]).join() === 'chairman');
+    && C.encounters[2].boss && C.encounters[2].spawn.some(s => s[0] === 'orlova') && C.encounters[2].spawn.some(s => s[0] === 'bodyguard') && C.encounters[3].boss && C.encounters[3].spawn.map(s => s[0]).join() === 'bodyguard,bodyguard,chairman');
 
   // ---- the lobby
   until(() => TW.level.encounter === 0, 60);
@@ -241,6 +241,16 @@ try {
   check('the hook ignores goons who don\'t sign', !TWR.signed && TW.game.state === 'fight');
   run('onLeaderSigned({ type: "chairman", cfg: { signs: true }, alive: false })'); step(1);
   check('a leader with signs: true calling onLeaderSigned ends the level the same way', TWR.signed && TW.game.state === 'won');
+
+  // ---- his bodyguards: if he goes down first he kneels, and signs only once they're down too
+  run('LEVELS.tower.start(false); level.encounter = 99'); step(2);
+  run('resetTowerLifts(3); clearEnemies(); level.encounter = 3; game.state = "fight"; game.queue = []; for (const [t, x] of [["chairman", -43], ["bodyguard", -37]]) { const e = new Enemy(enemyType(t)); e.placeAt(...ACT1_WEST.toWorld(x, 321), 0, TWR.top.y); e.cooldown = 1e9; enemies.push(e); }');
+  setL(-40, TWR.top.y, 318); step(3);
+  run('enemies.find(e => e.type === "chairman").signDown()'); step(5);
+  const kneels = run('enemies.find(e => e.type === "chairman").state');
+  check('the Chairman down while a bodyguard still stands: he kneels, but nothing is signed yet', kneels === 'signed' && !TWR.signed && TW.game.state === 'fight', `${kneels}, signed ${TWR.signed}`);
+  run('{ const b = enemies.find(e => e.type === "bodyguard"); b.hp = 0; b.markKO(); }'); until(() => TWR.signed, 120);
+  check('then his last bodyguard goes down: he signs, the level is won', TWR.signed && TW.game.state === 'won' && run('SIGNED.has("chairman")'), TW.game.state);
 
   // ---- walking in from Parade Square, once it's won
   run(`LEVELS.parade.start(false); clearEnemies(); level.encounter = CFG.parade.encounters.length - 1; game.state = 'won'; LOCKED.clear();`);

@@ -13,7 +13,7 @@
 // (Inspector Orlova at her interrogation desk under one bulb); then the glass lift, up the OUTSIDE of the south face, 150 m
 // with Parade Square and the city falling away below; out onto the Chairman's tribune right under the cog, in the wind.
 // Up there the air clears (twAltitudeFog): the city's fog pulls back with your height, so the whole city lies below you.
-// Beat the Chairman out there and he kneels and signs the permit to reopen The Threeway: 1 of 3, and Act 1 is complete.
+// Beat the Chairman and his two bodyguards out there and he kneels and signs the permit to reopen The Threeway: 1 of 3, and Act 1 is complete.
 // No stairs (VR): lifts do all the climbing, enclosed (the glass car too) and eased. Authored with +z running in from the
 // square, laid into the world by the ACT1_WEST frame (src/levels.js): the south doors face east, back down the boulevard.
 //
@@ -43,7 +43,7 @@ CFG.tower = {
     { name: 'archive', at: [-56, -24, 316.6, 333.0, 39, 41.5], respawn: [-47, 332.4, 40, 0], sign: 'orlova', boss: true, enrageAt: 0.5, lock: ['twLift2', 'twLift3'],
       spawn: [['bodyguard', -35.5, 322, 40], ['orlova', -43, 328.6, 40]] },
     { name: 'chairman', at: [-50, -30, 316.0, 334.6, 189, 191.5], respawn: [-40, 317.2, 190, Math.PI], sign: 'chairman', boss: true, lock: ['twLift3'],
-      spawn: [['chairman', -40, 326.6, 190]] },   // out of his office's doors onto the tribune
+      spawn: [['bodyguard', -46, 323.4, 190], ['bodyguard', -34, 323.4, 190], ['chairman', -40, 326.6, 190]] },   // two bodyguards by his doors, then he comes out of his office onto the tribune
   ],
   get enrageAt() { const E = this.encounters[level.encounter]; return (E && E.enrageAt) || 0; },   // read by the stage flow (src/street/fight.js)
   props: [['bin', -50.8, 313.2, 0], ['bin', -29.2, 313.2, 0],
@@ -760,7 +760,10 @@ function towerSigned(e) {
 // the hook a leader goon with `signs: true` calls when he kneels at 0 hp (any sector's leader; the Chairman ends Act 1)
 function onLeaderSigned(e) {
   if (!e || !e.cfg || !e.cfg.signs) return;
-  if (level.name === 'tower') { towerSigned(e); return; }
+  if (level.name === 'tower') {   // he kneels first if he goes down first; he signs once his bodyguards are down too (updateTower's check)
+    if (game.queue.length || enemies.some(o => o.alive && !(o.cfg && o.cfg.signs))) return;
+    towerSigned(e); return;
+  }
   if (!SIGNED.has(e.type)) { SIGNED.add(e.type); showSign('signed' + Math.min(3, SIGNED.size), 3.0); AU.bell(); }
 }
 defineLevel('tower', {

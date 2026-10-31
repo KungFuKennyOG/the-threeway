@@ -293,7 +293,7 @@ function buildStationSquare(acc, L) {
   ground(acc, 'paving', x0, z0, x1, z1, 0.004, 4, { cell: 4 });
   ground(acc, 'asphaltK', x1, z0, PL.sqRect[1], z1, 0, 8, { cell: 8 });
   // East Station: a long two-storey hall on the square's east side, a taller entrance block in the middle with its
-  // glass front, the name, a clock and a gilt spire with a red star; a canopy along the front
+  // glass front, the name, a clock and a gilt spire with the gold cog; a canopy along the front
   sbox(acc, 'towerFace', (sx0 + sx1) / 2, 0, sm, sx1 - sx0, sz1 - sz0, 12, 0, { u: 8, v: 8, top: 'roofDark', tu: 8, cell: 6 });
   sbox(acc, 'decoGold', (sx0 + sx1) / 2, 11.4, sm, sx1 - sx0 + 0.4, sz1 - sz0 + 0.4, 0.6, 0, { u: 4, v: 0.6, top: false, cell: 6 });
   const ex0 = sx0 - 1.5, ez0 = sm - 7, ez1 = sm + 7;
@@ -303,7 +303,7 @@ function buildStationSquare(acc, L) {
   plate(acc, 'stationSign', ex0, 13.8, sm, 12, 12 * 13 / 84, -Math.PI / 2, 0.05);
   plate(acc, 'clockFace', ex0, 16.4, sm, 2.4, 2.4, -Math.PI / 2, 0.05);
   frustum(acc, 'gilt', (ex0 + sx1 - 4) / 2, 19, sm, 4, 4, 0.4, 0.4, 9, 0, { cell: 8 });
-  sbox(acc, 'litRed', (ex0 + sx1 - 4) / 2, 28, sm, 0.9, 0.9, 0.9, 0, { u: 1, v: 1 });
+  for (const ph of [0, Math.PI / 2]) plate(acc, 'cog', (ex0 + sx1 - 4) / 2, 29.0, sm, 3.4, 3.4, ph, 0, [0, 0, 1, 1], true);   // the gold cog on the spire
   sbox(acc, 'concrete', sx0 - 3.2, 4.2, sm, 3.4, ez1 - ez0 + 6, 0.35, 0, { u: 2, v: 1, top: 'roofDark', tu: 4 });
   sbox(acc, 'litWarm', sx0 - 3.2, 4.12, sm, 1.6, ez1 - ez0, 0.08, 0, { u: 1, v: 1 });
   for (const z of [sm - 9.5, sm + 9.5]) { sbox(acc, 'iron', sx0 - 4.6, 0, z, 0.2, 0.2, 4.2, 0, { u: 1, v: 1 }); plSolid(sx0 - 4.75, z - 0.15, sx0 - 4.45, z + 0.15, 0, 4.2); }
