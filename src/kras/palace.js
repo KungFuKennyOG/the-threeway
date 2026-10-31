@@ -657,11 +657,14 @@ function buildShutter() {
   g.setAttribute('position', new THREE.Float32BufferAttribute(P, 3)); g.setAttribute('normal', new THREE.Float32BufferAttribute(N, 3));
   g.setAttribute('uv', new THREE.Float32BufferAttribute(U, 2)); g.setAttribute('bake', new THREE.Float32BufferAttribute(B, 3));
   const m = new THREE.Mesh(g, makeMat('street', { baked: true, fog: false, depthWrite: false, side: THREE.DoubleSide }));
-  // drawn as light, not paint: it brightens what's under it (dst x (1 + its colour)), so the floor's own pattern shows through
-  Object.assign(m.material, { blending: THREE.CustomBlending || 5, blendEquation: THREE.AddEquation || 100, blendSrc: THREE.DstColorFactor || 208, blendDst: THREE.OneFactor || 201, transparent: true });
+  // drawn as light, not paint: it brightens what's under it (dst x (1 + its colour)), so the floor's own pattern shows through.
+  // Not `transparent`: three draws a two-sided transparent mesh twice (back faces, then front); in the opaque list with
+  // renderOrder 5 it's still drawn after the inside it lies on, in one pass (it writes no depth)
+  Object.assign(m.material, { blending: THREE.CustomBlending || 5, blendEquation: THREE.AddEquation || 100, blendSrc: THREE.DstColorFactor || 208, blendDst: THREE.OneFactor || 201 });
   m.renderOrder = 5; m.frustumCulled = false; m.visible = false; m.userData.small = true; scene.add(m);
   PL.spill = m; PL.spillGrow = { list: grow, z: zs, len: -1 }; PL.spillCol = col;
   PL.spillLamp = [[-40, 1.4, zs - 1.6], [0, 0, 0], C.lampRadius]; ST.lamps.push(PL.spillLamp);   // (black until it opens: it bakes into nothing)
+  placeShutter();   // (neither is drawn on any level till the Palace places them)
 }
 // the shutter, the spill and its lamp where they are now (from PL.shut.t). Out of the Palace (Parade Square from the
 // menu, the Tower) the shutter is up: the doors are open. Both meshes belong to the Palace's room (drawn only while the
